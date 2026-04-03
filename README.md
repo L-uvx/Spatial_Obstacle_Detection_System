@@ -2,9 +2,9 @@
 
 基于 `Vue 3 + Vite + TypeScript + Cesium` 的业务型地图前端骨架项目。
 
-## 当前阶段
+## 当前功能概览
 
-当前已完成第一阶段地图底座搭建，主要能力包括：
+当前项目已具备以下基础能力：
 
 1. Cesium 地图容器与业务壳布局
 2. 顶部工具栏 + 左侧侧边栏联动
@@ -51,25 +51,6 @@ npm run dev
 ```bash
 npm run build
 ```
-
-## 开发约定
-
-1. 后续默认直接在 `master` 分支开发。
-2. 除非有明确需要隔离并行工作，否则不再默认使用 git worktree。
-3. 后续提交信息统一使用中文。
-
-## 本地辅助文件
-
-以下文件仅用于本地开发状态恢复，不纳入代码仓库版本管理：
-
-1. `AGENTS.md`
-2. `task_plan.md`
-3. `progress.md`
-4. `findings.md`
-5. `docs/current-status.md`
-6. `docs/superpowers/`
-7. `.opencode/`
-8. `opencode.jsonc`
 
 ## 当前地图行为
 
@@ -127,22 +108,3 @@ import 'cesium/Build/Cesium/Widgets/widgets.css'
 
 4. 天地图偶发单瓦片失败时，当前实现会自动重试最多 2 次。
 
-## 下一阶段建议
-
-当前更适合继续做“业务功能层”，而不是继续修改地图底座。
-
-建议的下一阶段方向：
-
-1. 将左侧侧边栏从占位面板改造成真实业务面板
-2. 接入业务数据，例如 GeoJSON、点位、边界或专题图层
-3. 实装工具栏能力，例如查询、测距、面积量算等
-
-## 当前分支状态
-
-当前正式开发基线已位于：
-
-`master`
-
-地图底座阶段的初始提交为：
-
-`f38f917 feat: initialize cesium vue map shell`
