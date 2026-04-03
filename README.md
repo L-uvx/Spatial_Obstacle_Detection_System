@@ -52,6 +52,25 @@ npm run dev
 npm run build
 ```
 
+## 开发约定
+
+1. 后续默认直接在 `master` 分支开发。
+2. 除非有明确需要隔离并行工作，否则不再默认使用 git worktree。
+3. 后续提交信息统一使用中文。
+
+## 本地辅助文件
+
+以下文件仅用于本地开发状态恢复，不纳入代码仓库版本管理：
+
+1. `AGENTS.md`
+2. `task_plan.md`
+3. `progress.md`
+4. `findings.md`
+5. `docs/current-status.md`
+6. `docs/superpowers/`
+7. `.opencode/`
+8. `opencode.jsonc`
+
 ## 当前地图行为
 
 ### 初始化视角
@@ -120,10 +139,10 @@ import 'cesium/Build/Cesium/Widgets/widgets.css'
 
 ## 当前分支状态
 
-当前工作已提交在分支：
+当前正式开发基线已位于：
 
-`feature/cesium-vue-shell`
+`master`
 
-首次提交：
+地图底座阶段的初始提交为：
 
 `f38f917 feat: initialize cesium vue map shell`

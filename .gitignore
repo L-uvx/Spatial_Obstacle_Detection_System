@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 AGENTS.md
+.opencode/
+opencode.jsonc
+task_plan.md
+progress.md
+findings.md
+docs/superpowers/
 docs/current-status.md
 
 # Editor directories and files
