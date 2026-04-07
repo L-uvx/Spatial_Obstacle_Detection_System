@@ -10,10 +10,11 @@
 2. 顶部工具栏 + 左侧侧边栏联动
 3. 天地图影像底图 `img_w`
 4. 天地图影像注记层 `cia_w`
-5. 武汉市初始化视角
-6. 点击复位按钮后飞回武汉视角
-7. 天地图瓦片偶发失败的自动重试
-8. Cesium 在 Vite 下的运行时资源接入
+5. 公共标准 terrain 接入入口（当前默认 `Cesium World Terrain`）
+6. 武汉市初始化视角
+7. 点击复位按钮后飞回武汉视角
+8. 天地图瓦片偶发失败的自动重试
+9. Cesium 在 Vite 下的运行时资源接入
 
 ## 技术栈
 
@@ -38,7 +39,14 @@ npm install
 
 ```env
 VITE_TDT_KEY=your_tianditu_key
+VITE_CESIUM_ION_TOKEN=your_cesium_ion_token
 ```
+
+说明：
+
+1. `VITE_TDT_KEY` 用于天地图影像底图与注记图层。
+2. `VITE_CESIUM_ION_TOKEN` 用于公共标准 terrain。当前默认 terrain 为 `Cesium World Terrain`。
+3. 如果未配置 `VITE_CESIUM_ION_TOKEN`，地图仍可正常显示影像底图与注记，但 terrain 会自动关闭。
 
 ### 3. 启动开发环境
 
@@ -68,6 +76,14 @@ npm run build
 ### 复位行为
 
 顶部工具栏中的“地图复位”按钮会调用 `resetTick`，最终触发 `CesiumViewer.vue` 中的 `flyToInitialView()`，以 `1.5` 秒动画飞回上述武汉视角。
+
+### Terrain 行为
+
+当前项目采用纯 npm `Cesium` 路线，默认 terrain 方案为公共标准 terrain：
+
+1. 当前实现优先接入 `Cesium World Terrain`
+2. 底图与 terrain 解耦，天地图影像负责展示，terrain 负责高程与贴地计算
+3. 后续可将公共 terrain 替换为私有化标准 terrain 服务，而不必重写分析逻辑
 
 ## 关键文件
 
@@ -107,4 +123,6 @@ import 'cesium/Build/Cesium/Widgets/widgets.css'
 3. 当前项目依赖 `vite-plugin-cesium` 处理 Cesium 运行时资源。
 
 4. 天地图偶发单瓦片失败时，当前实现会自动重试最多 2 次。
+
+5. 项目已放弃天地图官方三维扩展，保持纯 npm `Cesium` 运行时，以便后续支持贴地分析、真实高程与 terrain 私有化替换。
 

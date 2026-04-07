@@ -7,9 +7,16 @@ export interface InitialViewConfig {
   roll?: number
 }
 
+export interface TerrainConfig {
+  enabled: boolean
+  type: 'cesium-world-terrain'
+  ionToken: string
+}
+
 export interface MapConfig {
   tdtKey: string
   imageryStyle: 'img'
+  terrain: TerrainConfig
   showAnimation: boolean
   showTimeline: boolean
   showBaseLayerPicker: boolean

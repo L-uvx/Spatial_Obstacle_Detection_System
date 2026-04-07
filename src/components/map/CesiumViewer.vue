@@ -15,6 +15,15 @@ function buildTiandituUrl(layerType: string) {
   return `https://t{s}.tianditu.gov.cn/DataServer?T=${layerType}_w&x={x}&y={y}&l={z}&tk=${mapConfig.tdtKey}`
 }
 
+function createTiandituImageryProvider(layerType: 'img' | 'cia') {
+  return new Cesium.UrlTemplateImageryProvider({
+    url: buildTiandituUrl(layerType),
+    subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
+    tilingScheme: new Cesium.WebMercatorTilingScheme(),
+    maximumLevel: 18,
+  })
+}
+
 function attachRetryOnError(provider: Cesium.UrlTemplateImageryProvider) {
   provider.errorEvent.addEventListener((error) => {
     if (error.timesRetried < 2) {
@@ -41,7 +50,52 @@ function flyToInitialView() {
   })
 }
 
-function initViewer() {
+async function buildTerrainProvider() {
+  if (!mapConfig.terrain.enabled) {
+    return undefined
+  }
+
+  if (mapConfig.terrain.type !== 'cesium-world-terrain') {
+    return undefined
+  }
+
+  if (!mapConfig.terrain.ionToken) {
+    console.warn('Missing VITE_CESIUM_ION_TOKEN, terrain is disabled and imagery-only mode will be used.')
+    return undefined
+  }
+
+  Cesium.Ion.defaultAccessToken = mapConfig.terrain.ionToken
+  return Cesium.createWorldTerrainAsync()
+}
+
+function createViewer(
+  imageryProvider: Cesium.UrlTemplateImageryProvider,
+  terrainProvider?: Cesium.TerrainProvider,
+) {
+  return new Cesium.Viewer(containerRef.value as HTMLDivElement, {
+    animation: mapConfig.showAnimation,
+    timeline: mapConfig.showTimeline,
+    baseLayerPicker: mapConfig.showBaseLayerPicker,
+    geocoder: mapConfig.showGeocoder,
+    sceneModePicker: mapConfig.showSceneModePicker,
+    navigationHelpButton: mapConfig.showNavigationHelpButton,
+    fullscreenButton: mapConfig.showFullscreenButton,
+    baseLayer: new Cesium.ImageryLayer(imageryProvider),
+    terrainProvider,
+    homeButton: false,
+    infoBox: false,
+    selectionIndicator: false,
+    shouldAnimate: false,
+  })
+}
+
+function destroyViewer(viewer?: Cesium.Viewer | null) {
+  if (viewer && !viewer.isDestroyed()) {
+    viewer.destroy()
+  }
+}
+
+async function initViewer() {
   if (!containerRef.value) {
     return
   }
@@ -50,51 +104,38 @@ function initViewer() {
     console.warn('Missing VITE_TDT_KEY, Tianditu imagery may fail to load.')
   }
 
-  try {
-    const imageryProvider = new Cesium.UrlTemplateImageryProvider({
-      url: buildTiandituUrl(mapConfig.imageryStyle),
-      subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
-      tilingScheme: new Cesium.WebMercatorTilingScheme(),
-      maximumLevel: 18,
-    })
+  let viewer: Cesium.Viewer | undefined
 
-    const annotationProvider = new Cesium.UrlTemplateImageryProvider({
-      url: buildTiandituUrl('cia'),
-      subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
-      tilingScheme: new Cesium.WebMercatorTilingScheme(),
-      maximumLevel: 18,
-    })
+  try {
+    const imageryProvider = createTiandituImageryProvider(mapConfig.imageryStyle)
+    const annotationProvider = createTiandituImageryProvider('cia')
 
     attachRetryOnError(imageryProvider)
     attachRetryOnError(annotationProvider)
 
-    const viewer = new Cesium.Viewer(containerRef.value, {
-      animation: mapConfig.showAnimation,
-      timeline: mapConfig.showTimeline,
-      baseLayerPicker: mapConfig.showBaseLayerPicker,
-      geocoder: mapConfig.showGeocoder,
-      sceneModePicker: mapConfig.showSceneModePicker,
-      navigationHelpButton: mapConfig.showNavigationHelpButton,
-      fullscreenButton: mapConfig.showFullscreenButton,
-      baseLayer: new Cesium.ImageryLayer(imageryProvider),
-      homeButton: false,
-      infoBox: false,
-      selectionIndicator: false,
-      shouldAnimate: false,
-    })
+    let terrainProvider: Cesium.TerrainProvider | undefined
+
+    try {
+      terrainProvider = await buildTerrainProvider()
+    } catch (error) {
+      console.warn('[CesiumViewer] Failed to initialize terrain, falling back to imagery only.', error)
+    }
+
+    viewer = createViewer(imageryProvider, terrainProvider)
 
     viewer.imageryLayers.addImageryProvider(annotationProvider)
     viewerRef.value = viewer
     errorMessage.value = ''
     flyToInitialView()
   } catch (error) {
+    destroyViewer(viewer)
     console.error('[CesiumViewer] Failed to initialize map.', error)
     errorMessage.value = '地图初始化失败，请检查天地图密钥和 Cesium 配置。'
   }
 }
 
 onMounted(() => {
-  initViewer()
+  void initViewer()
 })
 
 watch(
@@ -105,7 +146,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
-  viewerRef.value?.destroy()
+  destroyViewer(viewerRef.value)
   viewerRef.value = null
 })
 </script>
