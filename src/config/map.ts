@@ -19,9 +19,9 @@ export const mapConfig: MapConfig = {
   showNavigationHelpButton: false,
   showFullscreenButton: false,
   initialView: {
-    longitude: 114.3055,
-    latitude: 30.5928,
-    height: 30000,
+    longitude: 114.21246022823736,
+    latitude: 30.776607831015887,
+    height: 10000,
     pitch: -90,
   },
 }
