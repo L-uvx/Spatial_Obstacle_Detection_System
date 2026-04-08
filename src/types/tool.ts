@@ -1,6 +1,14 @@
-export type PanelToolKey = 'intro' | 'query' | 'measure'
+export type PanelToolKey = 'import' | 'analyze' | 'export'
 
 export type ToolKey = PanelToolKey | 'reset'
+
+export type ActionToolKey = Extract<PanelToolKey, 'import' | 'analyze' | 'export'>
+
+export interface ActionToolState {
+  status: 'idle' | 'running' | 'success'
+  message: string
+  lastTriggeredAt?: number
+}
 
 export interface ToolbarItem {
   key: ToolKey
@@ -9,23 +17,23 @@ export interface ToolbarItem {
 }
 
 export const toolbarItems: ToolbarItem[] = [
-  { key: 'intro', label: '图层说明', opensPanel: true },
-  { key: 'query', label: '查询占位', opensPanel: true },
-  { key: 'measure', label: '测量占位', opensPanel: true },
+  { key: 'import', label: '一键导入', opensPanel: true },
+  { key: 'analyze', label: '一键分析', opensPanel: true },
+  { key: 'export', label: '一键导出', opensPanel: true },
   { key: 'reset', label: '地图复位', opensPanel: false },
 ]
 
 export const panelContentByTool: Record<PanelToolKey, { title: string; description: string }> = {
-  intro: {
-    title: '图层说明',
-    description: '当前应用默认加载天地图影像底图，后续可在该面板补充图层说明或地图业务说明。',
+  import: {
+    title: '一键导入',
+    description: '用于上传障碍物数据并触发导入流程，当前已接入前端按钮和回调闭环。',
   },
-  query: {
-    title: '查询占位',
-    description: '这里预留查询工具内容区域，后续可接入表单、条件和结果展示。',
+  analyze: {
+    title: '一键分析',
+    description: '用于发起障碍物分析任务，当前已接入前端按钮和回调闭环。',
   },
-  measure: {
-    title: '测量占位',
-    description: '这里预留测量工具内容区域，后续可接入距离、面积等测量能力。',
+  export: {
+    title: '一键导出',
+    description: '用于发起报告导出流程，当前已接入前端按钮和回调闭环。',
   },
 }
