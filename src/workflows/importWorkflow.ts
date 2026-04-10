@@ -11,6 +11,7 @@ export async function runImportWorkflow(input: {
   projectName: string
   obstacleType: string
   fileName: string
+  file: File
 }): Promise<ImportWorkflowResult> {
   const serviceResult = await importObstacles(input)
   const layerResult = syncObstacleLayer()

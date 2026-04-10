@@ -45,6 +45,12 @@ export function useWorkflowActions() {
   }
 
   async function submitImport(formValue: ImportFormValue) {
+    if (!formValue.file) {
+      state.stage = 'error'
+      state.statusMessage = '请先选择 Excel 文件后再开始导入。'
+      return
+    }
+
     state.projectName = formValue.projectName
     state.obstacleType = formValue.obstacleType
     state.fileName = formValue.fileName
@@ -52,7 +58,10 @@ export function useWorkflowActions() {
     state.statusMessage = '导入任务执行中，正在等待后端解析和入库。'
 
     await delay(400)
-    const workflowResult = await runImportWorkflow(formValue)
+    const workflowResult = await runImportWorkflow({
+      ...formValue,
+      file: formValue.file,
+    })
 
     state.projectId = workflowResult.projectId
     state.obstacleBatchId = workflowResult.obstacleBatchId

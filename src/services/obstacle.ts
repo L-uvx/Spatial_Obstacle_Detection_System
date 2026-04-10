@@ -8,10 +8,27 @@ export async function importObstacles(input: {
   projectName: string
   obstacleType: string
   fileName: string
+  file: File
 }): Promise<ImportObstacleResult> {
+  const formData = new FormData()
+  formData.append('projectName', input.projectName)
+  formData.append('obstacleType', input.obstacleType)
+  formData.append('file', input.file)
+
+  const response = await fetch('/polygon-obstacle/import', {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!response.ok) {
+    throw new Error(`导入接口请求失败：${response.status}`)
+  }
+
+  const result = (await response.json()) as ImportObstacleResult
+
   return {
-    projectId: 'project-1',
-    obstacleBatchId: 'batch-1',
-    message: `已接收项目“${input.projectName}”的${input.obstacleType}导入请求，文件为 ${input.fileName}。`,
+    projectId: result.projectId,
+    obstacleBatchId: result.obstacleBatchId,
+    message: result.message,
   }
 }

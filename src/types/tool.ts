@@ -28,6 +28,7 @@ export interface ImportFormValue {
   projectName: string
   obstacleType: string
   fileName: string
+  file: File | null
 }
 
 export interface PolygonObstacleAnalysisState {

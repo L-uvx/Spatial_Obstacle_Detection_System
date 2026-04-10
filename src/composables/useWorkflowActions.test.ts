@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { useWorkflowActions } from './useWorkflowActions'
+import { runImportWorkflow } from '../workflows/importWorkflow'
 
 vi.mock('../workflows/importWorkflow', () => ({
   runImportWorkflow: vi.fn(async () => ({
@@ -28,6 +29,10 @@ describe('useWorkflowActions', () => {
   it('drives the single polygon obstacle analysis wizard lifecycle', async () => {
     vi.useFakeTimers()
 
+    const file = new File(['demo'], 'obstacles.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
     const { state, submitImport, toggleTarget, startAnalysis, exportReport, closeModal, openModal } =
       useWorkflowActions()
 
@@ -43,6 +48,7 @@ describe('useWorkflowActions', () => {
       projectName: '武汉净空项目',
       obstacleType: '铁塔',
       fileName: 'obstacles.xlsx',
+      file,
     })
 
     expect(state.stage).toBe('importing')
@@ -50,6 +56,13 @@ describe('useWorkflowActions', () => {
 
     await vi.runAllTimersAsync()
     await importPromise
+
+    expect(runImportWorkflow).toHaveBeenCalledWith({
+      projectName: '武汉净空项目',
+      obstacleType: '铁塔',
+      fileName: 'obstacles.xlsx',
+      file,
+    })
 
     expect(state.stage).toBe('target-selection')
     expect(state.projectName).toBe('武汉净空项目')

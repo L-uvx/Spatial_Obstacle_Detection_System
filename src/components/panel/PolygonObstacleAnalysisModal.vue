@@ -19,10 +19,19 @@ const formValue = reactive<ImportFormValue>({
   projectName: '',
   obstacleType: obstacleTypeOptions[0],
   fileName: '',
+  file: null,
 })
 
+function handleFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const selectedFile = input.files?.[0]
+
+  formValue.fileName = selectedFile?.name ?? ''
+  formValue.file = selectedFile ?? null
+}
+
 function handleImportSubmit() {
-  if (!formValue.projectName || !formValue.obstacleType || !formValue.fileName) {
+  if (!formValue.projectName || !formValue.obstacleType || !formValue.fileName || !formValue.file) {
     return
   }
 
@@ -58,13 +67,14 @@ function handleImportSubmit() {
 
         <label class="analysis-modal__field">
           <span>Excel 文件</span>
-          <input v-model="formValue.fileName" type="text" placeholder="请输入 Excel 文件名，如 obstacles.xlsx" />
+          <input type="file" accept=".xls,.xlsx" @change="handleFileChange" />
+          <small v-if="formValue.fileName" class="analysis-modal__file-name">已选择：{{ formValue.fileName }}</small>
         </label>
 
         <button
           type="button"
           class="analysis-modal__primary"
-          :disabled="!formValue.projectName || !formValue.obstacleType || !formValue.fileName"
+          :disabled="!formValue.projectName || !formValue.obstacleType || !formValue.fileName || !formValue.file"
           @click="handleImportSubmit"
         >
           开始导入
