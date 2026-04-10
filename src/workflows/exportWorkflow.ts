@@ -1,10 +1,15 @@
 import { createExportTask } from '../services/report'
-import type { WorkflowResult } from './importWorkflow'
 
-export async function runExportWorkflow(): Promise<WorkflowResult> {
-  const serviceResult = await createExportTask()
+export interface ExportWorkflowResult {
+  downloadUrl: string
+  message: string
+}
+
+export async function runExportWorkflow(input: { analysisTaskId: string }): Promise<ExportWorkflowResult> {
+  const serviceResult = await createExportTask(input)
 
   return {
-    message: `导出占位 workflow 已执行。${serviceResult.message}`,
+    downloadUrl: serviceResult.downloadUrl,
+    message: serviceResult.message,
   }
 }

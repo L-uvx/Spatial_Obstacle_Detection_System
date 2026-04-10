@@ -1,9 +1,17 @@
 export interface ImportObstacleResult {
+  projectId: string
+  obstacleBatchId: string
   message: string
 }
 
-export async function importObstacles(): Promise<ImportObstacleResult> {
+export async function importObstacles(input: {
+  projectName: string
+  obstacleType: string
+  fileName: string
+}): Promise<ImportObstacleResult> {
   return {
-    message: '导入服务占位已执行，后续可接入文件上传和导入接口。',
+    projectId: 'project-1',
+    obstacleBatchId: 'batch-1',
+    message: `已接收项目“${input.projectName}”的${input.obstacleType}导入请求，文件为 ${input.fileName}。`,
   }
 }

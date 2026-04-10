@@ -2,37 +2,51 @@
 import { ref } from 'vue'
 import AppShell from './components/layout/AppShell.vue'
 import { useWorkflowActions } from './composables/useWorkflowActions'
-import type { ActionToolKey, PanelToolKey } from './types/tool'
+import type { ImportFormValue } from './types/tool'
 
-const activeTool = ref<PanelToolKey | null>(null)
 const resetTick = ref(0)
-const { actionStateByTool, executeToolAction } = useWorkflowActions()
+const { state, openModal, closeModal, submitImport, toggleTarget, startAnalysis, exportReport } =
+  useWorkflowActions()
 
-function handleToolToggle(tool: PanelToolKey) {
-  activeTool.value = activeTool.value === tool ? null : tool
+function handleOpenAnalysis() {
+  openModal()
 }
 
 function handleReset() {
   resetTick.value += 1
 }
 
-function closePanel() {
-  activeTool.value = null
+function handleCloseAnalysis() {
+  closeModal()
 }
 
-function handleWorkflowAction(tool: ActionToolKey) {
-  void executeToolAction(tool)
+function handleSubmitImport(formValue: ImportFormValue) {
+  void submitImport(formValue)
+}
+
+function handleToggleTarget(targetId: string) {
+  toggleTarget(targetId)
+}
+
+function handleStartAnalysis() {
+  void startAnalysis()
+}
+
+function handleExportReport() {
+  void exportReport()
 }
 </script>
 
 <template>
   <AppShell
-    :active-tool="activeTool"
-    :action-state-by-tool="actionStateByTool"
+    :analysis-state="state"
     :reset-tick="resetTick"
-    @toggle-tool="handleToolToggle"
-    @workflow-action="handleWorkflowAction"
+    @open-analysis="handleOpenAnalysis"
     @reset="handleReset"
-    @close-panel="closePanel"
+    @close-analysis="handleCloseAnalysis"
+    @submit-import="handleSubmitImport"
+    @toggle-target="handleToggleTarget"
+    @start-analysis="handleStartAnalysis"
+    @export-report="handleExportReport"
   />
 </template>

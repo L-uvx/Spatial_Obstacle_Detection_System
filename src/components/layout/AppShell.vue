@@ -1,37 +1,37 @@
 <script setup lang="ts">
 import CesiumViewer from '../map/CesiumViewer.vue'
-import SidePanel from '../panel/SidePanel.vue'
+import PolygonObstacleAnalysisModal from '../panel/PolygonObstacleAnalysisModal.vue'
 import TopToolbar from '../toolbar/TopToolbar.vue'
-import type { ActionToolKey, ActionToolState, PanelToolKey } from '../../types/tool'
+import type { ImportFormValue, PolygonObstacleAnalysisState } from '../../types/tool'
 
 defineProps<{
-  activeTool: PanelToolKey | null
-  actionStateByTool: Record<ActionToolKey, ActionToolState>
+  analysisState: PolygonObstacleAnalysisState
   resetTick: number
 }>()
 
 const emit = defineEmits<{
-  toggleTool: [tool: PanelToolKey]
-  workflowAction: [tool: ActionToolKey]
+  openAnalysis: []
   reset: []
-  closePanel: []
+  closeAnalysis: []
+  submitImport: [formValue: ImportFormValue]
+  toggleTarget: [targetId: string]
+  startAnalysis: []
+  exportReport: []
 }>()
 </script>
 
 <template>
   <div class="app-shell">
-    <TopToolbar
-      :active-tool="activeTool"
-      @toggle-tool="emit('toggleTool', $event)"
-      @reset="emit('reset')"
-    />
+    <TopToolbar @open-analysis="emit('openAnalysis')" @reset="emit('reset')" />
 
     <div class="app-shell__body">
-      <SidePanel
-        :active-tool="activeTool"
-        :action-state-by-tool="actionStateByTool"
-        @action="emit('workflowAction', $event)"
-        @close="emit('closePanel')"
+      <PolygonObstacleAnalysisModal
+        :state="analysisState"
+        @close="emit('closeAnalysis')"
+        @submit-import="emit('submitImport', $event)"
+        @toggle-target="emit('toggleTarget', $event)"
+        @start-analysis="emit('startAnalysis')"
+        @export-report="emit('exportReport')"
       />
       <CesiumViewer :reset-tick="resetTick" class="app-shell__map" />
     </div>

@@ -1,39 +1,56 @@
-export type PanelToolKey = 'import' | 'analyze' | 'export'
+export type ToolbarToolKey = 'polygon-obstacle-analysis' | 'reset'
 
-export type ToolKey = PanelToolKey | 'reset'
+export type WizardStage =
+  | 'idle'
+  | 'import-form'
+  | 'importing'
+  | 'target-selection'
+  | 'analyzing'
+  | 'analysis-result'
+  | 'error'
 
-export type ActionToolKey = Extract<PanelToolKey, 'import' | 'analyze' | 'export'>
-
-export interface ActionToolState {
-  status: 'idle' | 'running' | 'success'
-  message: string
-  lastTriggeredAt?: number
-}
+export type ExportStatus = 'idle' | 'running' | 'success' | 'error'
 
 export interface ToolbarItem {
-  key: ToolKey
+  key: ToolbarToolKey
   label: string
-  opensPanel: boolean
+  opensModal: boolean
+}
+
+export interface TargetOption {
+  id: string
+  name: string
+  category: '机场' | '空管局'
+  distance: string
+}
+
+export interface ImportFormValue {
+  projectName: string
+  obstacleType: string
+  fileName: string
+}
+
+export interface PolygonObstacleAnalysisState {
+  isOpen: boolean
+  stage: WizardStage
+  projectName: string
+  obstacleType: string
+  fileName: string
+  projectId: string
+  obstacleBatchId: string
+  targetOptions: TargetOption[]
+  selectedTargetIds: string[]
+  analysisTaskId: string
+  analysisSummary: string
+  statusMessage: string
+  exportStatus: ExportStatus
+  exportMessage: string
+  downloadUrl: string
 }
 
 export const toolbarItems: ToolbarItem[] = [
-  { key: 'import', label: '一键导入', opensPanel: true },
-  { key: 'analyze', label: '一键分析', opensPanel: true },
-  { key: 'export', label: '一键导出', opensPanel: true },
-  { key: 'reset', label: '地图复位', opensPanel: false },
+  { key: 'polygon-obstacle-analysis', label: '多边形障碍物分析', opensModal: true },
+  { key: 'reset', label: '地图复位', opensModal: false },
 ]
 
-export const panelContentByTool: Record<PanelToolKey, { title: string; description: string }> = {
-  import: {
-    title: '一键导入',
-    description: '用于上传障碍物数据并触发导入流程，当前已接入前端按钮和回调闭环。',
-  },
-  analyze: {
-    title: '一键分析',
-    description: '用于发起障碍物分析任务，当前已接入前端按钮和回调闭环。',
-  },
-  export: {
-    title: '一键导出',
-    description: '用于发起报告导出流程，当前已接入前端按钮和回调闭环。',
-  },
-}
+export const obstacleTypeOptions = ['铁塔', '烟囱', '建筑物', '山体']

@@ -1,19 +1,15 @@
 <script setup lang="ts">
 import { toolbarItems } from '../../types/tool'
-import type { PanelToolKey, ToolbarItem } from '../../types/tool'
-
-defineProps<{
-  activeTool: PanelToolKey | null
-}>()
+import type { ToolbarItem } from '../../types/tool'
 
 const emit = defineEmits<{
-  toggleTool: [tool: PanelToolKey]
+  openAnalysis: []
   reset: []
 }>()
 
 function handleClick(item: ToolbarItem) {
-  if (item.opensPanel) {
-    emit('toggleTool', item.key as PanelToolKey)
+  if (item.opensModal) {
+    emit('openAnalysis')
     return
   }
 
@@ -28,7 +24,6 @@ function handleClick(item: ToolbarItem) {
       :key="item.key"
       type="button"
       class="toolbar-button"
-      :class="{ 'is-active': activeTool === item.key }"
       @click="handleClick(item)"
     >
       {{ item.label }}

@@ -2,37 +2,91 @@ import { describe, expect, it, vi } from 'vitest'
 import { useWorkflowActions } from './useWorkflowActions'
 
 vi.mock('../workflows/importWorkflow', () => ({
-  runImportWorkflow: vi.fn(async () => ({ message: '导入占位 workflow 已执行。' })),
+  runImportWorkflow: vi.fn(async () => ({
+    projectId: 'project-1',
+    obstacleBatchId: 'batch-1',
+    message: '导入占位 workflow 已执行。',
+  })),
 }))
 
 vi.mock('../workflows/analyzeWorkflow', () => ({
-  runAnalyzeWorkflow: vi.fn(async () => ({ message: '分析占位 workflow 已执行。' })),
+  runAnalyzeWorkflow: vi.fn(async () => ({
+    analysisTaskId: 'analysis-1',
+    summary: '超高分析结论：存在重点影响对象。',
+    message: '分析占位 workflow 已执行。',
+  })),
 }))
 
 vi.mock('../workflows/exportWorkflow', () => ({
-  runExportWorkflow: vi.fn(async () => ({ message: '导出占位 workflow 已执行。' })),
+  runExportWorkflow: vi.fn(async () => ({
+    downloadUrl: '/mock/report.docx',
+    message: '导出占位 workflow 已执行。',
+  })),
 }))
 
 describe('useWorkflowActions', () => {
-  it('tracks import, analyze, and export action lifecycle', async () => {
+  it('drives the single polygon obstacle analysis wizard lifecycle', async () => {
     vi.useFakeTimers()
 
-    const { actionStateByTool, executeToolAction } = useWorkflowActions()
+    const { state, submitImport, toggleTarget, startAnalysis, exportReport, closeModal, openModal } =
+      useWorkflowActions()
 
-    expect(actionStateByTool.import.status).toBe('idle')
-    expect(actionStateByTool.analyze.status).toBe('idle')
-    expect(actionStateByTool.export.status).toBe('idle')
+    expect(state.isOpen).toBe(false)
+    expect(state.stage).toBe('idle')
 
-    const promise = executeToolAction('import')
+    openModal()
 
-    expect(actionStateByTool.import.status).toBe('running')
-    expect(actionStateByTool.import.message).toContain('执行中')
+    expect(state.isOpen).toBe(true)
+    expect(state.stage).toBe('import-form')
+
+    const importPromise = submitImport({
+      projectName: '武汉净空项目',
+      obstacleType: '铁塔',
+      fileName: 'obstacles.xlsx',
+    })
+
+    expect(state.stage).toBe('importing')
+    expect(state.statusMessage).toContain('导入')
 
     await vi.runAllTimersAsync()
-    await promise
+    await importPromise
 
-    expect(actionStateByTool.import.status).toBe('success')
-    expect(actionStateByTool.import.message).toContain('workflow 已执行')
+    expect(state.stage).toBe('target-selection')
+    expect(state.projectName).toBe('武汉净空项目')
+    expect(state.targetOptions).toHaveLength(3)
+    expect(state.targetOptions[0].category).toBe('机场')
+
+    toggleTarget('airport-1')
+    toggleTarget('atc-1')
+
+    expect(state.selectedTargetIds).toEqual(['airport-1', 'atc-1'])
+
+    const analyzePromise = startAnalysis()
+
+    expect(state.stage).toBe('analyzing')
+    expect(state.statusMessage).toContain('分析')
+
+    await vi.runAllTimersAsync()
+    await analyzePromise
+
+    expect(state.stage).toBe('analysis-result')
+    expect(state.analysisSummary).toContain('超高分析结论')
+
+    const exportPromise = exportReport()
+
+    expect(state.exportStatus).toBe('running')
+
+    await vi.runAllTimersAsync()
+    await exportPromise
+
+    expect(state.exportStatus).toBe('success')
+    expect(state.exportMessage).toContain('导出占位 workflow 已执行')
+    expect(state.downloadUrl).toBe('/mock/report.docx')
+
+    closeModal()
+
+    expect(state.isOpen).toBe(false)
+    expect(state.stage).toBe('idle')
 
     vi.useRealTimers()
   })
