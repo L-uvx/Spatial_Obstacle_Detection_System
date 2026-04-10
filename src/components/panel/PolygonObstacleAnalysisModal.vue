@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { obstacleTypeOptions } from '../../types/tool'
 import type { ImportFormValue, PolygonObstacleAnalysisState } from '../../types/tool'
 
@@ -21,6 +21,12 @@ const formValue = reactive<ImportFormValue>({
   fileName: '',
   file: null,
 })
+
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+function triggerFileSelect() {
+  fileInputRef.value?.click()
+}
 
 function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement
@@ -67,7 +73,8 @@ function handleImportSubmit() {
 
         <label class="analysis-modal__field">
           <span>Excel 文件</span>
-          <input type="file" accept=".xls,.xlsx" @change="handleFileChange" />
+          <input ref="fileInputRef" class="analysis-modal__file-input" type="file" accept=".xls,.xlsx" @change="handleFileChange" />
+          <button type="button" class="analysis-modal__file-trigger" @click="triggerFileSelect">选择 Excel 文件</button>
           <small v-if="formValue.fileName" class="analysis-modal__file-name">已选择：{{ formValue.fileName }}</small>
         </label>
 
