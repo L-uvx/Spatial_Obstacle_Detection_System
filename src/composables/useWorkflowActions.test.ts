@@ -4,9 +4,17 @@ import { runImportWorkflow } from '../workflows/importWorkflow'
 
 vi.mock('../workflows/importWorkflow', () => ({
   runImportWorkflow: vi.fn(async () => ({
+    importTaskId: 'import-batch-3',
+    importStatus: 'succeeded',
+    importProgressPercent: 100,
     projectId: 'project-1',
     obstacleBatchId: 'batch-1',
-    message: '导入占位 workflow 已执行。',
+    targetOptions: [
+      { id: 'airport-1', name: '天河机场', category: '机场', distance: '12.4 km' },
+      { id: 'airport-2', name: '荆州机场', category: '机场', distance: '48.9 km' },
+      { id: 'atc-1', name: '武汉空管局', category: '空管局', distance: '6.2 km' },
+    ],
+    message: '导入任务已完成，候选对象已准备就绪。',
   })),
 }))
 
@@ -66,6 +74,9 @@ describe('useWorkflowActions', () => {
 
     expect(state.stage).toBe('target-selection')
     expect(state.projectName).toBe('武汉净空项目')
+    expect(state.importTaskId).toBe('import-batch-3')
+    expect(state.importStatus).toBe('succeeded')
+    expect(state.importProgressPercent).toBe(100)
     expect(state.targetOptions).toHaveLength(3)
     expect(state.targetOptions[0].category).toBe('机场')
 

@@ -1,6 +1,5 @@
 import { reactive } from 'vue'
 import type { ImportFormValue, PolygonObstacleAnalysisState } from '../types/tool'
-import { listAnalysisTargets } from '../services/analysis'
 import { runAnalyzeWorkflow } from '../workflows/analyzeWorkflow'
 import { runExportWorkflow } from '../workflows/exportWorkflow'
 import { runImportWorkflow } from '../workflows/importWorkflow'
@@ -18,6 +17,9 @@ function createInitialState(): PolygonObstacleAnalysisState {
     projectName: '',
     obstacleType: '',
     fileName: '',
+    importTaskId: '',
+    importStatus: 'idle',
+    importProgressPercent: 0,
     projectId: '',
     obstacleBatchId: '',
     targetOptions: [],
@@ -54,18 +56,23 @@ export function useWorkflowActions() {
     state.projectName = formValue.projectName
     state.obstacleType = formValue.obstacleType
     state.fileName = formValue.fileName
+    state.importTaskId = ''
+    state.importStatus = 'running'
+    state.importProgressPercent = 0
     state.stage = 'importing'
-    state.statusMessage = '导入任务执行中，正在等待后端解析和入库。'
+    state.statusMessage = '导入任务已创建，正在等待后端解析 Excel 并入库。'
 
-    await delay(400)
     const workflowResult = await runImportWorkflow({
       ...formValue,
       file: formValue.file,
     })
 
+    state.importTaskId = workflowResult.importTaskId
+    state.importStatus = workflowResult.importStatus
+    state.importProgressPercent = workflowResult.importProgressPercent
     state.projectId = workflowResult.projectId
     state.obstacleBatchId = workflowResult.obstacleBatchId
-    state.targetOptions = listAnalysisTargets()
+    state.targetOptions = workflowResult.targetOptions
     state.selectedTargetIds = []
     state.stage = 'target-selection'
     state.statusMessage = workflowResult.message

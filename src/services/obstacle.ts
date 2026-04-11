@@ -1,7 +1,35 @@
+import type { TargetOption } from '../types/tool'
+
 export interface ImportObstacleResult {
-  projectId: string
-  obstacleBatchId: string
+  taskId: string
+  status: string
   message: string
+  progressPercent: number
+  projectId: number | string
+  obstacleBatchId: string
+}
+
+export interface ImportTaskStatusResult {
+  taskId: string
+  status: string
+  message: string
+  progressPercent: number
+}
+
+export interface ImportTaskResult {
+  taskId: string
+  projectId: number | string
+  obstacleBatchId: string
+  importedCount?: number
+  failedCount?: number
+}
+
+interface ImportTargetResponseItem {
+  id: string
+  name: string
+  category: '机场' | '空管局'
+  distance: number | string
+  distanceUnit?: string
 }
 
 export async function importObstacles(input: {
@@ -27,8 +55,63 @@ export async function importObstacles(input: {
   const result = (await response.json()) as ImportObstacleResult
 
   return {
+    taskId: result.taskId,
+    status: result.status,
+    message: result.message,
+    progressPercent: result.progressPercent,
     projectId: result.projectId,
     obstacleBatchId: result.obstacleBatchId,
-    message: result.message,
   }
+}
+
+export async function getImportTaskStatus(taskId: string): Promise<ImportTaskStatusResult> {
+  const response = await fetch(`/polygon-obstacle/import/${taskId}/status`)
+
+  if (!response.ok) {
+    throw new Error(`导入状态查询失败：${response.status}`)
+  }
+
+  const result = (await response.json()) as ImportTaskStatusResult
+
+  return {
+    taskId: result.taskId,
+    status: result.status,
+    message: result.message,
+    progressPercent: result.progressPercent,
+  }
+}
+
+export async function getImportTaskResult(taskId: string): Promise<ImportTaskResult> {
+  const response = await fetch(`/polygon-obstacle/import/${taskId}/result`)
+
+  if (!response.ok) {
+    throw new Error(`导入结果查询失败：${response.status}`)
+  }
+
+  const result = (await response.json()) as ImportTaskResult
+
+  return {
+    taskId: result.taskId,
+    projectId: result.projectId,
+    obstacleBatchId: result.obstacleBatchId,
+    importedCount: result.importedCount,
+    failedCount: result.failedCount,
+  }
+}
+
+export async function getImportTargets(taskId: string): Promise<TargetOption[]> {
+  const response = await fetch(`/polygon-obstacle/import/${taskId}/targets`)
+
+  if (!response.ok) {
+    throw new Error(`候选对象查询失败：${response.status}`)
+  }
+
+  const result = (await response.json()) as ImportTargetResponseItem[]
+
+  return result.map((item) => ({
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    distance: `${item.distance} ${item.distanceUnit ?? ''}`.trim(),
+  }))
 }

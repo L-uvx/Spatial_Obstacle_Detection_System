@@ -90,6 +90,8 @@ function handleImportSubmit() {
 
       <div v-else-if="state.stage === 'importing'" class="analysis-modal__section">
         <p>导入任务执行中，正在等待后端解析 Excel、数据入库并返回候选分析对象。</p>
+        <p>任务状态：{{ state.importStatus }}</p>
+        <p>当前进度：{{ state.importProgressPercent }}%</p>
       </div>
 
       <div v-else-if="state.stage === 'target-selection'" class="analysis-modal__section">

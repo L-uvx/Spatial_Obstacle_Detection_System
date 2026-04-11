@@ -37,6 +37,9 @@ export interface PolygonObstacleAnalysisState {
   projectName: string
   obstacleType: string
   fileName: string
+  importTaskId: string
+  importStatus: string
+  importProgressPercent: number
   projectId: string
   obstacleBatchId: string
   targetOptions: TargetOption[]
