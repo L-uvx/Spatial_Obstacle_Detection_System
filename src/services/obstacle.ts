@@ -13,7 +13,7 @@ export async function importObstacles(input: {
   const formData = new FormData()
   formData.append('projectName', input.projectName)
   formData.append('obstacleType', input.obstacleType)
-  formData.append('file', input.file)
+  formData.append('excelFile', input.file)
 
   const response = await fetch('/polygon-obstacle/import', {
     method: 'POST',

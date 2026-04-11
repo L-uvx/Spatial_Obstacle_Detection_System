@@ -8,7 +8,7 @@ describe('importObstacles', () => {
     vi.restoreAllMocks()
   })
 
-  it('uploads excel using FormData to the polygon obstacle import endpoint', async () => {
+  it('uploads excel using FormData field excelFile to the polygon obstacle import endpoint', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -41,7 +41,7 @@ describe('importObstacles', () => {
 
     expect(body.get('projectName')).toBe('武汉净空项目')
     expect(body.get('obstacleType')).toBe('铁塔')
-    expect(body.get('file')).toBe(file)
+    expect(body.get('excelFile')).toBe(file)
 
     expect(result).toEqual({
       projectId: 'project-1',
