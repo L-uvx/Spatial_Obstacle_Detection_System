@@ -50,7 +50,7 @@ export async function runImportWorkflow(input: {
   const createResult = await importObstacles(input)
   const statusResult = await waitForImportCompletion(createResult.taskId)
   const importResult = await getImportTaskResult(createResult.taskId)
-  // const targetOptions = await getImportTargets(createResult.taskId)
+  const targetOptions = await getImportTargets(createResult.taskId)
   const layerResult = syncObstacleLayer()
 
   return {
@@ -59,7 +59,7 @@ export async function runImportWorkflow(input: {
     importProgressPercent: statusResult.progressPercent,
     projectId: String(importResult.projectId),
     obstacleBatchId: importResult.obstacleBatchId,
-    // targetOptions,
+    targetOptions,
     message: `${statusResult.message}${layerResult.message}`,
   }
 }
