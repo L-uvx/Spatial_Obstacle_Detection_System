@@ -105,7 +105,7 @@ function handleImportSubmit() {
           <thead>
             <tr>
               <th>选择</th>
-              <th>名称</th>
+              <!-- <th>名称</th> -->
               <th>机场/空管局</th>
               <th>距离</th>
             </tr>
@@ -120,7 +120,7 @@ function handleImportSubmit() {
                 />
               </td>
               <td>{{ target.name }}</td>
-              <td>{{ target.category }}</td>
+              <!-- <td>{{ target.category }}</td> -->
               <td>{{ target.distance }}</td>
             </tr>
           </tbody>

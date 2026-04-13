@@ -20,7 +20,7 @@ export interface ToolbarItem {
 export interface TargetOption {
   id: string
   name: string
-  category: '机场' | '空管局'
+  // category: '机场' | '空管局'
   distance: string
 }
 

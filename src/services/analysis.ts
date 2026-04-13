@@ -8,9 +8,9 @@ export interface AnalyzeObstacleResult {
 
 export function listAnalysisTargets(): TargetOption[] {
   return [
-    { id: 'airport-1', name: '天河机场', category: '机场', distance: '12.4 km' },
-    { id: 'airport-2', name: '荆州机场', category: '机场', distance: '48.9 km' },
-    { id: 'atc-1', name: '武汉空管局', category: '空管局', distance: '6.2 km' },
+    { id: 'airport-1', name: '天河机场',  distance: '12.4 km' },
+    { id: 'airport-2', name: '荆州机场',  distance: '48.9 km' },
+    { id: 'atc-1', name: '武汉空管局',  distance: '6.2 km' },
   ]
 }
 
