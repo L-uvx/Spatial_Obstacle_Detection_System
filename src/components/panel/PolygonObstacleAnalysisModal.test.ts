@@ -29,6 +29,7 @@ describe('PolygonObstacleAnalysisModal', () => {
           exportStatus: 'idle',
           exportMessage: '分析完成后可导出 Word 结论。',
           downloadUrl: '',
+          renderedObstacles: [],
         },
       },
     })
@@ -63,6 +64,7 @@ describe('PolygonObstacleAnalysisModal', () => {
           exportStatus: 'idle',
           exportMessage: '分析完成后可导出 Word 结论。',
           downloadUrl: '',
+          renderedObstacles: [],
         },
       },
     })

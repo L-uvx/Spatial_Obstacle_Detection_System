@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import type { ImportFormValue, PolygonObstacleAnalysisState } from '../types/tool'
+import type { ImportFormValue, PolygonObstacleAnalysisState, RenderedObstacle } from '../types/tool'
 import { runAnalyzeWorkflow } from '../workflows/analyzeWorkflow'
 import { runExportWorkflow } from '../workflows/exportWorkflow'
 import { runImportWorkflow } from '../workflows/importWorkflow'
@@ -10,7 +10,22 @@ function delay(ms: number) {
   })
 }
 
-function createInitialState(): PolygonObstacleAnalysisState {
+function appendRenderedObstacles(
+  existingObstacles: RenderedObstacle[],
+  nextObstacles: RenderedObstacle[],
+) {
+  const obstacleById = new Map(existingObstacles.map((item) => [item.id, item]))
+
+  for (const obstacle of nextObstacles) {
+    if (!obstacleById.has(obstacle.id)) {
+      obstacleById.set(obstacle.id, obstacle)
+    }
+  }
+
+  return [...obstacleById.values()]
+}
+
+function createInitialState(renderedObstacles: RenderedObstacle[] = []): PolygonObstacleAnalysisState {
   return {
     isOpen: false,
     stage: 'idle',
@@ -30,11 +45,12 @@ function createInitialState(): PolygonObstacleAnalysisState {
     exportStatus: 'idle',
     exportMessage: '分析完成后可导出 Word 结论。',
     downloadUrl: '',
+    renderedObstacles,
   }
 }
 
-export function useWorkflowActions() {
-  const state = reactive(createInitialState())
+export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
+  const state = reactive(createInitialState(initialObstacles))
 
   function openModal() {
     state.isOpen = true
@@ -43,7 +59,9 @@ export function useWorkflowActions() {
   }
 
   function closeModal() {
-    Object.assign(state, createInitialState())
+    const preservedObstacles = [...state.renderedObstacles]
+
+    Object.assign(state, createInitialState(preservedObstacles))
   }
 
   async function submitImport(formValue: ImportFormValue) {
@@ -73,6 +91,7 @@ export function useWorkflowActions() {
     state.projectId = workflowResult.projectId
     state.obstacleBatchId = workflowResult.obstacleBatchId
     state.targetOptions = workflowResult.targetOptions
+    state.renderedObstacles = appendRenderedObstacles(state.renderedObstacles, workflowResult.obstacles)
     state.selectedTargetIds = []
     state.stage = 'target-selection'
     state.statusMessage = workflowResult.message

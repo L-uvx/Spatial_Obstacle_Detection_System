@@ -92,6 +92,29 @@ describe('importObstacles', () => {
         obstacleBatchId: 'import-batch-3',
         importedCount: 12,
         failedCount: 0,
+        obstacles: [
+          {
+            id: 7,
+            name: '障碍物1',
+            obstacleType: '建筑物/构建物',
+            topElevation: 549.9,
+            geometry: {
+              type: 'MultiPolygon',
+              coordinates: [
+                [
+                  [
+                    [103.9758638888889, 30.506880555555554],
+                    [103.97811111111112, 30.50565],
+                    [103.97690833333334, 30.50386388888889],
+                    [103.97425, 30.50510277777778],
+                    [103.97421944444444, 30.505241666666667],
+                    [103.9758638888889, 30.506880555555554],
+                  ],
+                ],
+              ],
+            },
+          },
+        ],
       }),
     } as Response)
 
@@ -104,6 +127,29 @@ describe('importObstacles', () => {
       obstacleBatchId: 'import-batch-3',
       importedCount: 12,
       failedCount: 0,
+      obstacles: [
+        {
+          id: '7',
+          name: '障碍物1',
+          obstacleType: '建筑物/构建物',
+          topElevation: 549.9,
+          geometry: {
+            type: 'MultiPolygon',
+            coordinates: [
+              [
+                [
+                  [103.9758638888889, 30.506880555555554],
+                  [103.97811111111112, 30.50565],
+                  [103.97690833333334, 30.50386388888889],
+                  [103.97425, 30.50510277777778],
+                  [103.97421944444444, 30.505241666666667],
+                  [103.9758638888889, 30.506880555555554],
+                ],
+              ],
+            ],
+          },
+        },
+      ],
     })
   })
 

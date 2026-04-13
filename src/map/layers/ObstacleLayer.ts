@@ -1,5 +1,129 @@
-export function syncObstacleLayer() {
+import * as Cesium from 'cesium'
+import type {
+  LinearRingCoordinates,
+  PolygonCoordinates,
+  RenderedObstacle,
+} from '../../types/tool'
+
+const ENTITY_ID_PREFIX = 'polygon-obstacle'
+
+export interface ObstacleLayerSyncResult {
+  message: string
+  addedEntityIds: string[]
+  flyToBoundingSphere?: Cesium.BoundingSphere
+  flyToOffset?: Cesium.HeadingPitchRange
+}
+
+export function getObstacleFlyToOptions(result: ObstacleLayerSyncResult) {
+  if (!result.flyToBoundingSphere) {
+    return undefined
+  }
+
   return {
-    message: '障碍物图层占位已预留，后续可接入导入结果上图。',
+    duration: 1.5,
+    offset: result.flyToOffset,
+  }
+}
+
+function createFlyToOffset(boundingSphere: Cesium.BoundingSphere) {
+  return new Cesium.HeadingPitchRange(
+    0,
+    Cesium.Math.toRadians(-90),
+    Math.max(boundingSphere.radius * 3, 1500),
+  )
+}
+
+function createCartesianPositions(ring: LinearRingCoordinates) {
+  return ring.map(([longitude, latitude]) => Cesium.Cartesian3.fromDegrees(longitude, latitude, 0))
+}
+
+function createPolygonHierarchy(polygon: PolygonCoordinates) {
+  const [outerRing, ...holeRings] = polygon
+
+  return new Cesium.PolygonHierarchy(
+    createCartesianPositions(outerRing),
+    holeRings.map((ring) => new Cesium.PolygonHierarchy(createCartesianPositions(ring))),
+  )
+}
+
+function createEntityId(obstacleId: string, polygonIndex: number) {
+  return `${ENTITY_ID_PREFIX}-${obstacleId}-${polygonIndex}`
+}
+
+function createBoundingSphere(obstacles: RenderedObstacle[]) {
+  const points = obstacles.flatMap((obstacle) =>
+    obstacle.geometry.coordinates.flatMap((polygon) =>
+      polygon.flatMap((ring) =>
+        ring.map(([longitude, latitude]) =>
+          Cesium.Cartesian3.fromDegrees(longitude, latitude, obstacle.topElevation),
+        ),
+      ),
+    ),
+  )
+
+  if (points.length === 0) {
+    return undefined
+  }
+
+  return Cesium.BoundingSphere.fromPoints(points)
+}
+
+export function syncObstacleLayer(
+  viewer: Cesium.Viewer | null | undefined,
+  obstacles: RenderedObstacle[] = [],
+): ObstacleLayerSyncResult {
+  if (!viewer || obstacles.length === 0) {
+    return {
+      message: '未返回可渲染的障碍物。',
+      addedEntityIds: [],
+    }
+  }
+
+  const addedObstacles: RenderedObstacle[] = []
+  const addedEntityIds: string[] = []
+
+  for (const obstacle of obstacles) {
+    let obstacleWasAdded = false
+
+    obstacle.geometry.coordinates.forEach((polygon, polygonIndex) => {
+      const entityId = createEntityId(obstacle.id, polygonIndex)
+
+      if (viewer.entities.getById(entityId)) {
+        return
+      }
+
+      viewer.entities.add({
+        id: entityId,
+        name: obstacle.name,
+        properties: {
+          obstacleId: obstacle.id,
+          obstacleType: obstacle.obstacleType,
+          topElevation: obstacle.topElevation,
+        },
+        polygon: {
+          hierarchy: createPolygonHierarchy(polygon),
+          height: 0,
+          extrudedHeight: obstacle.topElevation,
+          perPositionHeight: false,
+          material: Cesium.Color.fromCssColorString('#ff8a3d').withAlpha(0.45),
+          outline: true,
+          outlineColor: Cesium.Color.fromCssColorString('#ffb26b'),
+        },
+      })
+
+      obstacleWasAdded = true
+      addedEntityIds.push(entityId)
+    })
+
+    if (obstacleWasAdded) {
+      addedObstacles.push(obstacle)
+    }
+  }
+
+  return {
+    message: addedEntityIds.length > 0 ? '障碍物已同步到地图图层。' : '未新增障碍物到地图图层。',
+    addedEntityIds,
+    flyToBoundingSphere: createBoundingSphere(addedObstacles),
+    flyToOffset: addedObstacles.length > 0 ? createFlyToOffset(createBoundingSphere(addedObstacles)!) : undefined,
   }
 }

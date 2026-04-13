@@ -20,8 +20,29 @@ export interface ToolbarItem {
 export interface TargetOption {
   id: string
   name: string
-  // category: '机场' | '空管局'
+  category: '机场' | '空管局'
   distance: string
+}
+
+export type PositionCoordinate = [number, number]
+
+export type LinearRingCoordinates = PositionCoordinate[]
+
+export type PolygonCoordinates = LinearRingCoordinates[]
+
+export type MultiPolygonCoordinates = PolygonCoordinates[]
+
+export interface MultiPolygonGeometry {
+  type: 'MultiPolygon'
+  coordinates: MultiPolygonCoordinates
+}
+
+export interface RenderedObstacle {
+  id: string
+  name: string
+  obstacleType: string
+  topElevation: number
+  geometry: MultiPolygonGeometry
 }
 
 export interface ImportFormValue {
@@ -50,6 +71,7 @@ export interface PolygonObstacleAnalysisState {
   exportStatus: ExportStatus
   exportMessage: string
   downloadUrl: string
+  renderedObstacles: RenderedObstacle[]
 }
 
 export const toolbarItems: ToolbarItem[] = [

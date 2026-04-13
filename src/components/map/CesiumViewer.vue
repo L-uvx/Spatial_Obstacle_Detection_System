@@ -2,14 +2,26 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as Cesium from 'cesium'
 import { mapConfig } from '../../config/map'
+import { getObstacleFlyToOptions, syncObstacleLayer } from '../../map/layers/ObstacleLayer'
+import type { RenderedObstacle } from '../../types/tool'
 
 const props = defineProps<{
   resetTick: number
+  obstacles: RenderedObstacle[]
 }>()
 
 const containerRef = ref<HTMLDivElement | null>(null)
 const viewerRef = ref<Cesium.Viewer | null>(null)
 const errorMessage = ref('')
+
+function syncObstaclesAndFly(obstacles: RenderedObstacle[]) {
+  const result = syncObstacleLayer(viewerRef.value, obstacles)
+  const flyToOptions = getObstacleFlyToOptions(result)
+
+  if (result.flyToBoundingSphere && viewerRef.value && flyToOptions) {
+    viewerRef.value.camera.flyToBoundingSphere(result.flyToBoundingSphere, flyToOptions)
+  }
+}
 
 function buildTiandituUrl(layerType: string) {
   return `https://t{s}.tianditu.gov.cn/DataServer?T=${layerType}_w&x={x}&y={y}&l={z}&tk=${mapConfig.tdtKey}`
@@ -122,11 +134,16 @@ async function initViewer() {
     }
 
     viewer = createViewer(imageryProvider, terrainProvider)
+    viewer.scene.globe.depthTestAgainstTerrain = true
 
     viewer.imageryLayers.addImageryProvider(annotationProvider)
     viewerRef.value = viewer
     errorMessage.value = ''
-    flyToInitialView()
+    syncObstaclesAndFly(props.obstacles)
+
+    if (props.obstacles.length === 0) {
+      flyToInitialView()
+    }
   } catch (error) {
     destroyViewer(viewer)
     console.error('[CesiumViewer] Failed to initialize map.', error)
@@ -143,6 +160,14 @@ watch(
   () => {
     flyToInitialView()
   },
+)
+
+watch(
+  () => props.obstacles,
+  (obstacles) => {
+    syncObstaclesAndFly(obstacles)
+  },
+  { deep: true },
 )
 
 onBeforeUnmount(() => {

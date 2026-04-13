@@ -14,6 +14,29 @@ vi.mock('../workflows/importWorkflow', () => ({
       { id: 'airport-2', name: '荆州机场', category: '机场', distance: '48.9 km' },
       { id: 'atc-1', name: '武汉空管局', category: '空管局', distance: '6.2 km' },
     ],
+    obstacles: [
+      {
+        id: 'obstacle-1',
+        name: '障碍物1',
+        obstacleType: '建筑物/构建物',
+        topElevation: 549.9,
+        geometry: {
+          type: 'MultiPolygon',
+          coordinates: [
+            [
+              [
+                [103.9758638888889, 30.506880555555554],
+                [103.97811111111112, 30.50565],
+                [103.97690833333334, 30.50386388888889],
+                [103.97425, 30.50510277777778],
+                [103.97421944444444, 30.505241666666667],
+                [103.9758638888889, 30.506880555555554],
+              ],
+            ],
+          ],
+        },
+      },
+    ],
     message: '导入任务已完成，候选对象已准备就绪。',
   })),
 }))
@@ -79,6 +102,29 @@ describe('useWorkflowActions', () => {
     expect(state.importProgressPercent).toBe(100)
     expect(state.targetOptions).toHaveLength(3)
     expect(state.targetOptions[0].name).toBe('天河机场')
+    expect(state.renderedObstacles).toEqual([
+      {
+        id: 'obstacle-1',
+        name: '障碍物1',
+        obstacleType: '建筑物/构建物',
+        topElevation: 549.9,
+        geometry: {
+          type: 'MultiPolygon',
+          coordinates: [
+            [
+              [
+                [103.9758638888889, 30.506880555555554],
+                [103.97811111111112, 30.50565],
+                [103.97690833333334, 30.50386388888889],
+                [103.97425, 30.50510277777778],
+                [103.97421944444444, 30.505241666666667],
+                [103.9758638888889, 30.506880555555554],
+              ],
+            ],
+          ],
+        },
+      },
+    ])
 
     toggleTarget('airport-1')
     toggleTarget('atc-1')
@@ -111,7 +157,87 @@ describe('useWorkflowActions', () => {
 
     expect(state.isOpen).toBe(false)
     expect(state.stage).toBe('idle')
+    expect(state.renderedObstacles).toHaveLength(1)
 
     vi.useRealTimers()
+  })
+
+  it('appends imported obstacles instead of overwriting existing map obstacles', async () => {
+    const file = new File(['demo'], 'obstacles.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
+    const { state, openModal, submitImport } = useWorkflowActions([
+      {
+        id: 'history-1',
+        name: '历史障碍物',
+        obstacleType: '建筑物/构建物',
+        topElevation: 520,
+        geometry: {
+          type: 'MultiPolygon',
+          coordinates: [
+            [
+              [
+                [114.1, 30.6],
+                [114.2, 30.6],
+                [114.2, 30.5],
+                [114.1, 30.5],
+                [114.1, 30.6],
+              ],
+            ],
+          ],
+        },
+      },
+    ])
+
+    openModal()
+    await submitImport({
+      projectName: '武汉净空项目',
+      obstacleType: '铁塔',
+      fileName: 'obstacles.xlsx',
+      file,
+    })
+
+    expect(state.renderedObstacles.map((item) => item.id)).toEqual(['history-1', 'obstacle-1'])
+  })
+
+  it('keeps only one obstacle when an imported obstacle id already exists in map state', async () => {
+    const file = new File(['demo'], 'obstacles.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
+    const { state, openModal, submitImport } = useWorkflowActions([
+      {
+        id: 'obstacle-1',
+        name: '历史障碍物1',
+        obstacleType: '建筑物/构建物',
+        topElevation: 500,
+        geometry: {
+          type: 'MultiPolygon',
+          coordinates: [
+            [
+              [
+                [114.1, 30.6],
+                [114.2, 30.6],
+                [114.2, 30.5],
+                [114.1, 30.5],
+                [114.1, 30.6],
+              ],
+            ],
+          ],
+        },
+      },
+    ])
+
+    openModal()
+    await submitImport({
+      projectName: '武汉净空项目',
+      obstacleType: '铁塔',
+      fileName: 'obstacles.xlsx',
+      file,
+    })
+
+    expect(state.renderedObstacles).toHaveLength(1)
+    expect(state.renderedObstacles[0].name).toBe('历史障碍物1')
   })
 })

@@ -1,11 +1,10 @@
-import { syncObstacleLayer } from '../map/layers/ObstacleLayer'
 import {
   getImportTargets,
   getImportTaskResult,
   getImportTaskStatus,
   importObstacles,
 } from '../services/obstacle'
-import type { TargetOption } from '../types/tool'
+import type { RenderedObstacle, TargetOption } from '../types/tool'
 
 export interface ImportWorkflowResult {
   importTaskId: string
@@ -14,6 +13,7 @@ export interface ImportWorkflowResult {
   projectId: string
   obstacleBatchId: string
   targetOptions: TargetOption[]
+  obstacles: RenderedObstacle[]
   message: string
 }
 
@@ -51,7 +51,8 @@ export async function runImportWorkflow(input: {
   const statusResult = await waitForImportCompletion(createResult.taskId)
   const importResult = await getImportTaskResult(createResult.taskId)
   const targetOptions = await getImportTargets(createResult.taskId)
-  const layerResult = syncObstacleLayer()
+  const obstacleMessage =
+    importResult.obstacles.length > 0 ? '障碍物已准备渲染到地图图层。' : '未返回可渲染的障碍物。'
 
   return {
     importTaskId: createResult.taskId,
@@ -60,6 +61,7 @@ export async function runImportWorkflow(input: {
     projectId: String(importResult.projectId),
     obstacleBatchId: importResult.obstacleBatchId,
     targetOptions,
-    message: `${statusResult.message}${layerResult.message}`,
+    obstacles: importResult.obstacles,
+    message: `${statusResult.message}${obstacleMessage}`,
   }
 }

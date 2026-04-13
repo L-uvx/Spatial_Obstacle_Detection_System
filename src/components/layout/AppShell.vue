@@ -2,11 +2,12 @@
 import CesiumViewer from '../map/CesiumViewer.vue'
 import PolygonObstacleAnalysisModal from '../panel/PolygonObstacleAnalysisModal.vue'
 import TopToolbar from '../toolbar/TopToolbar.vue'
-import type { ImportFormValue, PolygonObstacleAnalysisState } from '../../types/tool'
+import type { ImportFormValue, PolygonObstacleAnalysisState, RenderedObstacle } from '../../types/tool'
 
 defineProps<{
   analysisState: PolygonObstacleAnalysisState
   resetTick: number
+  renderedObstacles: RenderedObstacle[]
 }>()
 
 const emit = defineEmits<{
@@ -33,7 +34,7 @@ const emit = defineEmits<{
         @start-analysis="emit('startAnalysis')"
         @export-report="emit('exportReport')"
       />
-      <CesiumViewer :reset-tick="resetTick" class="app-shell__map" />
+      <CesiumViewer :reset-tick="resetTick" :obstacles="renderedObstacles" class="app-shell__map" />
     </div>
   </div>
 </template>

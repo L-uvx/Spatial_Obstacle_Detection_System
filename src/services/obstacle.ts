@@ -1,4 +1,4 @@
-import type { TargetOption } from '../types/tool'
+import type { MultiPolygonCoordinates, RenderedObstacle, TargetOption } from '../types/tool'
 
 export interface ImportObstacleResult {
   taskId: string
@@ -22,6 +22,27 @@ export interface ImportTaskResult {
   obstacleBatchId: string
   importedCount?: number
   failedCount?: number
+  obstacles: RenderedObstacle[]
+}
+
+interface ImportObstacleResponseItem {
+  id: number | string
+  name: string
+  obstacleType: string
+  topElevation: number
+  geometry: {
+    type: 'MultiPolygon'
+    coordinates: MultiPolygonCoordinates
+  }
+}
+
+interface ImportTaskResultResponse {
+  taskId: string
+  projectId: number | string
+  obstacleBatchId: string
+  importedCount?: number
+  failedCount?: number
+  obstacles?: ImportObstacleResponseItem[]
 }
 
 interface ImportTargetResponseItem {
@@ -88,7 +109,7 @@ export async function getImportTaskResult(taskId: string): Promise<ImportTaskRes
     throw new Error(`导入结果查询失败：${response.status}`)
   }
 
-  const result = (await response.json()) as ImportTaskResult
+  const result = (await response.json()) as ImportTaskResultResponse
 
   return {
     taskId: result.taskId,
@@ -96,6 +117,16 @@ export async function getImportTaskResult(taskId: string): Promise<ImportTaskRes
     obstacleBatchId: result.obstacleBatchId,
     importedCount: result.importedCount,
     failedCount: result.failedCount,
+    obstacles: (result.obstacles ?? []).map((item) => ({
+      id: String(item.id),
+      name: item.name,
+      obstacleType: item.obstacleType,
+      topElevation: item.topElevation,
+      geometry: {
+        type: item.geometry.type,
+        coordinates: item.geometry.coordinates,
+      },
+    })),
   }
 }
 

@@ -41,6 +41,7 @@ function handleExportReport() {
   <AppShell
     :analysis-state="state"
     :reset-tick="resetTick"
+    :rendered-obstacles="state.renderedObstacles"
     @open-analysis="handleOpenAnalysis"
     @reset="handleReset"
     @close-analysis="handleCloseAnalysis"
