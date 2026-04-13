@@ -78,7 +78,7 @@ describe('useWorkflowActions', () => {
     expect(state.importStatus).toBe('succeeded')
     expect(state.importProgressPercent).toBe(100)
     expect(state.targetOptions).toHaveLength(3)
-    expect(state.targetOptions[0].category).toBe('机场')
+    expect(state.targetOptions[0].name).toBe('天河机场')
 
     toggleTarget('airport-1')
     toggleTarget('atc-1')

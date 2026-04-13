@@ -68,7 +68,7 @@ describe('PolygonObstacleAnalysisModal', () => {
     })
 
     await wrapper.get('input[type="text"]').setValue('武汉净空项目')
-    await wrapper.get('select').setValue('铁塔')
+    await wrapper.get('select').setValue('铁塔/高塔')
 
     const file = new File(['demo'], 'obstacles.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -87,7 +87,7 @@ describe('PolygonObstacleAnalysisModal', () => {
       [
         {
           projectName: '武汉净空项目',
-          obstacleType: '铁塔',
+          obstacleType: '铁塔/高塔',
           fileName: 'obstacles.xlsx',
           file,
         },
