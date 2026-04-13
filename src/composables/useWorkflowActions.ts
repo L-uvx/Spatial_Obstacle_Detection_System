@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 import type { ImportFormValue, PolygonObstacleAnalysisState, RenderedObstacle } from '../types/tool'
+import { getBootstrapData } from '../services/bootstrap'
 import { runAnalyzeWorkflow } from '../workflows/analyzeWorkflow'
 import { runExportWorkflow } from '../workflows/exportWorkflow'
 import { runImportWorkflow } from '../workflows/importWorkflow'
@@ -29,6 +30,9 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
   return {
     isOpen: false,
     stage: 'idle',
+    bootstrapStatus: 'idle',
+    bootstrapMessage: '等待系统初始化。',
+    initialCameraTarget: null,
     projectName: '',
     obstacleType: '',
     fileName: '',
@@ -52,6 +56,25 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
 export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
   const state = reactive(createInitialState(initialObstacles))
 
+  async function bootstrap() {
+    state.bootstrapStatus = 'loading'
+    state.bootstrapMessage = '正在加载机场基线和历史障碍物。'
+
+    try {
+      const result = await getBootstrapData()
+
+      state.initialCameraTarget = result.initialCameraTarget
+      state.renderedObstacles = appendRenderedObstacles(state.renderedObstacles, result.historicalObstacles)
+      state.bootstrapStatus = 'success'
+      state.bootstrapMessage = '系统初始化完成。'
+    } catch (error) {
+      state.bootstrapStatus = 'error'
+      state.bootstrapMessage =
+        error instanceof Error ? `${error.message} 已降级到默认视角。` : '系统初始化失败，已降级到默认视角。'
+      state.initialCameraTarget = null
+    }
+  }
+
   function openModal() {
     state.isOpen = true
     state.stage = 'import-form'
@@ -60,8 +83,16 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
 
   function closeModal() {
     const preservedObstacles = [...state.renderedObstacles]
+    const preservedBootstrapStatus = state.bootstrapStatus
+    const preservedBootstrapMessage = state.bootstrapMessage
+    const preservedInitialCameraTarget = state.initialCameraTarget
 
-    Object.assign(state, createInitialState(preservedObstacles))
+    Object.assign(state, {
+      ...createInitialState(preservedObstacles),
+      bootstrapStatus: preservedBootstrapStatus,
+      bootstrapMessage: preservedBootstrapMessage,
+      initialCameraTarget: preservedInitialCameraTarget,
+    })
   }
 
   async function submitImport(formValue: ImportFormValue) {
@@ -146,6 +177,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
 
   return {
     state,
+    bootstrap,
     openModal,
     closeModal,
     submitImport,

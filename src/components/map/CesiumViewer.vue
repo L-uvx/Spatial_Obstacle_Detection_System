@@ -3,20 +3,40 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as Cesium from 'cesium'
 import { mapConfig } from '../../config/map'
 import { getObstacleFlyToOptions, syncObstacleLayer } from '../../map/layers/ObstacleLayer'
-import type { RenderedObstacle } from '../../types/tool'
+import type { InitialCameraTarget, RenderedObstacle } from '../../types/tool'
+import { buildCameraFlyToOptions, getInitialCameraKey, resolveResetCameraTarget } from './camera'
 
 const props = defineProps<{
   resetTick: number
   obstacles: RenderedObstacle[]
+  initialCameraTarget: InitialCameraTarget | null
 }>()
 
 const containerRef = ref<HTMLDivElement | null>(null)
 const viewerRef = ref<Cesium.Viewer | null>(null)
 const errorMessage = ref('')
+const appliedInitialCameraKeyRef = ref<string | null>(null)
+const hasSyncedInitialObstaclesRef = ref(false)
 
-function syncObstaclesAndFly(obstacles: RenderedObstacle[]) {
-  const result = syncObstacleLayer(viewerRef.value, obstacles)
+function shouldFlyToObstacleExtents() {
+  if (appliedInitialCameraKeyRef.value !== null) {
+    return true
+  }
+
+  if (props.initialCameraTarget !== null) {
+    return false
+  }
+
+  return hasSyncedInitialObstaclesRef.value
+}
+
+function syncObstacles(obstacles: RenderedObstacle[], flyToNewlyAdded: boolean) {
+  const result = syncObstacleLayer(viewerRef.value, obstacles, { flyToNewlyAdded })
   const flyToOptions = getObstacleFlyToOptions(result)
+
+  if (props.initialCameraTarget === null && obstacles.length > 0) {
+    hasSyncedInitialObstaclesRef.value = true
+  }
 
   if (result.flyToBoundingSphere && viewerRef.value && flyToOptions) {
     viewerRef.value.camera.flyToBoundingSphere(result.flyToBoundingSphere, flyToOptions)
@@ -44,22 +64,12 @@ function attachRetryOnError(provider: Cesium.UrlTemplateImageryProvider) {
   })
 }
 
-function flyToInitialView() {
-  if (!viewerRef.value) {
+function flyToTarget(target: InitialCameraTarget | null) {
+  if (!viewerRef.value || !target) {
     return
   }
 
-  const { longitude, latitude, height, heading = 0, pitch = -45, roll = 0 } = mapConfig.initialView
-
-  viewerRef.value.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, height),
-    orientation: {
-      heading: Cesium.Math.toRadians(heading),
-      pitch: Cesium.Math.toRadians(pitch),
-      roll: Cesium.Math.toRadians(roll),
-    },
-    duration: 1.5,
-  })
+  viewerRef.value.camera.flyTo(buildCameraFlyToOptions(target))
 }
 
 async function buildTerrainProvider() {
@@ -139,10 +149,13 @@ async function initViewer() {
     viewer.imageryLayers.addImageryProvider(annotationProvider)
     viewerRef.value = viewer
     errorMessage.value = ''
-    syncObstaclesAndFly(props.obstacles)
+    syncObstacles(props.obstacles, false)
 
-    if (props.obstacles.length === 0) {
-      flyToInitialView()
+    if (props.initialCameraTarget) {
+      flyToTarget(props.initialCameraTarget)
+      appliedInitialCameraKeyRef.value = getInitialCameraKey(props.initialCameraTarget)
+    } else if (props.obstacles.length === 0) {
+      flyToTarget(resolveResetCameraTarget(props.initialCameraTarget))
     }
   } catch (error) {
     destroyViewer(viewer)
@@ -158,14 +171,30 @@ onMounted(() => {
 watch(
   () => props.resetTick,
   () => {
-    flyToInitialView()
+    flyToTarget(resolveResetCameraTarget(props.initialCameraTarget))
   },
 )
 
 watch(
   () => props.obstacles,
   (obstacles) => {
-    syncObstaclesAndFly(obstacles)
+    syncObstacles(obstacles, shouldFlyToObstacleExtents())
+  },
+  { deep: true },
+)
+
+watch(
+  () => props.initialCameraTarget,
+  (target) => {
+    const nextKey = getInitialCameraKey(target)
+
+    if (!target || !nextKey || nextKey === appliedInitialCameraKeyRef.value) {
+      return
+    }
+
+    syncObstacles(props.obstacles, false)
+    flyToTarget(target)
+    appliedInitialCameraKeyRef.value = nextKey
   },
   { deep: true },
 )

@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import { useWorkflowActions } from './useWorkflowActions'
+import { getBootstrapData } from '../services/bootstrap'
 import { runImportWorkflow } from '../workflows/importWorkflow'
+
+vi.mock('../services/bootstrap', () => ({
+  getBootstrapData: vi.fn(),
+}))
 
 vi.mock('../workflows/importWorkflow', () => ({
   runImportWorkflow: vi.fn(async () => ({
@@ -57,6 +62,92 @@ vi.mock('../workflows/exportWorkflow', () => ({
 }))
 
 describe('useWorkflowActions', () => {
+  it('stores bootstrap airport target and historical obstacles without changing wizard stage', async () => {
+    vi.mocked(getBootstrapData).mockResolvedValueOnce({
+      initialCameraTarget: {
+        longitude: 103.95056,
+        latitude: 30.57972,
+        height: 10000,
+        pitch: -90,
+      },
+      historicalObstacles: [
+        {
+          id: 'history-17',
+          name: '历史障碍物1',
+          obstacleType: '建筑物/构建物',
+          topElevation: 549.9,
+          geometry: {
+            type: 'MultiPolygon',
+            coordinates: [
+              [
+                [
+                  [103.9758638888889, 30.506880555555554],
+                  [103.97811111111112, 30.50565],
+                  [103.97690833333334, 30.50386388888889],
+                  [103.97425, 30.50510277777778],
+                  [103.97421944444444, 30.505241666666667],
+                  [103.9758638888889, 30.506880555555554],
+                ],
+              ],
+            ],
+          },
+        },
+      ],
+    })
+
+    const { state, bootstrap } = useWorkflowActions()
+
+    await bootstrap()
+
+    expect(state.bootstrapStatus).toBe('success')
+    expect(state.stage).toBe('idle')
+    expect(state.initialCameraTarget?.longitude).toBe(103.95056)
+    expect(state.renderedObstacles.map((item) => item.id)).toEqual(['history-17'])
+  })
+
+  it('keeps the app usable when bootstrap fails', async () => {
+    vi.mocked(getBootstrapData).mockRejectedValueOnce(new Error('初始化接口请求失败：500'))
+
+    const { state, bootstrap } = useWorkflowActions()
+
+    await bootstrap()
+
+    expect(state.bootstrapStatus).toBe('error')
+    expect(state.stage).toBe('idle')
+    expect(state.initialCameraTarget).toBeNull()
+    expect(state.renderedObstacles).toEqual([])
+    expect(state.bootstrapMessage).toContain('初始化')
+  })
+
+  it('preserves bootstrap state when closing the modal', async () => {
+    vi.mocked(getBootstrapData).mockResolvedValueOnce({
+      initialCameraTarget: {
+        longitude: 103.95056,
+        latitude: 30.57972,
+        height: 10000,
+        pitch: -90,
+      },
+      historicalObstacles: [],
+    })
+
+    const { state, bootstrap, openModal, closeModal } = useWorkflowActions()
+
+    await bootstrap()
+    openModal()
+    closeModal()
+
+    expect(state.isOpen).toBe(false)
+    expect(state.stage).toBe('idle')
+    expect(state.bootstrapStatus).toBe('success')
+    expect(state.bootstrapMessage).toBe('系统初始化完成。')
+    expect(state.initialCameraTarget).toEqual({
+      longitude: 103.95056,
+      latitude: 30.57972,
+      height: 10000,
+      pitch: -90,
+    })
+  })
+
   it('drives the single polygon obstacle analysis wizard lifecycle', async () => {
     vi.useFakeTimers()
 

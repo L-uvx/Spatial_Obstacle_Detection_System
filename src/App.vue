@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import AppShell from './components/layout/AppShell.vue'
 import { useWorkflowActions } from './composables/useWorkflowActions'
 import type { ImportFormValue } from './types/tool'
 
 const resetTick = ref(0)
-const { state, openModal, closeModal, submitImport, toggleTarget, startAnalysis, exportReport } =
+const { state, bootstrap, openModal, closeModal, submitImport, toggleTarget, startAnalysis, exportReport } =
   useWorkflowActions()
+
+onMounted(() => {
+  void bootstrap()
+})
 
 function handleOpenAnalysis() {
   openModal()
@@ -42,6 +46,7 @@ function handleExportReport() {
     :analysis-state="state"
     :reset-tick="resetTick"
     :rendered-obstacles="state.renderedObstacles"
+    :initial-camera-target="state.initialCameraTarget"
     @open-analysis="handleOpenAnalysis"
     @reset="handleReset"
     @close-analysis="handleCloseAnalysis"

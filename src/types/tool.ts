@@ -11,6 +11,8 @@ export type WizardStage =
 
 export type ExportStatus = 'idle' | 'running' | 'success' | 'error'
 
+export type BootstrapStatus = 'idle' | 'loading' | 'success' | 'error'
+
 export interface ToolbarItem {
   key: ToolbarToolKey
   label: string
@@ -45,6 +47,15 @@ export interface RenderedObstacle {
   geometry: MultiPolygonGeometry
 }
 
+export interface InitialCameraTarget {
+  longitude: number
+  latitude: number
+  height: number
+  heading?: number
+  pitch: number
+  roll?: number
+}
+
 export interface ImportFormValue {
   projectName: string
   obstacleType: string
@@ -55,6 +66,9 @@ export interface ImportFormValue {
 export interface PolygonObstacleAnalysisState {
   isOpen: boolean
   stage: WizardStage
+  bootstrapStatus: BootstrapStatus
+  bootstrapMessage: string
+  initialCameraTarget: InitialCameraTarget | null
   projectName: string
   obstacleType: string
   fileName: string

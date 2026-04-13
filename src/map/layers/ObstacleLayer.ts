@@ -14,6 +14,10 @@ export interface ObstacleLayerSyncResult {
   flyToOffset?: Cesium.HeadingPitchRange
 }
 
+export interface SyncObstacleLayerOptions {
+  flyToNewlyAdded?: boolean
+}
+
 export function getObstacleFlyToOptions(result: ObstacleLayerSyncResult) {
   if (!result.flyToBoundingSphere) {
     return undefined
@@ -71,6 +75,7 @@ function createBoundingSphere(obstacles: RenderedObstacle[]) {
 export function syncObstacleLayer(
   viewer: Cesium.Viewer | null | undefined,
   obstacles: RenderedObstacle[] = [],
+  options: SyncObstacleLayerOptions = {},
 ): ObstacleLayerSyncResult {
   if (!viewer || obstacles.length === 0) {
     return {
@@ -81,6 +86,7 @@ export function syncObstacleLayer(
 
   const addedObstacles: RenderedObstacle[] = []
   const addedEntityIds: string[] = []
+  const flyToNewlyAdded = options.flyToNewlyAdded ?? true
 
   for (const obstacle of obstacles) {
     let obstacleWasAdded = false
@@ -120,10 +126,12 @@ export function syncObstacleLayer(
     }
   }
 
+  const flyToBoundingSphere = flyToNewlyAdded ? createBoundingSphere(addedObstacles) : undefined
+
   return {
     message: addedEntityIds.length > 0 ? '障碍物已同步到地图图层。' : '未新增障碍物到地图图层。',
     addedEntityIds,
-    flyToBoundingSphere: createBoundingSphere(addedObstacles),
-    flyToOffset: addedObstacles.length > 0 ? createFlyToOffset(createBoundingSphere(addedObstacles)!) : undefined,
+    flyToBoundingSphere,
+    flyToOffset: flyToBoundingSphere ? createFlyToOffset(flyToBoundingSphere) : undefined,
   }
 }

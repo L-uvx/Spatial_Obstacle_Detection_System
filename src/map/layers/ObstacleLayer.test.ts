@@ -54,6 +54,26 @@ describe('syncObstacleLayer', () => {
     expect(result.message).toContain('同步到地图图层')
   })
 
+  it('adds entities without fly-to output when newly added fly-to is disabled', () => {
+    const add = vi.fn((entity: { id: string; polygon: { perPositionHeight?: boolean } }) => entity)
+
+    const viewer = {
+      entities: {
+        getById: vi.fn(() => undefined),
+        add,
+      },
+    }
+
+    const result = syncObstacleLayer(viewer as never, [createObstacle('import-2')], {
+      flyToNewlyAdded: false,
+    })
+
+    expect(add).toHaveBeenCalledTimes(1)
+    expect(result.addedEntityIds).toEqual(['polygon-obstacle-import-2-0'])
+    expect(result.flyToBoundingSphere).toBeUndefined()
+    expect(result.flyToOffset).toBeUndefined()
+  })
+
   it('returns no new entities when all obstacle polygons already exist', () => {
     const existingEntityIds = new Set<string>(['polygon-obstacle-history-1-0'])
     const add = vi.fn()

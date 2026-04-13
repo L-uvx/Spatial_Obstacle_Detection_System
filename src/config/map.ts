@@ -21,7 +21,7 @@ export const mapConfig: MapConfig = {
   initialView: {
     longitude: 114.21246022823736,
     latitude: 30.776607831015887,
-    height: 10000,
+    height: 20000,
     pitch: -90,
   },
 }
