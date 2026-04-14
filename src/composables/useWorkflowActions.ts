@@ -45,6 +45,8 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
     selectedTargetIds: [],
     analysisTaskId: '',
     analysisSummary: '',
+    analysisSelectedTargets: [],
+    analysisObstacleCount: 0,
     statusMessage: '等待打开多边形障碍物分析流程。',
     exportStatus: 'idle',
     exportMessage: '分析完成后可导出 Word 结论。',
@@ -150,13 +152,14 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
 
     await delay(400)
     const workflowResult = await runAnalyzeWorkflow({
-      projectId: state.projectId,
-      obstacleBatchId: state.obstacleBatchId,
+      importTaskId: state.importTaskId,
       targetIds: [...state.selectedTargetIds],
     })
 
     state.analysisTaskId = workflowResult.analysisTaskId
     state.analysisSummary = workflowResult.summary
+    state.analysisSelectedTargets = workflowResult.selectedTargets
+    state.analysisObstacleCount = workflowResult.obstacleCount
     state.stage = 'analysis-result'
     state.statusMessage = workflowResult.message
   }

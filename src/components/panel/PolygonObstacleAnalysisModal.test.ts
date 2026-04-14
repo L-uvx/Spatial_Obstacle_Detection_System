@@ -24,6 +24,8 @@ function createImportFormState(): PolygonObstacleAnalysisState {
     selectedTargetIds: [],
     analysisTaskId: '',
     analysisSummary: '',
+    analysisSelectedTargets: [],
+    analysisObstacleCount: 0,
     statusMessage: '请填写项目名称、障碍物类型并上传 Excel。',
     exportStatus: 'idle',
     exportMessage: '分析完成后可导出 Word 结论。',
@@ -83,5 +85,28 @@ describe('PolygonObstacleAnalysisModal', () => {
         },
       ],
     ])
+  })
+
+  it('renders minimal text analysis result details from backend', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: {
+          ...createImportFormState(),
+          stage: 'analysis-result',
+          analysisTaskId: 'analysis-task-1',
+          analysisSummary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
+          analysisSelectedTargets: [
+            { id: '1', name: 'Airport Near', category: '机场' },
+            { id: '2', name: 'Airport Far', category: '机场' },
+          ],
+          analysisObstacleCount: 2,
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('已基于当前导入障碍物和所选机场生成最小分析结果。')
+    expect(wrapper.text()).toContain('Airport Near')
+    expect(wrapper.text()).toContain('Airport Far')
+    expect(wrapper.text()).toContain('2')
   })
 })

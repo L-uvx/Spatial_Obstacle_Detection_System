@@ -143,7 +143,18 @@ function handleImportSubmit() {
       <div v-else-if="state.stage === 'analysis-result'" class="analysis-modal__section">
         <div class="analysis-modal__result-card">
           <h3>超高分析结论</h3>
+          <p>分析任务：{{ state.analysisTaskId }}</p>
+          <p>关联障碍物数量：{{ state.analysisObstacleCount }}</p>
           <p>{{ state.analysisSummary }}</p>
+
+          <div v-if="state.analysisSelectedTargets.length > 0" class="analysis-modal__result-list">
+            <h4>已分析对象</h4>
+            <ul>
+              <li v-for="target in state.analysisSelectedTargets" :key="target.id">
+                {{ target.name }}
+              </li>
+            </ul>
+          </div>
         </div>
 
         <button

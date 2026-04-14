@@ -48,9 +48,14 @@ vi.mock('../workflows/importWorkflow', () => ({
 
 vi.mock('../workflows/analyzeWorkflow', () => ({
   runAnalyzeWorkflow: vi.fn(async () => ({
-    analysisTaskId: 'analysis-1',
-    summary: '超高分析结论：存在重点影响对象。',
-    message: '分析占位 workflow 已执行。',
+    analysisTaskId: 'analysis-task-1',
+    summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
+    message: 'analysis task created',
+    selectedTargets: [
+      { id: '1', name: 'Airport Near', category: '机场' },
+      { id: '2', name: 'Airport Far', category: '机场' },
+    ],
+    obstacleCount: 2,
   })),
 }))
 
@@ -231,7 +236,14 @@ describe('useWorkflowActions', () => {
     await analyzePromise
 
     expect(state.stage).toBe('analysis-result')
-    expect(state.analysisSummary).toContain('超高分析结论')
+    expect(state.analysisTaskId).toBe('analysis-task-1')
+    expect(state.analysisSummary).toBe('已基于当前导入障碍物和所选机场生成最小分析结果。')
+    expect(state.analysisSelectedTargets).toEqual([
+      { id: '1', name: 'Airport Near', category: '机场' },
+      { id: '2', name: 'Airport Far', category: '机场' },
+    ])
+    expect(state.analysisObstacleCount).toBe(2)
+    expect(state.statusMessage).toBe('analysis task created')
 
     const exportPromise = exportReport()
 

@@ -1,27 +1,127 @@
-import type { TargetOption } from '../types/tool'
+import type { AnalysisSelectedTarget } from '../types/tool'
 
-export interface AnalyzeObstacleResult {
+export interface AnalysisTaskStatusResult {
   analysisTaskId: string
-  summary: string
+  status: string
   message: string
+  progressPercent: number
+  importTaskId: string
+  targetIds: number[]
 }
 
-export function listAnalysisTargets(): TargetOption[] {
-  return [
-    { id: 'airport-1', name: '天河机场', category: '机场', distance: '12.4 km' },
-    { id: 'airport-2', name: '荆州机场', category: '机场', distance: '48.9 km' },
-    { id: 'atc-1', name: '武汉空管局', category: '空管局', distance: '6.2 km' },
-  ]
+export interface AnalysisTaskResult {
+  analysisTaskId: string
+  status: string
+  importTaskId: string
+  targetIds: number[]
+  selectedTargets: AnalysisSelectedTarget[]
+  obstacleCount: number
+  summary: string
+}
+
+interface AnalysisTaskResultResponse {
+  analysisTaskId: string
+  status: string
+  importTaskId: string
+  targetIds: number[]
+  selectedTargets?: Array<{
+    id: number | string
+    name: string
+    category: '机场' | '空管局'
+  }>
+  obstacleCount: number
+  summary: string
+}
+
+function parseErrorDetail(detail: unknown, fallbackMessage: string) {
+  if (typeof detail === 'string' && detail) {
+    return detail
+  }
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    const firstItem = detail[0] as { msg?: string } | undefined
+
+    if (firstItem?.msg) {
+      return firstItem.msg
+    }
+  }
+
+  return fallbackMessage
 }
 
 export async function createAnalysisTask(input: {
-  projectId: string
-  obstacleBatchId: string
+  importTaskId: string
   targetIds: string[]
-}): Promise<AnalyzeObstacleResult> {
+}): Promise<AnalysisTaskStatusResult> {
+  const response = await fetch('/polygon-obstacle/analysis', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      importTaskId: input.importTaskId,
+      targetIds: input.targetIds.map((item) => Number(item)),
+    }),
+  })
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { detail?: unknown } | null
+    throw new Error(parseErrorDetail(payload?.detail, `分析任务创建失败：${response.status}`))
+  }
+
+  const result = (await response.json()) as AnalysisTaskStatusResult
+
   return {
-    analysisTaskId: 'analysis-1',
-    summary: `超高分析结论：已纳入 ${input.targetIds.length} 个机场/空管局对象，存在重点影响对象。`,
-    message: '分析服务占位已执行，后续可接入分析任务创建与轮询接口。',
+    analysisTaskId: result.analysisTaskId,
+    status: result.status,
+    message: result.message,
+    progressPercent: result.progressPercent,
+    importTaskId: result.importTaskId,
+    targetIds: result.targetIds,
+  }
+}
+
+export async function getAnalysisTaskStatus(taskId: string): Promise<AnalysisTaskStatusResult> {
+  const response = await fetch(`/polygon-obstacle/analysis/${taskId}/status`)
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { detail?: unknown } | null
+    throw new Error(parseErrorDetail(payload?.detail, `分析状态查询失败：${response.status}`))
+  }
+
+  const result = (await response.json()) as AnalysisTaskStatusResult
+
+  return {
+    analysisTaskId: result.analysisTaskId,
+    status: result.status,
+    message: result.message,
+    progressPercent: result.progressPercent,
+    importTaskId: result.importTaskId,
+    targetIds: result.targetIds,
+  }
+}
+
+export async function getAnalysisTaskResult(taskId: string): Promise<AnalysisTaskResult> {
+  const response = await fetch(`/polygon-obstacle/analysis/${taskId}/result`)
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { detail?: unknown } | null
+    throw new Error(parseErrorDetail(payload?.detail, `分析结果查询失败：${response.status}`))
+  }
+
+  const result = (await response.json()) as AnalysisTaskResultResponse
+
+  return {
+    analysisTaskId: result.analysisTaskId,
+    status: result.status,
+    importTaskId: result.importTaskId,
+    targetIds: result.targetIds,
+    selectedTargets: (result.selectedTargets ?? []).map((item) => ({
+      id: String(item.id),
+      name: item.name,
+      category: item.category,
+    })),
+    obstacleCount: result.obstacleCount,
+    summary: result.summary,
   }
 }

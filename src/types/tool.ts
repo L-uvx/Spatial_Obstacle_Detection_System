@@ -26,6 +26,12 @@ export interface TargetOption {
   distance: string
 }
 
+export interface AnalysisSelectedTarget {
+  id: string
+  name: string
+  category: '机场' | '空管局'
+}
+
 export type PositionCoordinate = [number, number]
 
 export type LinearRingCoordinates = PositionCoordinate[]
@@ -81,6 +87,8 @@ export interface PolygonObstacleAnalysisState {
   selectedTargetIds: string[]
   analysisTaskId: string
   analysisSummary: string
+  analysisSelectedTargets: AnalysisSelectedTarget[]
+  analysisObstacleCount: number
   statusMessage: string
   exportStatus: ExportStatus
   exportMessage: string
