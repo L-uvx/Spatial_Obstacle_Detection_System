@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { obstacleTypeOptions } from '../../types/tool'
 import type { ImportFormValue, PolygonObstacleAnalysisState } from '../../types/tool'
 
@@ -24,6 +24,17 @@ const formValue = reactive<ImportFormValue>({
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
+function resetFormValue() {
+  formValue.projectName = ''
+  formValue.obstacleType = obstacleTypeOptions[0]
+  formValue.fileName = ''
+  formValue.file = null
+
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+  }
+}
+
 function triggerFileSelect() {
   fileInputRef.value?.click()
 }
@@ -34,6 +45,7 @@ function handleFileChange(event: Event) {
 
   formValue.fileName = selectedFile?.name ?? ''
   formValue.file = selectedFile ?? null
+  input.value = ''
 }
 
 function handleImportSubmit() {
@@ -43,6 +55,24 @@ function handleImportSubmit() {
 
   emit('submitImport', { ...formValue })
 }
+
+watch(
+  () => props.state.isOpen,
+  (isOpen) => {
+    if (!isOpen) {
+      resetFormValue()
+    }
+  },
+)
+
+watch(
+  () => props.state.stage,
+  (stage) => {
+    if (props.state.isOpen && stage === 'import-form') {
+      resetFormValue()
+    }
+  },
+)
 </script>
 
 <template>
@@ -61,19 +91,30 @@ function handleImportSubmit() {
       <div v-if="state.stage === 'import-form'" class="analysis-modal__section">
         <label class="analysis-modal__field">
           <span>项目名称</span>
-          <input v-model="formValue.projectName" type="text" placeholder="请输入项目名称" />
+          <input
+            v-model="formValue.projectName"
+            class="analysis-modal__project-input"
+            type="text"
+            placeholder="请输入项目名称"
+          />
         </label>
 
         <label class="analysis-modal__field">
           <span>障碍物类型</span>
-          <select v-model="formValue.obstacleType">
+          <select v-model="formValue.obstacleType" class="analysis-modal__obstacle-type-select">
             <option v-for="option in obstacleTypeOptions" :key="option" :value="option">{{ option }}</option>
           </select>
         </label>
 
         <label class="analysis-modal__field">
           <span>Excel 文件</span>
-          <input ref="fileInputRef" class="analysis-modal__file-input" type="file" accept=".xls,.xlsx" @change="handleFileChange" />
+          <input
+            ref="fileInputRef"
+            class="analysis-modal__file-input"
+            type="file"
+            accept=".xls,.xlsx"
+            @change="handleFileChange"
+          />
           <button type="button" class="analysis-modal__file-trigger" @click="triggerFileSelect">选择 Excel 文件</button>
           <small v-if="formValue.fileName" class="analysis-modal__file-name">已选择：{{ formValue.fileName }}</small>
         </label>
@@ -160,14 +201,25 @@ function handleImportSubmit() {
         <button
           type="button"
           class="analysis-modal__primary"
-          :disabled="state.exportStatus === 'running'"
+          :disabled="state.exportStatus === 'pending' || state.exportStatus === 'running' || !state.analysisTaskId"
           @click="emit('exportReport')"
         >
-          {{ state.exportStatus === 'running' ? '导出中...' : '导出结论' }}
+          {{
+            state.exportStatus === 'succeeded'
+              ? '重新导出'
+              : state.exportStatus === 'pending' || state.exportStatus === 'running'
+                ? '导出中...'
+                : '导出结论'
+          }}
         </button>
 
         <p class="analysis-modal__export-status" :data-status="state.exportStatus">{{ state.exportMessage }}</p>
-        <a v-if="state.downloadUrl" class="analysis-modal__download" :href="state.downloadUrl">下载 Word 报告</a>
+        <p v-if="state.exportStatus === 'pending' || state.exportStatus === 'running'" class="analysis-modal__export-progress">
+          当前进度：{{ state.exportProgressPercent }}%
+        </p>
+        <p v-if="state.exportFileName" class="analysis-modal__export-file">文件名：{{ state.exportFileName }}</p>
+        <p v-if="state.exportErrorMessage" class="analysis-modal__export-error">{{ state.exportErrorMessage }}</p>
+        <a v-if="state.downloadUrl" class="analysis-modal__download" :href="state.downloadUrl" download>重新下载 Word 报告</a>
       </div>
     </div>
   </section>

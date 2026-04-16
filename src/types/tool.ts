@@ -9,7 +9,7 @@ export type WizardStage =
   | 'analysis-result'
   | 'error'
 
-export type ExportStatus = 'idle' | 'running' | 'success' | 'error'
+export type ExportStatus = 'idle' | 'pending' | 'running' | 'succeeded' | 'failed'
 
 export type BootstrapStatus = 'idle' | 'loading' | 'success' | 'error'
 
@@ -90,9 +90,13 @@ export interface PolygonObstacleAnalysisState {
   analysisSelectedTargets: AnalysisSelectedTarget[]
   analysisObstacleCount: number
   statusMessage: string
+  exportTaskId: string
   exportStatus: ExportStatus
+  exportProgressPercent: number
   exportMessage: string
+  exportFileName: string
   downloadUrl: string
+  exportErrorMessage: string
   renderedObstacles: RenderedObstacle[]
 }
 

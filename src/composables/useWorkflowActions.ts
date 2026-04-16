@@ -26,6 +26,24 @@ function appendRenderedObstacles(
   return [...obstacleById.values()]
 }
 
+function triggerDownload(downloadUrl: string) {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  const isAllowedDownloadUrl = /^https?:\/\//.test(downloadUrl) || /^\/(?!\/)/.test(downloadUrl)
+
+  if (!isAllowedDownloadUrl) {
+    return
+  }
+
+  const link = document.createElement('a')
+  link.href = downloadUrl
+  link.download = ''
+  link.rel = 'noopener'
+  link.click()
+}
+
 function createInitialState(renderedObstacles: RenderedObstacle[] = []): PolygonObstacleAnalysisState {
   return {
     isOpen: false,
@@ -48,15 +66,20 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
     analysisSelectedTargets: [],
     analysisObstacleCount: 0,
     statusMessage: '等待打开多边形障碍物分析流程。',
+    exportTaskId: '',
     exportStatus: 'idle',
+    exportProgressPercent: 0,
     exportMessage: '分析完成后可导出 Word 结论。',
+    exportFileName: '',
     downloadUrl: '',
+    exportErrorMessage: '',
     renderedObstacles,
   }
 }
 
 export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
   const state = reactive(createInitialState(initialObstacles))
+  let exportRunId = 0
 
   async function bootstrap() {
     state.bootstrapStatus = 'loading'
@@ -165,17 +188,58 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
   }
 
   async function exportReport() {
-    state.exportStatus = 'running'
-    state.exportMessage = '正在导出 Word 结论报告。'
+    if (state.stage !== 'analysis-result' || !state.analysisTaskId) {
+      return
+    }
 
-    await delay(200)
-    const workflowResult = await runExportWorkflow({
-      analysisTaskId: state.analysisTaskId,
-    })
+    exportRunId += 1
+    const currentExportRunId = exportRunId
 
-    state.downloadUrl = workflowResult.downloadUrl
-    state.exportStatus = 'success'
-    state.exportMessage = workflowResult.message
+    state.exportTaskId = ''
+    state.exportStatus = 'idle'
+    state.exportProgressPercent = 0
+    state.exportMessage = '分析完成后可导出 Word 结论。'
+    state.exportFileName = ''
+    state.downloadUrl = ''
+    state.exportErrorMessage = ''
+
+    try {
+      const workflowResult = await runExportWorkflow({
+        analysisTaskId: state.analysisTaskId,
+        onProgress(progress) {
+          if (currentExportRunId !== exportRunId) {
+            return
+          }
+
+          state.exportTaskId = progress.exportTaskId
+          state.exportStatus = progress.exportStatus
+          state.exportProgressPercent = progress.exportProgressPercent
+          state.exportMessage = progress.exportMessage
+          state.exportErrorMessage = ''
+        },
+        triggerDownload,
+      })
+
+      if (currentExportRunId !== exportRunId) {
+        return
+      }
+
+      state.exportTaskId = workflowResult.exportTaskId
+      state.exportStatus = workflowResult.exportStatus
+      state.exportProgressPercent = workflowResult.exportProgressPercent
+      state.exportMessage = workflowResult.exportMessage
+      state.exportFileName = workflowResult.exportFileName
+      state.downloadUrl = workflowResult.downloadUrl
+      state.exportErrorMessage = workflowResult.exportErrorMessage
+    } catch (error) {
+      if (currentExportRunId !== exportRunId) {
+        return
+      }
+
+      state.exportStatus = 'failed'
+      state.exportErrorMessage = error instanceof Error ? error.message : '导出失败，请稍后重试。'
+      state.exportMessage = state.exportErrorMessage
+    }
   }
 
   return {

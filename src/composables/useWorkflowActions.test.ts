@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useWorkflowActions } from './useWorkflowActions'
 import { getBootstrapData } from '../services/bootstrap'
 import { runImportWorkflow } from '../workflows/importWorkflow'
+import { runExportWorkflow } from '../workflows/exportWorkflow'
 
 vi.mock('../services/bootstrap', () => ({
   getBootstrapData: vi.fn(),
@@ -60,13 +61,14 @@ vi.mock('../workflows/analyzeWorkflow', () => ({
 }))
 
 vi.mock('../workflows/exportWorkflow', () => ({
-  runExportWorkflow: vi.fn(async () => ({
-    downloadUrl: '/mock/report.docx',
-    message: '导出占位 workflow 已执行。',
-  })),
+  runExportWorkflow: vi.fn(),
 }))
 
 describe('useWorkflowActions', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('stores bootstrap airport target and historical obstacles without changing wizard stage', async () => {
     vi.mocked(getBootstrapData).mockResolvedValueOnce({
       initialCameraTarget: {
@@ -155,6 +157,31 @@ describe('useWorkflowActions', () => {
 
   it('drives the single polygon obstacle analysis wizard lifecycle', async () => {
     vi.useFakeTimers()
+
+    vi.mocked(runExportWorkflow).mockImplementationOnce(async ({ onProgress }) => {
+      onProgress({
+        exportTaskId: 'export-task-1',
+        exportStatus: 'pending',
+        exportProgressPercent: 0,
+        exportMessage: '导出任务已创建。',
+      })
+      onProgress({
+        exportTaskId: 'export-task-1',
+        exportStatus: 'running',
+        exportProgressPercent: 60,
+        exportMessage: '正在生成 Word 结论。',
+      })
+
+      return {
+        exportTaskId: 'export-task-1',
+        exportStatus: 'succeeded',
+        exportProgressPercent: 100,
+        exportMessage: 'Word 结论已生成。',
+        exportFileName: 'analysis-task-1.docx',
+        downloadUrl: '/mock/report.docx',
+        exportErrorMessage: '',
+      }
+    })
 
     const file = new File(['demo'], 'obstacles.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -247,20 +274,222 @@ describe('useWorkflowActions', () => {
 
     const exportPromise = exportReport()
 
-    expect(state.exportStatus).toBe('running')
-
     await vi.runAllTimersAsync()
     await exportPromise
 
-    expect(state.exportStatus).toBe('success')
-    expect(state.exportMessage).toContain('导出占位 workflow 已执行')
+    expect(state.exportTaskId).toBe('export-task-1')
+    expect(state.exportStatus).toBe('succeeded')
+    expect(state.exportProgressPercent).toBe(100)
+    expect(state.exportMessage).toBe('Word 结论已生成。')
+    expect(state.exportFileName).toBe('analysis-task-1.docx')
     expect(state.downloadUrl).toBe('/mock/report.docx')
+    expect(state.exportErrorMessage).toBe('')
 
     closeModal()
 
     expect(state.isOpen).toBe(false)
     expect(state.stage).toBe('idle')
     expect(state.renderedObstacles).toHaveLength(1)
+
+    vi.useRealTimers()
+  })
+
+  it('keeps analysis result stage and stores export failure details when export workflow fails', async () => {
+    vi.useFakeTimers()
+
+    vi.mocked(runExportWorkflow).mockImplementationOnce(async ({ onProgress }) => {
+      onProgress({
+        exportTaskId: 'export-task-2',
+        exportStatus: 'running',
+        exportProgressPercent: 35,
+        exportMessage: '正在生成 Word 结论。',
+      })
+
+      throw new Error('导出失败，请稍后重试。')
+    })
+
+    const file = new File(['demo'], 'obstacles.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
+    const { state, openModal, submitImport, toggleTarget, startAnalysis, exportReport } = useWorkflowActions()
+
+    openModal()
+    await submitImport({
+      projectName: '武汉净空项目',
+      obstacleType: '铁塔',
+      fileName: 'obstacles.xlsx',
+      file,
+    })
+    toggleTarget('airport-1')
+
+    const analyzePromise = startAnalysis()
+
+    await vi.runAllTimersAsync()
+    await analyzePromise
+
+    const exportPromise = exportReport()
+
+    await vi.runAllTimersAsync()
+
+    await expect(exportPromise).resolves.toBeUndefined()
+    expect(state.stage).toBe('analysis-result')
+    expect(state.exportTaskId).toBe('export-task-2')
+    expect(state.exportStatus).toBe('failed')
+    expect(state.exportProgressPercent).toBe(35)
+    expect(state.exportMessage).toBe('导出失败，请稍后重试。')
+    expect(state.exportErrorMessage).toBe('导出失败，请稍后重试。')
+    expect(state.exportFileName).toBe('')
+    expect(state.downloadUrl).toBe('')
+
+    vi.useRealTimers()
+  })
+
+  it('ignores stale export updates from an older export attempt', async () => {
+    vi.useFakeTimers()
+
+    const exportResolvers: {
+      first: null | (() => void)
+      second: null | (() => void)
+    } = {
+      first: null,
+      second: null,
+    }
+
+    vi.mocked(runExportWorkflow)
+      .mockImplementationOnce(({ onProgress }) => {
+        onProgress({
+          exportTaskId: 'export-task-old',
+          exportStatus: 'running',
+          exportProgressPercent: 25,
+          exportMessage: '旧导出任务执行中。',
+        })
+
+        return new Promise<void>((resolve) => {
+          exportResolvers.first = () => resolve()
+        }).then(() => ({
+          exportTaskId: 'export-task-old',
+          exportStatus: 'succeeded',
+          exportProgressPercent: 100,
+          exportMessage: '旧导出任务已完成。',
+          exportFileName: 'old.docx',
+          downloadUrl: '/mock/old.docx',
+          exportErrorMessage: '',
+        }))
+      })
+      .mockImplementationOnce(({ onProgress }) => {
+        onProgress({
+          exportTaskId: 'export-task-new',
+          exportStatus: 'running',
+          exportProgressPercent: 80,
+          exportMessage: '新导出任务执行中。',
+        })
+
+        return new Promise<void>((resolve) => {
+          exportResolvers.second = () => resolve()
+        }).then(() => ({
+          exportTaskId: 'export-task-new',
+          exportStatus: 'succeeded',
+          exportProgressPercent: 100,
+          exportMessage: '新导出任务已完成。',
+          exportFileName: 'new.docx',
+          downloadUrl: '/mock/new.docx',
+          exportErrorMessage: '',
+        }))
+      })
+
+    const file = new File(['demo'], 'obstacles.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
+    const { state, openModal, submitImport, toggleTarget, startAnalysis, exportReport } = useWorkflowActions()
+
+    openModal()
+    await submitImport({
+      projectName: '武汉净空项目',
+      obstacleType: '铁塔',
+      fileName: 'obstacles.xlsx',
+      file,
+    })
+    toggleTarget('airport-1')
+
+    const analyzePromise = startAnalysis()
+    await vi.runAllTimersAsync()
+    await analyzePromise
+
+    const firstExportPromise = exportReport()
+    const secondExportPromise = exportReport()
+
+    const resolveFirstExport = exportResolvers.first
+
+    if (resolveFirstExport) {
+      resolveFirstExport()
+    }
+    await vi.runAllTimersAsync()
+    await firstExportPromise
+
+    expect(state.exportTaskId).toBe('export-task-new')
+    expect(state.exportStatus).toBe('running')
+    expect(state.exportProgressPercent).toBe(80)
+    expect(state.exportMessage).toBe('新导出任务执行中。')
+    expect(state.exportFileName).toBe('')
+    expect(state.downloadUrl).toBe('')
+
+    const resolveSecondExport = exportResolvers.second
+
+    if (resolveSecondExport) {
+      resolveSecondExport()
+    }
+    await vi.runAllTimersAsync()
+    await secondExportPromise
+
+    expect(state.exportTaskId).toBe('export-task-new')
+    expect(state.exportStatus).toBe('succeeded')
+    expect(state.exportProgressPercent).toBe(100)
+    expect(state.exportMessage).toBe('新导出任务已完成。')
+    expect(state.exportFileName).toBe('new.docx')
+    expect(state.downloadUrl).toBe('/mock/new.docx')
+
+    vi.useRealTimers()
+  })
+
+  it('does not throw when export workflow triggers download outside browser environment', async () => {
+    vi.useFakeTimers()
+
+    vi.mocked(runExportWorkflow).mockImplementationOnce(async ({ triggerDownload }) => {
+      triggerDownload('javascript:alert(1)')
+
+      return {
+        exportTaskId: 'export-task-3',
+        exportStatus: 'succeeded',
+        exportProgressPercent: 100,
+        exportMessage: 'Word 结论已生成。',
+        exportFileName: 'analysis-task-3.docx',
+        downloadUrl: 'javascript:alert(1)',
+        exportErrorMessage: '',
+      }
+    })
+
+    const file = new File(['demo'], 'obstacles.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
+    const { openModal, submitImport, toggleTarget, startAnalysis, exportReport } = useWorkflowActions()
+
+    openModal()
+    await submitImport({
+      projectName: '武汉净空项目',
+      obstacleType: '铁塔',
+      fileName: 'obstacles.xlsx',
+      file,
+    })
+    toggleTarget('airport-1')
+
+    const analyzePromise = startAnalysis()
+    await vi.runAllTimersAsync()
+    await analyzePromise
+
+    await expect(exportReport()).resolves.toBeUndefined()
 
     vi.useRealTimers()
   })
