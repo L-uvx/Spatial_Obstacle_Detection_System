@@ -2,14 +2,21 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as Cesium from 'cesium'
 import { mapConfig } from '../../config/map'
+import { syncAnalysisLayer } from '../../map/layers/AnalysisLayer'
 import { getObstacleFlyToOptions, syncObstacleLayer } from '../../map/layers/ObstacleLayer'
-import type { InitialCameraTarget, RenderedObstacle } from '../../types/tool'
+import type {
+  InitialCameraTarget,
+  PolygonObstacleAnalysisState,
+  RenderedObstacle,
+} from '../../types/tool'
 import { buildCameraFlyToOptions, getInitialCameraKey, resolveResetCameraTarget } from './camera'
 
 const props = defineProps<{
   resetTick: number
   obstacles: RenderedObstacle[]
   initialCameraTarget: InitialCameraTarget | null
+  visibleProtectionZones: PolygonObstacleAnalysisState['visibleProtectionZones']
+  protectionZoneSampling: PolygonObstacleAnalysisState['protectionZoneSampling']
 }>()
 
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -41,6 +48,13 @@ function syncObstacles(obstacles: RenderedObstacle[], flyToNewlyAdded: boolean) 
   if (result.flyToBoundingSphere && viewerRef.value && flyToOptions) {
     viewerRef.value.camera.flyToBoundingSphere(result.flyToBoundingSphere, flyToOptions)
   }
+}
+
+function syncAnalysisZones(
+  zones: PolygonObstacleAnalysisState['visibleProtectionZones'],
+  sampling: PolygonObstacleAnalysisState['protectionZoneSampling'],
+) {
+  syncAnalysisLayer(viewerRef.value, zones, sampling)
 }
 
 function buildTiandituUrl(layerType: string) {
@@ -150,6 +164,7 @@ async function initViewer() {
     viewerRef.value = viewer
     errorMessage.value = ''
     syncObstacles(props.obstacles, false)
+    syncAnalysisZones(props.visibleProtectionZones, props.protectionZoneSampling)
 
     if (props.initialCameraTarget) {
       flyToTarget(props.initialCameraTarget)
@@ -179,6 +194,14 @@ watch(
   () => props.obstacles,
   (obstacles) => {
     syncObstacles(obstacles, shouldFlyToObstacleExtents())
+  },
+  { deep: true },
+)
+
+watch(
+  () => [props.visibleProtectionZones, props.protectionZoneSampling] as const,
+  ([zones, sampling]) => {
+    syncAnalysisZones(zones, sampling)
   },
   { deep: true },
 )

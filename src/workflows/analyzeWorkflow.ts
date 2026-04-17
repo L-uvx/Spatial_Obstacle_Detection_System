@@ -1,7 +1,5 @@
-import { syncAnalysisLayer } from '../map/layers/AnalysisLayer'
-import { syncStationLayer } from '../map/layers/StationLayer'
 import { createAnalysisTask, getAnalysisTaskResult, getAnalysisTaskStatus } from '../services/analysis'
-import type { AnalysisSelectedTarget } from '../types/tool'
+import type { AnalysisSelectedTarget, ProtectionZoneRegion } from '../types/tool'
 
 export interface AnalyzeWorkflowResult {
   analysisTaskId: string
@@ -9,6 +7,7 @@ export interface AnalyzeWorkflowResult {
   message: string
   selectedTargets: AnalysisSelectedTarget[]
   obstacleCount: number
+  protectionZones: ProtectionZoneRegion[]
 }
 
 function delay(ms: number) {
@@ -42,14 +41,13 @@ export async function runAnalyzeWorkflow(input: {
   const serviceResult = await createAnalysisTask(input)
   const statusResult = await waitForAnalysisCompletion(serviceResult.analysisTaskId)
   const result = await getAnalysisTaskResult(serviceResult.analysisTaskId)
-  const stationLayerResult = syncStationLayer()
-  const analysisLayerResult = syncAnalysisLayer()
 
   return {
     analysisTaskId: result.analysisTaskId,
     summary: result.summary,
-    message: `${statusResult.message}${stationLayerResult.message}${analysisLayerResult.message}`,
+    message: statusResult.message,
     selectedTargets: result.selectedTargets,
     obstacleCount: result.obstacleCount,
+    protectionZones: result.protectionZones,
   }
 }

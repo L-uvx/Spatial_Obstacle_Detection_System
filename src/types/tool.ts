@@ -62,6 +62,122 @@ export interface InitialCameraTarget {
   roll?: number
 }
 
+export interface ProtectionZoneSamplingConfig {
+  circleAngleStepDegrees: number
+  sectorAngleStepDegrees: number
+}
+
+export interface ProtectionZoneRegionProperties {
+  label?: string
+}
+
+export interface ProtectionZoneCircleGeometry {
+  shapeType: 'circle'
+  center: {
+    longitude: number
+    latitude: number
+  }
+  radiusMeters: number
+}
+
+export interface ProtectionZoneSectorGeometry {
+  shapeType: 'sector'
+  center: {
+    longitude: number
+    latitude: number
+  }
+  innerRadiusMeters: number
+  outerRadiusMeters: number
+  startAzimuthDegrees: number
+  endAzimuthDegrees: number
+}
+
+export interface ProtectionZoneFlatVertical {
+  mode: 'flat'
+  baseReference: 'station'
+  baseHeightMeters: number
+}
+
+export interface ProtectionZoneAnalyticSurfaceVertical {
+  mode: 'analytic_surface'
+  baseReference: 'station'
+  baseHeightMeters: number
+  heightFunction: {
+    type: 'elevation_angle'
+    distanceMetric: 'radial'
+    elevationAngleDegrees: number
+    startDistanceMeters: number
+    endDistanceMeters: number
+  }
+}
+
+export interface ProtectionZoneRegion {
+  id: string
+  airportId: string
+  airportName: string
+  stationId: string
+  stationName: string
+  stationType: string
+  ruleCode: string
+  ruleName: string
+  zoneCode: string
+  zoneName: string
+  regionCode: string
+  regionName: string
+  geometry: ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry
+  vertical: ProtectionZoneFlatVertical | ProtectionZoneAnalyticSurfaceVertical
+  properties: ProtectionZoneRegionProperties
+}
+
+export interface ProtectionZoneNode {
+  key: string
+  airportId: string
+  airportName: string
+  stationId: string
+  stationName: string
+  stationType: string
+  zoneCode: string
+  zoneName: string
+  ruleCode: string
+  ruleName: string
+  visible: boolean
+  regions: ProtectionZoneRegion[]
+}
+
+export interface ProtectionZoneStationNode {
+  stationId: string
+  stationName: string
+  stationType: string
+  visible: boolean
+  zones: ProtectionZoneNode[]
+}
+
+export interface ProtectionZoneAirportNode {
+  airportId: string
+  airportName: string
+  visible: boolean
+  stations: ProtectionZoneStationNode[]
+}
+
+export interface VisibleProtectionZoneRegion {
+  key: string
+  id: string
+  airportId: string
+  airportName: string
+  stationId: string
+  stationName: string
+  stationType: string
+  zoneCode: string
+  zoneName: string
+  ruleCode: string
+  ruleName: string
+  regionCode: string
+  regionName: string
+  geometry: ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry
+  vertical: ProtectionZoneFlatVertical | ProtectionZoneAnalyticSurfaceVertical
+  properties: ProtectionZoneRegionProperties
+}
+
 export interface ImportFormValue {
   projectName: string
   obstacleType: string
@@ -71,6 +187,7 @@ export interface ImportFormValue {
 
 export interface PolygonObstacleAnalysisState {
   isOpen: boolean
+  protectionZonePanelOpen: boolean
   stage: WizardStage
   bootstrapStatus: BootstrapStatus
   bootstrapMessage: string
@@ -98,6 +215,9 @@ export interface PolygonObstacleAnalysisState {
   downloadUrl: string
   exportErrorMessage: string
   renderedObstacles: RenderedObstacle[]
+  protectionZoneTree: ProtectionZoneAirportNode[]
+  visibleProtectionZones: VisibleProtectionZoneRegion[]
+  protectionZoneSampling: ProtectionZoneSamplingConfig
 }
 
 export const toolbarItems: ToolbarItem[] = [
