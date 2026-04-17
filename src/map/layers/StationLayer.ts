@@ -21,23 +21,36 @@ function isStationLayerEntity(entity: Cesium.Entity) {
   return typeof entity.id === 'string' && entity.id.startsWith(`${ENTITY_ID_PREFIX}-`)
 }
 
-function getEntityStationId(entity: Cesium.Entity) {
-  const stationIdProperty = entity.properties?.stationId
-
-  if (!stationIdProperty || typeof stationIdProperty.getValue !== 'function') {
-    return null
-  }
-
-  const stationId = stationIdProperty.getValue(Cesium.JulianDate.now())
-  return typeof stationId === 'string' ? stationId : null
-}
-
 function createEntityProperties(station: RenderedStation) {
   return {
     stationId: station.id,
     airportId: station.airportId,
     stationType: station.stationType,
     altitude: station.altitude,
+  }
+}
+
+function createStationPointGraphics() {
+  return {
+    pixelSize: 8,
+    color: Cesium.Color.fromCssColorString('#1d9bf0'),
+    outlineColor: Cesium.Color.WHITE,
+    outlineWidth: 2,
+    heightReference: Cesium.HeightReference.NONE,
+  }
+}
+
+function createStationLabelGraphics(station: RenderedStation) {
+  return {
+    text: station.name,
+    font: 'bold 18px sans-serif',
+    fillColor: Cesium.Color.WHITE,
+    outlineColor: Cesium.Color.fromCssColorString('#0b1f33'),
+    outlineWidth: 3,
+    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+    pixelOffset: new Cesium.Cartesian2(0, -22),
+    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+    disableDepthTestDistance: Number.POSITIVE_INFINITY,
   }
 }
 
@@ -54,10 +67,10 @@ function updateStationEntity(entity: Cesium.Entity, station: RenderedStation) {
   setEntityPosition(entity, station)
   ;(entity as unknown as { properties: ReturnType<typeof createEntityProperties> }).properties =
     createEntityProperties(station)
-
-  if (entity.label) {
-    ;(entity.label as unknown as { text: string }).text = station.name
-  }
+  ;(entity as unknown as { point: ReturnType<typeof createStationPointGraphics> }).point =
+    createStationPointGraphics()
+  ;(entity as unknown as { label: ReturnType<typeof createStationLabelGraphics> }).label =
+    createStationLabelGraphics(station)
 }
 
 function collectStaleStationEntities(
@@ -69,10 +82,9 @@ function collectStaleStationEntities(
       return false
     }
 
-    const stationId = getEntityStationId(entity)
     const entityId = typeof entity.id === 'string' ? entity.id : null
 
-    return Boolean(stationId && entityId && !expectedEntityIds.has(entityId))
+    return Boolean(entityId && !expectedEntityIds.has(entityId))
   })
 }
 
@@ -115,24 +127,8 @@ export function syncStationLayer(
       name: station.name,
       position: Cesium.Cartesian3.fromDegrees(station.longitude, station.latitude, station.altitude),
       properties: createEntityProperties(station),
-      point: {
-        pixelSize: 10,
-        color: Cesium.Color.fromCssColorString('#1d9bf0'),
-        outlineColor: Cesium.Color.WHITE,
-        outlineWidth: 2,
-        heightReference: Cesium.HeightReference.NONE,
-      },
-      label: {
-        text: station.name,
-        font: '14px sans-serif',
-        fillColor: Cesium.Color.WHITE,
-        outlineColor: Cesium.Color.fromCssColorString('#0b1f33'),
-        outlineWidth: 2,
-        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-        pixelOffset: new Cesium.Cartesian2(0, -18),
-        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-      },
+      point: createStationPointGraphics(),
+      label: createStationLabelGraphics(station),
     })
 
     addedEntityIds.push(entityId)

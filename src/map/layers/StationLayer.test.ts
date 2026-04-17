@@ -17,7 +17,14 @@ function createStation(id: string, overrides: Partial<RenderedStation> = {}): Re
 
 describe('syncStationLayer', () => {
   it('syncs current-airport stations as point and label entities', () => {
-    const add = vi.fn((entity: { id: string; point?: object; label?: { text?: string }; position?: object }) => entity)
+    const add = vi.fn(
+      (entity: {
+        id: string
+        point?: object
+        label?: { text?: string; font?: string; outlineWidth?: number; pixelOffset?: object }
+        position?: object
+      }) => entity,
+    )
 
     const viewer = {
       entities: {
@@ -32,7 +39,16 @@ describe('syncStationLayer', () => {
     expect(add).toHaveBeenCalledTimes(1)
     expect(add.mock.calls[0][0].id).toBe('station-layer-station-1')
     expect(add.mock.calls[0][0].point).toBeDefined()
+    expect(add.mock.calls[0][0].point).toMatchObject({
+      pixelSize: 8,
+    })
     expect(add.mock.calls[0][0].label?.text).toBe('台站-station-1')
+    expect(add.mock.calls[0][0].label).toMatchObject({
+      text: '台站-station-1',
+      font: 'bold 18px sans-serif',
+      outlineWidth: 3,
+    })
+    expect(add.mock.calls[0][0].label?.pixelOffset).toBeDefined()
     expect(add.mock.calls[0][0].position).toBeDefined()
     expect(result.addedEntityIds).toEqual(['station-layer-station-1'])
     expect(result.removedEntityIds).toEqual([])
@@ -109,6 +125,10 @@ describe('syncStationLayer', () => {
       id: 'station-layer-station-1',
       name: '旧台站',
       position: { kind: 'old-position' },
+      point: {
+        pixelSize: 10,
+        outlineWidth: 1,
+      },
       properties: {
         stationId: {
           getValue: () => 'station-1',
@@ -117,6 +137,9 @@ describe('syncStationLayer', () => {
       },
       label: {
         text: '旧台站',
+        font: '14px sans-serif',
+        outlineWidth: 2,
+        pixelOffset: { kind: 'old-offset' },
       },
     }
     const add = vi.fn()
@@ -146,10 +169,36 @@ describe('syncStationLayer', () => {
     expect(remove).not.toHaveBeenCalled()
     expect(existingEntity.name).toBe('更新后台站')
     expect(existingEntity.label.text).toBe('更新后台站')
+    expect(existingEntity.point.pixelSize).toBe(8)
+    expect(existingEntity.label.font).toBe('bold 18px sans-serif')
+    expect(existingEntity.label.outlineWidth).toBe(3)
+    expect(existingEntity.label.pixelOffset).not.toEqual({ kind: 'old-offset' })
     expect(existingEntity.position).not.toEqual({ kind: 'old-position' })
     expect(existingEntity.properties.altitude).toBe(600)
     expect(result.addedEntityIds).toEqual([])
     expect(result.removedEntityIds).toEqual([])
+  })
+
+  it('removes stale station entities by layer id even when stationId property is missing', () => {
+    const staleEntity = {
+      id: 'station-layer-station-old',
+      properties: {},
+    }
+    const remove = vi.fn()
+
+    const viewer = {
+      entities: {
+        values: [staleEntity],
+        add: vi.fn(),
+        remove,
+      },
+    }
+
+    const result = syncStationLayer(viewer as never, [])
+
+    expect(remove).toHaveBeenCalledTimes(1)
+    expect(remove).toHaveBeenCalledWith(staleEntity)
+    expect(result.removedEntityIds).toEqual(['station-layer-station-old'])
   })
 
   it('removes all stale station entities when switching away from an airport with multiple stations', () => {
