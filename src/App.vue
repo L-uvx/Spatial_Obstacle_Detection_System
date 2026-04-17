@@ -5,8 +5,21 @@ import { useWorkflowActions } from './composables/useWorkflowActions'
 import type { ImportFormValue } from './types/tool'
 
 const resetTick = ref(0)
-const { state, bootstrap, openModal, closeModal, submitImport, toggleTarget, startAnalysis, exportReport } =
-  useWorkflowActions()
+const {
+  state,
+  bootstrap,
+  openModal,
+  closeModal,
+  submitImport,
+  toggleTarget,
+  startAnalysis,
+  exportReport,
+  openProtectionZonePanel,
+  closeProtectionZonePanel,
+  toggleProtectionZoneAirportVisibility,
+  toggleProtectionZoneStationVisibility,
+  toggleProtectionZoneVisibility,
+} = useWorkflowActions()
 
 onMounted(() => {
   void bootstrap()
@@ -32,6 +45,23 @@ function handleToggleTarget(targetId: string) {
   toggleTarget(targetId)
 }
 
+function handleToggleProtectionZoneAirport(airportId: string, visible: boolean) {
+  toggleProtectionZoneAirportVisibility(airportId, visible)
+}
+
+function handleToggleProtectionZoneStation(airportId: string, stationId: string, visible: boolean) {
+  toggleProtectionZoneStationVisibility(airportId, stationId, visible)
+}
+
+function handleToggleProtectionZone(
+  airportId: string,
+  stationId: string,
+  zoneCode: string,
+  visible: boolean,
+) {
+  toggleProtectionZoneVisibility(airportId, stationId, zoneCode, visible)
+}
+
 function handleStartAnalysis() {
   void startAnalysis()
 }
@@ -52,6 +82,11 @@ function handleExportReport() {
     @close-analysis="handleCloseAnalysis"
     @submit-import="handleSubmitImport"
     @toggle-target="handleToggleTarget"
+    @set-airport-protection-zone-visibility="handleToggleProtectionZoneAirport"
+    @set-station-protection-zone-visibility="handleToggleProtectionZoneStation"
+    @set-zone-protection-zone-visibility="handleToggleProtectionZone"
+    @open-protection-zone-panel="openProtectionZonePanel"
+    @close-protection-zone-panel="closeProtectionZonePanel"
     @start-analysis="handleStartAnalysis"
     @export-report="handleExportReport"
   />

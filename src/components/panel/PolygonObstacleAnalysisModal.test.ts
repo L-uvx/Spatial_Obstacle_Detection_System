@@ -1,14 +1,50 @@
 // @vitest-environment jsdom
 
 import { mount } from '@vue/test-utils'
+import { defineComponent } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import PolygonObstacleAnalysisModal from './PolygonObstacleAnalysisModal.vue'
 import { obstacleTypeOptions } from '../../types/tool'
-import type { PolygonObstacleAnalysisState } from '../../types/tool'
+import type { PolygonObstacleAnalysisState, ProtectionZoneAirportNode } from '../../types/tool'
+
+function createVisibleProtectionZoneRegion(): PolygonObstacleAnalysisState['visibleProtectionZones'][number] {
+  return {
+    key: 'airport-1:station-1:zone-a:region-north',
+    id: 'airport-1-station-1-zone-a-region-north',
+    airportId: 'airport-1',
+    airportName: '天河机场',
+    stationId: 'station-1',
+    stationName: '导航台A',
+    stationType: 'VOR',
+    zoneCode: 'zone-a',
+    zoneName: 'A区',
+    ruleCode: 'rule-a',
+    ruleName: '规则A',
+    regionCode: 'region-north',
+    regionName: '北侧区域',
+    geometry: {
+      shapeType: 'circle',
+      center: {
+        longitude: 114.2,
+        latitude: 30.7,
+      },
+      radiusMeters: 500,
+    },
+    vertical: {
+      mode: 'flat',
+      baseReference: 'station',
+      baseHeightMeters: 500,
+    },
+    properties: {
+      label: '北侧区域',
+    },
+  }
+}
 
 function createImportFormState(): PolygonObstacleAnalysisState {
   return {
     isOpen: true,
+    protectionZonePanelOpen: false,
     stage: 'import-form',
     bootstrapStatus: 'idle',
     bootstrapMessage: '',
@@ -36,10 +72,140 @@ function createImportFormState(): PolygonObstacleAnalysisState {
     downloadUrl: '',
     exportErrorMessage: '',
     renderedObstacles: [],
+    protectionZoneTree: [],
+    visibleProtectionZones: [createVisibleProtectionZoneRegion()],
+    protectionZoneSampling: {
+      circleAngleStepDegrees: 5,
+      sectorAngleStepDegrees: 5,
+    },
   }
 }
 
+function createProtectionZoneTree(): ProtectionZoneAirportNode[] {
+  return [
+    {
+      airportId: 'airport-1',
+      airportName: '天河机场',
+      visible: true,
+      stations: [
+        {
+          stationId: 'station-1',
+          stationName: '导航台A',
+          stationType: 'VOR',
+          visible: true,
+          zones: [
+            {
+              key: 'airport-1:station-1:zone-a',
+              airportId: 'airport-1',
+              airportName: '天河机场',
+              stationId: 'station-1',
+              stationName: '导航台A',
+              stationType: 'VOR',
+              zoneCode: 'zone-a',
+              zoneName: 'A区',
+              ruleCode: 'rule-a',
+              ruleName: '规则A',
+              visible: true,
+              regions: [
+                {
+                  id: 'airport-1-station-1-zone-a-region-north',
+                  airportId: 'airport-1',
+                  airportName: '天河机场',
+                  stationId: 'station-1',
+                  stationName: '导航台A',
+                  stationType: 'VOR',
+                  ruleCode: 'rule-a',
+                  ruleName: '规则A',
+                  zoneCode: 'zone-a',
+                  zoneName: 'A区',
+                  regionCode: 'region-north',
+                  regionName: '北侧区域',
+                  geometry: {
+                    shapeType: 'circle',
+                    center: {
+                      longitude: 114.2,
+                      latitude: 30.7,
+                    },
+                    radiusMeters: 500,
+                  },
+                    vertical: {
+                      mode: 'flat',
+                      baseReference: 'station',
+                      baseHeightMeters: 500,
+                    },
+                  properties: {
+                    label: '北侧区域',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ]
+}
+
 describe('PolygonObstacleAnalysisModal', () => {
+  it('wires protection-zone visibility events from AppShell into workflow actions at the app root', async () => {
+    vi.resetModules()
+
+    const toggleProtectionZoneAirportVisibility = vi.fn()
+    const toggleProtectionZoneStationVisibility = vi.fn()
+    const toggleProtectionZoneVisibility = vi.fn()
+
+    vi.doMock('../../components/layout/AppShell.vue', () => ({
+      default: defineComponent({
+        name: 'AppShellStub',
+        emits: [
+          'open-analysis',
+          'reset',
+          'close-analysis',
+          'submit-import',
+          'toggle-target',
+          'set-airport-protection-zone-visibility',
+          'set-station-protection-zone-visibility',
+          'set-zone-protection-zone-visibility',
+          'start-analysis',
+          'export-report',
+        ],
+        template: '<div class="app-shell-stub"></div>',
+      }),
+    }))
+
+    vi.doMock('../../composables/useWorkflowActions', () => ({
+      useWorkflowActions: () => ({
+        state: createImportFormState(),
+        bootstrap: vi.fn(async () => undefined),
+        openModal: vi.fn(),
+        closeModal: vi.fn(),
+        submitImport: vi.fn(async () => undefined),
+        toggleTarget: vi.fn(),
+        startAnalysis: vi.fn(async () => undefined),
+        exportReport: vi.fn(async () => undefined),
+        toggleProtectionZoneAirportVisibility,
+        toggleProtectionZoneStationVisibility,
+        toggleProtectionZoneVisibility,
+      }),
+    }))
+
+    const { default: App } = await import('../../App.vue')
+    const wrapper = mount(App)
+    const shell = wrapper.getComponent({ name: 'AppShellStub' })
+
+    shell.vm.$emit('set-airport-protection-zone-visibility', 'airport-1', false)
+    shell.vm.$emit('set-station-protection-zone-visibility', 'airport-1', 'station-1', false)
+    shell.vm.$emit('set-zone-protection-zone-visibility', 'airport-1', 'station-1', 'zone-a', false)
+
+    expect(toggleProtectionZoneAirportVisibility).toHaveBeenCalledWith('airport-1', false)
+    expect(toggleProtectionZoneStationVisibility).toHaveBeenCalledWith('airport-1', 'station-1', false)
+    expect(toggleProtectionZoneVisibility).toHaveBeenCalledWith('airport-1', 'station-1', 'zone-a', false)
+
+    vi.doUnmock('../../components/layout/AppShell.vue')
+    vi.doUnmock('../../composables/useWorkflowActions')
+    vi.resetModules()
+  })
+
   it('uses a modal-styled button to trigger excel file selection', async () => {
     const clickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {})
 
@@ -144,6 +310,7 @@ describe('PolygonObstacleAnalysisModal', () => {
             { id: '2', name: 'Airport Far', category: '机场' },
           ],
           analysisObstacleCount: 2,
+          protectionZoneTree: createProtectionZoneTree(),
         },
       },
     })
@@ -152,6 +319,9 @@ describe('PolygonObstacleAnalysisModal', () => {
     expect(wrapper.text()).toContain('Airport Near')
     expect(wrapper.text()).toContain('Airport Far')
     expect(wrapper.text()).toContain('2')
+    expect(wrapper.text()).not.toContain('保护区显示管理')
+    expect(wrapper.text()).not.toContain('天河机场')
+    expect(wrapper.text()).not.toContain('导航台A')
   })
 
   it('renders export running progress in analysis result view', () => {

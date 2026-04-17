@@ -188,7 +188,7 @@ watch(
           <p>关联障碍物数量：{{ state.analysisObstacleCount }}</p>
           <p>{{ state.analysisSummary }}</p>
 
-          <div v-if="state.analysisSelectedTargets.length > 0" class="analysis-modal__result-list">
+          <div v-if="state.analysisSelectedTargets.length > 0" class="analysis-modal__result-section analysis-modal__result-list">
             <h4>已分析对象</h4>
             <ul>
               <li v-for="target in state.analysisSelectedTargets" :key="target.id">
@@ -196,6 +196,7 @@ watch(
               </li>
             </ul>
           </div>
+
         </div>
 
         <button

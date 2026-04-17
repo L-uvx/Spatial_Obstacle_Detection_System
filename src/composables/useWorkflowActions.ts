@@ -1,5 +1,12 @@
 import { reactive } from 'vue'
 import type { ImportFormValue, PolygonObstacleAnalysisState, RenderedObstacle } from '../types/tool'
+import {
+  flattenVisibleProtectionZones,
+  mergeProtectionZones,
+  toggleAirportVisibility,
+  toggleStationVisibility,
+  toggleZoneVisibility,
+} from '../map/layers/analysis/protectionZoneTree'
 import { getBootstrapData } from '../services/bootstrap'
 import { runAnalyzeWorkflow } from '../workflows/analyzeWorkflow'
 import { runExportWorkflow } from '../workflows/exportWorkflow'
@@ -44,9 +51,15 @@ function triggerDownload(downloadUrl: string) {
   link.click()
 }
 
+function getAllowedDownloadUrl(downloadUrl: string) {
+  const isAllowedDownloadUrl = /^https?:\/\//.test(downloadUrl) || /^\/(?!\/)/.test(downloadUrl)
+  return isAllowedDownloadUrl ? downloadUrl : ''
+}
+
 function createInitialState(renderedObstacles: RenderedObstacle[] = []): PolygonObstacleAnalysisState {
   return {
     isOpen: false,
+    protectionZonePanelOpen: false,
     stage: 'idle',
     bootstrapStatus: 'idle',
     bootstrapMessage: '等待系统初始化。',
@@ -74,6 +87,12 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
     downloadUrl: '',
     exportErrorMessage: '',
     renderedObstacles,
+    protectionZoneTree: [],
+    visibleProtectionZones: [],
+    protectionZoneSampling: {
+      circleAngleStepDegrees: 5,
+      sectorAngleStepDegrees: 5,
+    },
   }
 }
 
@@ -111,12 +130,18 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     const preservedBootstrapStatus = state.bootstrapStatus
     const preservedBootstrapMessage = state.bootstrapMessage
     const preservedInitialCameraTarget = state.initialCameraTarget
+    const preservedProtectionZoneTree = state.protectionZoneTree
+    const preservedProtectionZonePanelOpen = state.protectionZonePanelOpen
+    const nextVisibleProtectionZones = flattenVisibleProtectionZones(preservedProtectionZoneTree)
 
     Object.assign(state, {
       ...createInitialState(preservedObstacles),
       bootstrapStatus: preservedBootstrapStatus,
       bootstrapMessage: preservedBootstrapMessage,
       initialCameraTarget: preservedInitialCameraTarget,
+      protectionZonePanelOpen: preservedProtectionZonePanelOpen,
+      protectionZoneTree: preservedProtectionZoneTree,
+      visibleProtectionZones: nextVisibleProtectionZones,
     })
   }
 
@@ -136,21 +161,27 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     state.stage = 'importing'
     state.statusMessage = '导入任务已创建，正在等待后端解析 Excel 并入库。'
 
-    const workflowResult = await runImportWorkflow({
-      ...formValue,
-      file: formValue.file,
-    })
+    try {
+      const workflowResult = await runImportWorkflow({
+        ...formValue,
+        file: formValue.file,
+      })
 
-    state.importTaskId = workflowResult.importTaskId
-    state.importStatus = workflowResult.importStatus
-    state.importProgressPercent = workflowResult.importProgressPercent
-    state.projectId = workflowResult.projectId
-    state.obstacleBatchId = workflowResult.obstacleBatchId
-    state.targetOptions = workflowResult.targetOptions
-    state.renderedObstacles = appendRenderedObstacles(state.renderedObstacles, workflowResult.obstacles)
-    state.selectedTargetIds = []
-    state.stage = 'target-selection'
-    state.statusMessage = workflowResult.message
+      state.importTaskId = workflowResult.importTaskId
+      state.importStatus = workflowResult.importStatus
+      state.importProgressPercent = workflowResult.importProgressPercent
+      state.projectId = workflowResult.projectId
+      state.obstacleBatchId = workflowResult.obstacleBatchId
+      state.targetOptions = workflowResult.targetOptions
+      state.renderedObstacles = appendRenderedObstacles(state.renderedObstacles, workflowResult.obstacles)
+      state.selectedTargetIds = []
+      state.stage = 'target-selection'
+      state.statusMessage = workflowResult.message
+    } catch (error) {
+      state.importStatus = 'failed'
+      state.stage = 'error'
+      state.statusMessage = error instanceof Error ? error.message : '导入失败，请稍后重试。'
+    }
   }
 
   function toggleTarget(targetId: string) {
@@ -173,18 +204,26 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     state.stage = 'analyzing'
     state.statusMessage = '分析任务执行中，正在等待后端返回基础分析结论。'
 
-    await delay(400)
-    const workflowResult = await runAnalyzeWorkflow({
-      importTaskId: state.importTaskId,
-      targetIds: [...state.selectedTargetIds],
-    })
+    try {
+      await delay(400)
+      const workflowResult = await runAnalyzeWorkflow({
+        importTaskId: state.importTaskId,
+        targetIds: [...state.selectedTargetIds],
+      })
 
-    state.analysisTaskId = workflowResult.analysisTaskId
-    state.analysisSummary = workflowResult.summary
-    state.analysisSelectedTargets = workflowResult.selectedTargets
-    state.analysisObstacleCount = workflowResult.obstacleCount
-    state.stage = 'analysis-result'
-    state.statusMessage = workflowResult.message
+      state.analysisTaskId = workflowResult.analysisTaskId
+      state.analysisSummary = workflowResult.summary
+      state.analysisSelectedTargets = workflowResult.selectedTargets
+      state.analysisObstacleCount = workflowResult.obstacleCount
+      state.protectionZoneTree = mergeProtectionZones(state.protectionZoneTree, workflowResult.protectionZones)
+      state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
+      state.protectionZonePanelOpen = state.protectionZoneTree.length > 0
+      state.stage = 'analysis-result'
+      state.statusMessage = workflowResult.message
+    } catch (error) {
+      state.stage = 'error'
+      state.statusMessage = error instanceof Error ? error.message : '分析失败，请稍后重试。'
+    }
   }
 
   async function exportReport() {
@@ -229,7 +268,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       state.exportProgressPercent = workflowResult.exportProgressPercent
       state.exportMessage = workflowResult.exportMessage
       state.exportFileName = workflowResult.exportFileName
-      state.downloadUrl = workflowResult.downloadUrl
+      state.downloadUrl = getAllowedDownloadUrl(workflowResult.downloadUrl)
       state.exportErrorMessage = workflowResult.exportErrorMessage
     } catch (error) {
       if (currentExportRunId !== exportRunId) {
@@ -242,6 +281,40 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     }
   }
 
+  function toggleProtectionZoneAirportVisibility(airportId: string, visible: boolean) {
+    state.protectionZoneTree = toggleAirportVisibility(state.protectionZoneTree, airportId, visible)
+    state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
+  }
+
+  function toggleProtectionZoneStationVisibility(airportId: string, stationId: string, visible: boolean) {
+    state.protectionZoneTree = toggleStationVisibility(state.protectionZoneTree, airportId, stationId, visible)
+    state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
+  }
+
+  function toggleProtectionZoneVisibility(
+    airportId: string,
+    stationId: string,
+    zoneCode: string,
+    visible: boolean,
+  ) {
+    state.protectionZoneTree = toggleZoneVisibility(
+      state.protectionZoneTree,
+      airportId,
+      stationId,
+      zoneCode,
+      visible,
+    )
+    state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
+  }
+
+  function openProtectionZonePanel() {
+    state.protectionZonePanelOpen = true
+  }
+
+  function closeProtectionZonePanel() {
+    state.protectionZonePanelOpen = false
+  }
+
   return {
     state,
     bootstrap,
@@ -251,5 +324,10 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     toggleTarget,
     startAnalysis,
     exportReport,
+    openProtectionZonePanel,
+    closeProtectionZonePanel,
+    toggleProtectionZoneAirportVisibility,
+    toggleProtectionZoneStationVisibility,
+    toggleProtectionZoneVisibility,
   }
 }

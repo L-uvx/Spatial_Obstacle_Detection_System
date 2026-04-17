@@ -1,8 +1,119 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useWorkflowActions } from './useWorkflowActions'
 import { getBootstrapData } from '../services/bootstrap'
+import { runAnalyzeWorkflow } from '../workflows/analyzeWorkflow'
 import { runImportWorkflow } from '../workflows/importWorkflow'
 import { runExportWorkflow } from '../workflows/exportWorkflow'
+import type { PolygonObstacleAnalysisState, ProtectionZoneRegion } from '../types/tool'
+
+function createVisibleProtectionZoneRegion(): PolygonObstacleAnalysisState['visibleProtectionZones'][number] {
+  return {
+    key: 'airport-1:station-1:zone-a:region-north',
+    id: 'airport-1-station-1-zone-a-region-north',
+    airportId: 'airport-1',
+    airportName: '天河机场',
+    stationId: 'station-1',
+    stationName: '导航台A',
+    stationType: 'VOR',
+    zoneCode: 'zone-a',
+    zoneName: 'A区',
+    ruleCode: 'rule-a',
+    ruleName: '规则A',
+    regionCode: 'region-north',
+    regionName: '北侧区域',
+    geometry: {
+      shapeType: 'circle',
+      center: {
+        longitude: 114.2,
+        latitude: 30.7,
+      },
+      radiusMeters: 500,
+    },
+    vertical: {
+      mode: 'flat',
+      baseReference: 'station',
+      baseHeightMeters: 500,
+    },
+    properties: {
+      label: '北侧区域',
+    },
+  }
+}
+
+function createProtectionZones(): ProtectionZoneRegion[] {
+  return [
+    {
+      id: 'airport-1-station-1-zone-a-rule-a-region-north',
+      airportId: 'airport-1',
+      airportName: '天河机场',
+      stationId: 'station-1',
+      stationName: '导航台A',
+      stationType: 'VOR',
+      ruleCode: 'rule-a',
+      ruleName: '规则A',
+      zoneCode: 'zone-a',
+      zoneName: 'A区',
+      regionCode: 'region-north',
+      regionName: '北侧区域',
+      geometry: {
+        shapeType: 'circle',
+        center: {
+          longitude: 114.2,
+          latitude: 30.7,
+        },
+        radiusMeters: 500,
+      },
+        vertical: {
+          mode: 'flat',
+          baseReference: 'station',
+          baseHeightMeters: 500,
+        },
+      properties: {
+        label: '北侧区域',
+      },
+    },
+    {
+      id: 'airport-1-station-1-zone-a-rule-b-region-south',
+      airportId: 'airport-1',
+      airportName: '天河机场',
+      stationId: 'station-1',
+      stationName: '导航台A',
+      stationType: 'VOR',
+      ruleCode: 'rule-b',
+      ruleName: '规则B',
+      zoneCode: 'zone-a',
+      zoneName: 'A区-特殊规则',
+      regionCode: 'region-south',
+      regionName: '南侧区域',
+      geometry: {
+        shapeType: 'sector',
+        center: {
+          longitude: 114.21,
+          latitude: 30.69,
+        },
+        innerRadiusMeters: 100,
+        outerRadiusMeters: 1000,
+        startAzimuthDegrees: 90,
+        endAzimuthDegrees: 180,
+      },
+      vertical: {
+        mode: 'analytic_surface',
+        baseReference: 'station',
+        baseHeightMeters: 48,
+        heightFunction: {
+          type: 'elevation_angle',
+          distanceMetric: 'radial',
+          elevationAngleDegrees: 3,
+          startDistanceMeters: 100,
+          endDistanceMeters: 1000,
+        },
+      },
+      properties: {
+        label: '南侧区域',
+      },
+    },
+  ]
+}
 
 vi.mock('../services/bootstrap', () => ({
   getBootstrapData: vi.fn(),
@@ -57,6 +168,7 @@ vi.mock('../workflows/analyzeWorkflow', () => ({
       { id: '2', name: 'Airport Far', category: '机场' },
     ],
     obstacleCount: 2,
+    protectionZones: createProtectionZones(),
   })),
 }))
 
@@ -110,6 +222,12 @@ describe('useWorkflowActions', () => {
     expect(state.stage).toBe('idle')
     expect(state.initialCameraTarget?.longitude).toBe(103.95056)
     expect(state.renderedObstacles.map((item) => item.id)).toEqual(['history-17'])
+    expect(state.protectionZoneTree).toEqual([])
+    expect(state.visibleProtectionZones).toEqual([])
+    expect(state.protectionZoneSampling).toEqual({
+      circleAngleStepDegrees: 5,
+      sectorAngleStepDegrees: 5,
+    })
   })
 
   it('keeps the app usable when bootstrap fails', async () => {
@@ -124,6 +242,8 @@ describe('useWorkflowActions', () => {
     expect(state.initialCameraTarget).toBeNull()
     expect(state.renderedObstacles).toEqual([])
     expect(state.bootstrapMessage).toContain('初始化')
+    expect(state.protectionZoneTree).toEqual([])
+    expect(state.visibleProtectionZones).toEqual([])
   })
 
   it('preserves bootstrap state when closing the modal', async () => {
@@ -153,6 +273,8 @@ describe('useWorkflowActions', () => {
       height: 10000,
       pitch: -90,
     })
+    expect(state.protectionZoneTree).toEqual([])
+    expect(state.visibleProtectionZones).toEqual([])
   })
 
   it('drives the single polygon obstacle analysis wizard lifecycle', async () => {
@@ -187,11 +309,31 @@ describe('useWorkflowActions', () => {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     })
 
-    const { state, submitImport, toggleTarget, startAnalysis, exportReport, closeModal, openModal } =
-      useWorkflowActions()
+    const {
+      state,
+      submitImport,
+      toggleTarget,
+      startAnalysis,
+      exportReport,
+      closeModal,
+      openModal,
+      toggleProtectionZoneAirportVisibility,
+      toggleProtectionZoneVisibility,
+    } = useWorkflowActions()
 
     expect(state.isOpen).toBe(false)
     expect(state.stage).toBe('idle')
+    expect(state.protectionZoneTree).toEqual([])
+    expect(state.visibleProtectionZones).toEqual([])
+    expect(state.protectionZoneSampling).toEqual({
+      circleAngleStepDegrees: 5,
+      sectorAngleStepDegrees: 5,
+    })
+    const visibleRegion = createVisibleProtectionZoneRegion()
+    expect(visibleRegion.regionCode).toBe('region-north')
+    expect(visibleRegion.id).toBe('airport-1-station-1-zone-a-region-north')
+    expect(visibleRegion.geometry.shapeType).toBe('circle')
+    expect(visibleRegion.vertical.mode).toBe('flat')
 
     openModal()
 
@@ -271,6 +413,45 @@ describe('useWorkflowActions', () => {
     ])
     expect(state.analysisObstacleCount).toBe(2)
     expect(state.statusMessage).toBe('analysis task created')
+    expect(state.protectionZonePanelOpen).toBe(true)
+    expect(state.protectionZoneTree).toHaveLength(1)
+    expect(state.protectionZoneTree[0].airportName).toBe('天河机场')
+    expect(state.protectionZoneTree[0].stations[0].zones.map((zone) => zone.key)).toEqual(['airport-1:station-1:zone-a'])
+    expect(state.visibleProtectionZones).toEqual([])
+    expect(state.protectionZoneTree[0].stations[0].zones.map((zone) => ({
+      key: zone.key,
+      visible: zone.visible,
+    }))).toEqual([
+      { key: 'airport-1:station-1:zone-a', visible: false },
+    ])
+
+    toggleProtectionZoneVisibility('airport-1', 'station-1', 'zone-a', true)
+
+    expect(state.protectionZoneTree[0].stations[0].zones.map((zone) => ({
+      key: zone.key,
+      visible: zone.visible,
+    }))).toEqual([
+      { key: 'airport-1:station-1:zone-a', visible: true },
+    ])
+    expect(state.protectionZoneTree[0].visible).toBe(true)
+    expect(state.protectionZoneTree[0].stations[0].visible).toBe(true)
+    expect(state.visibleProtectionZones.map((item) => item.key)).toEqual([
+      'airport-1:station-1:zone-a:region-north',
+      'airport-1:station-1:zone-a:region-south',
+    ])
+
+    toggleProtectionZoneAirportVisibility('airport-1', false)
+    expect(state.visibleProtectionZones).toEqual([])
+    expect(state.protectionZoneTree[0].visible).toBe(false)
+    expect(state.protectionZoneTree[0].stations[0].visible).toBe(false)
+    expect(state.protectionZoneTree[0].stations[0].zones[0].visible).toBe(false)
+
+    toggleProtectionZoneAirportVisibility('airport-1', true)
+    toggleProtectionZoneVisibility('airport-1', 'station-1', 'zone-a', true)
+    expect(state.visibleProtectionZones.map((item) => item.key)).toEqual([
+      'airport-1:station-1:zone-a:region-north',
+      'airport-1:station-1:zone-a:region-south',
+    ])
 
     const exportPromise = exportReport()
 
@@ -290,6 +471,11 @@ describe('useWorkflowActions', () => {
     expect(state.isOpen).toBe(false)
     expect(state.stage).toBe('idle')
     expect(state.renderedObstacles).toHaveLength(1)
+    expect(state.protectionZoneTree).toHaveLength(1)
+    expect(state.visibleProtectionZones.map((item) => item.key)).toEqual([
+      'airport-1:station-1:zone-a:region-north',
+      'airport-1:station-1:zone-a:region-south',
+    ])
 
     vi.useRealTimers()
   })
@@ -341,6 +527,64 @@ describe('useWorkflowActions', () => {
     expect(state.exportErrorMessage).toBe('导出失败，请稍后重试。')
     expect(state.exportFileName).toBe('')
     expect(state.downloadUrl).toBe('')
+
+    vi.useRealTimers()
+  })
+
+  it('moves to error stage and stores a user-facing message when import workflow rejects', async () => {
+    vi.mocked(runImportWorkflow).mockRejectedValueOnce(new Error('导入失败，请检查上传文件。'))
+
+    const file = new File(['demo'], 'obstacles.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
+    const { state, openModal, submitImport } = useWorkflowActions()
+
+    openModal()
+
+    await expect(
+      submitImport({
+        projectName: '武汉净空项目',
+        obstacleType: '铁塔',
+        fileName: 'obstacles.xlsx',
+        file,
+      }),
+    ).resolves.toBeUndefined()
+
+    expect(state.stage).toBe('error')
+    expect(state.statusMessage).toBe('导入失败，请检查上传文件。')
+    expect(state.importStatus).toBe('failed')
+    expect(state.importProgressPercent).toBe(0)
+  })
+
+  it('moves to error stage and stores a user-facing message when analysis workflow rejects', async () => {
+    vi.useFakeTimers()
+    vi.mocked(runAnalyzeWorkflow).mockRejectedValueOnce(new Error('分析失败，请稍后重试。'))
+
+    const file = new File(['demo'], 'obstacles.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
+    const { state, openModal, submitImport, toggleTarget, startAnalysis } = useWorkflowActions()
+
+    openModal()
+    await submitImport({
+      projectName: '武汉净空项目',
+      obstacleType: '铁塔',
+      fileName: 'obstacles.xlsx',
+      file,
+    })
+    toggleTarget('airport-1')
+
+    const analyzePromise = startAnalysis()
+
+    expect(state.stage).toBe('analyzing')
+
+    await vi.runAllTimersAsync()
+    await expect(analyzePromise).resolves.toBeUndefined()
+
+    expect(state.stage).toBe('error')
+    expect(state.statusMessage).toBe('分析失败，请稍后重试。')
 
     vi.useRealTimers()
   })
@@ -453,7 +697,7 @@ describe('useWorkflowActions', () => {
     vi.useRealTimers()
   })
 
-  it('does not throw when export workflow triggers download outside browser environment', async () => {
+  it('clears unsafe download urls returned by export workflow', async () => {
     vi.useFakeTimers()
 
     vi.mocked(runExportWorkflow).mockImplementationOnce(async ({ triggerDownload }) => {
@@ -474,7 +718,7 @@ describe('useWorkflowActions', () => {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     })
 
-    const { openModal, submitImport, toggleTarget, startAnalysis, exportReport } = useWorkflowActions()
+    const { state, openModal, submitImport, toggleTarget, startAnalysis, exportReport } = useWorkflowActions()
 
     openModal()
     await submitImport({
@@ -490,6 +734,10 @@ describe('useWorkflowActions', () => {
     await analyzePromise
 
     await expect(exportReport()).resolves.toBeUndefined()
+
+    expect(state.exportStatus).toBe('succeeded')
+    expect(state.exportFileName).toBe('analysis-task-3.docx')
+    expect(state.downloadUrl).toBe('')
 
     vi.useRealTimers()
   })
