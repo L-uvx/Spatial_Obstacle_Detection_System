@@ -87,6 +87,79 @@ describe('syncAnalysisLayer', () => {
     expect(entitiesById.has('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north')).toBe(true)
   })
 
+  it('renders sector analytic surfaces with per-position heights', () => {
+    const { viewer, add } = createViewer()
+
+    syncAnalysisLayer(viewer as never, [
+      createVisibleRegion({
+        geometry: {
+          shapeType: 'sector',
+          center: {
+            longitude: 114.2,
+            latitude: 30.7,
+          },
+          innerRadiusMeters: 50,
+          outerRadiusMeters: 500,
+          startAzimuthDegrees: 0,
+          endAzimuthDegrees: 90,
+        },
+        vertical: {
+          mode: 'analytic_surface',
+          baseReference: 'station',
+          baseHeightMeters: 500,
+          heightFunction: {
+            type: 'elevation_angle',
+            distanceMetric: 'radial',
+            elevationAngleDegrees: 3,
+            startDistanceMeters: 50,
+            endDistanceMeters: 500,
+          },
+        },
+      }),
+    ], createSampling())
+
+    expect(add).toHaveBeenCalledTimes(1)
+    expect(add.mock.calls[0][0].polygon?.perPositionHeight).toBe(true)
+    expect(add.mock.calls[0][0].polygon?.height).toBeUndefined()
+    expect(add.mock.calls[0][0].polygon?.extrudedHeight).toBeUndefined()
+  })
+
+  it('renders radial band analytic surfaces as a 360 degree ring with per-position heights', () => {
+    const { viewer, add } = createViewer()
+
+    syncAnalysisLayer(viewer as never, [
+      createVisibleRegion({
+        geometry: {
+          shapeType: 'radial_band',
+          center: {
+            longitude: 103.935861,
+            latitude: 30.554611,
+          },
+          innerRadiusMeters: 50,
+          outerRadiusMeters: 37040,
+        },
+        vertical: {
+          mode: 'analytic_surface',
+          baseReference: 'station',
+          baseHeightMeters: 491.1,
+          heightFunction: {
+            type: 'elevation_angle',
+            distanceMetric: 'radial',
+            elevationAngleDegrees: 3,
+            startDistanceMeters: 50,
+            endDistanceMeters: 37040,
+          },
+        },
+      }),
+    ], createSampling())
+
+    expect(add).toHaveBeenCalledTimes(1)
+    expect(add.mock.calls[0][0].polygon?.perPositionHeight).toBe(true)
+    expect(add.mock.calls[0][0].polygon?.height).toBeUndefined()
+    expect(add.mock.calls[0][0].polygon?.extrudedHeight).toBeUndefined()
+    expect((add.mock.calls[0][0].polygon?.hierarchy as { holes?: unknown[] } | undefined)?.holes).toHaveLength(1)
+  })
+
   it('rebuilds only the changed region key when visible region content changes', () => {
     const { viewer, add, removeById } = createViewer()
     const sampling = createSampling()

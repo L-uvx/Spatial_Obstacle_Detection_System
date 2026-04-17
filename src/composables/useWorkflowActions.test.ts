@@ -189,6 +189,15 @@ describe('useWorkflowActions', () => {
         height: 10000,
         pitch: -90,
       },
+      airports: [
+        {
+          id: '1',
+          name: '双流机场',
+          longitude: 103.95056,
+          latitude: 30.57972,
+          stations: [],
+        },
+      ],
       historicalObstacles: [
         {
           id: 'history-17',
@@ -254,6 +263,15 @@ describe('useWorkflowActions', () => {
         height: 10000,
         pitch: -90,
       },
+      airports: [
+        {
+          id: '1',
+          name: '双流机场',
+          longitude: 103.95056,
+          latitude: 30.57972,
+          stations: [],
+        },
+      ],
       historicalObstacles: [],
     })
 
@@ -270,11 +288,183 @@ describe('useWorkflowActions', () => {
     expect(state.initialCameraTarget).toEqual({
       longitude: 103.95056,
       latitude: 30.57972,
-      height: 10000,
+      height: 20000,
       pitch: -90,
     })
     expect(state.protectionZoneTree).toEqual([])
     expect(state.visibleProtectionZones).toEqual([])
+  })
+
+  it('stores airports, defaults to the first airport and derives visible stations on bootstrap', async () => {
+    vi.mocked(getBootstrapData).mockResolvedValueOnce({
+      initialCameraTarget: {
+        longitude: 120.123,
+        latitude: 31.456,
+        height: 99999,
+        pitch: -90,
+      },
+      airports: [
+        {
+          id: '1',
+          name: '双流机场',
+          longitude: 103.95056,
+          latitude: 30.57972,
+          stations: [
+            {
+              id: '4',
+              airportId: '1',
+              name: '西南近无方向信标台',
+              stationType: 'NDB',
+              longitude: 103.935861,
+              latitude: 30.554611,
+              altitude: 491.1,
+            },
+          ],
+        },
+        {
+          id: '2',
+          name: '天府机场',
+          longitude: 104.44194,
+          latitude: 30.31252,
+          stations: [],
+        },
+      ],
+      historicalObstacles: [],
+    })
+
+    const { state, bootstrap } = useWorkflowActions()
+
+    await bootstrap()
+
+    expect(state.airports).toHaveLength(2)
+    expect(state.selectedAirportId).toBe('1')
+    expect(state.visibleStations.map((item) => item.id)).toEqual(['4'])
+    expect(state.initialCameraTarget).toEqual({
+      longitude: 103.95056,
+      latitude: 30.57972,
+      height: 20000,
+      pitch: -90,
+    })
+  })
+
+  it('switches airports, updates visible stations and camera target without clearing stored airports', () => {
+    const { state, selectAirport } = useWorkflowActions()
+
+    state.airports = [
+      {
+        id: '1',
+        name: '双流机场',
+        longitude: 103.95056,
+        latitude: 30.57972,
+        stations: [],
+      },
+      {
+        id: '2',
+        name: '天府机场',
+        longitude: 104.44194,
+        latitude: 30.31252,
+        stations: [
+          {
+            id: '20',
+            airportId: '2',
+            name: 'LOC01',
+            stationType: 'LOC',
+            longitude: 104.45,
+            latitude: 30.31,
+            altitude: 600,
+          },
+        ],
+      },
+    ]
+
+    selectAirport('2')
+
+    expect(state.selectedAirportId).toBe('2')
+    expect(state.visibleStations.map((item) => item.id)).toEqual(['20'])
+    expect(state.initialCameraTarget).toEqual({
+      longitude: 104.44194,
+      latitude: 30.31252,
+      height: 20000,
+      pitch: -90,
+    })
+    expect(state.airports).toHaveLength(2)
+  })
+
+  it('ignores unknown airport ids when switching', () => {
+    const { state, selectAirport } = useWorkflowActions()
+
+    state.airports = [
+      {
+        id: '1',
+        name: '双流机场',
+        longitude: 103.95056,
+        latitude: 30.57972,
+        stations: [],
+      },
+    ]
+    state.selectedAirportId = '1'
+    state.initialCameraTarget = {
+      longitude: 103.95056,
+      latitude: 30.57972,
+      height: 10000,
+      pitch: -90,
+    }
+
+    selectAirport('missing')
+
+    expect(state.selectedAirportId).toBe('1')
+    expect(state.initialCameraTarget).toEqual({
+      longitude: 103.95056,
+      latitude: 30.57972,
+      height: 10000,
+      pitch: -90,
+    })
+  })
+
+  it('opens and closes the station panel', () => {
+    const { state, openStationPanel, closeStationPanel } = useWorkflowActions()
+
+    openStationPanel()
+    expect(state.stationPanelOpen).toBe(true)
+
+    closeStationPanel()
+    expect(state.stationPanelOpen).toBe(false)
+  })
+
+  it('preserves airport state when closing the modal', () => {
+    const { state, openModal, closeModal } = useWorkflowActions()
+
+    state.airports = [
+      {
+        id: '1',
+        name: '双流机场',
+        longitude: 103.95056,
+        latitude: 30.57972,
+        stations: [
+          {
+            id: '4',
+            airportId: '1',
+            name: '西南近无方向信标台',
+            stationType: 'NDB',
+            longitude: 103.935861,
+            latitude: 30.554611,
+            altitude: 491.1,
+          },
+        ],
+      },
+    ]
+    state.selectedAirportId = '1'
+    state.visibleStations = [...state.airports[0].stations]
+    state.stationPanelOpen = true
+
+    openModal()
+    closeModal()
+
+    expect(state.isOpen).toBe(false)
+    expect(state.airports).toHaveLength(1)
+    expect(state.selectedAirportId).toBe('1')
+    expect(state.visibleStations.map((item) => item.id)).toEqual(['4'])
+    expect(state.stationPanelOpen).toBe(true)
   })
 
   it('drives the single polygon obstacle analysis wizard lifecycle', async () => {

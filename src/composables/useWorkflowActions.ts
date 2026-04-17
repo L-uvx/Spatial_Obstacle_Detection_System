@@ -1,5 +1,12 @@
 import { reactive } from 'vue'
-import type { ImportFormValue, PolygonObstacleAnalysisState, RenderedObstacle } from '../types/tool'
+import { mapConfig } from '../config/map'
+import type {
+  ImportFormValue,
+  InitialCameraTarget,
+  PolygonObstacleAnalysisState,
+  RenderedAirport,
+  RenderedObstacle,
+} from '../types/tool'
 import {
   flattenVisibleProtectionZones,
   mergeProtectionZones,
@@ -33,6 +40,20 @@ function appendRenderedObstacles(
   return [...obstacleById.values()]
 }
 
+function buildAirportCameraTarget(airport: RenderedAirport): InitialCameraTarget {
+  return {
+    longitude: airport.longitude,
+    latitude: airport.latitude,
+    height: mapConfig.initialView.height,
+    pitch: -90,
+  }
+}
+
+function resolveVisibleStations(airports: RenderedAirport[], selectedAirportId: string) {
+  const selectedAirport = airports.find((airport) => airport.id === selectedAirportId)
+  return selectedAirport ? [...selectedAirport.stations] : []
+}
+
 function triggerDownload(downloadUrl: string) {
   if (typeof document === 'undefined') {
     return
@@ -60,10 +81,14 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
   return {
     isOpen: false,
     protectionZonePanelOpen: false,
+    stationPanelOpen: false,
     stage: 'idle',
     bootstrapStatus: 'idle',
     bootstrapMessage: '等待系统初始化。',
     initialCameraTarget: null,
+    airports: [],
+    selectedAirportId: '',
+    visibleStations: [],
     projectName: '',
     obstacleType: '',
     fileName: '',
@@ -106,12 +131,19 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
 
     try {
       const result = await getBootstrapData()
+      const defaultAirport = result.airports[0] ?? null
 
-      state.initialCameraTarget = result.initialCameraTarget
+      state.airports = result.airports
+      state.selectedAirportId = defaultAirport?.id ?? ''
+      state.visibleStations = defaultAirport ? [...defaultAirport.stations] : []
+      state.initialCameraTarget = defaultAirport ? buildAirportCameraTarget(defaultAirport) : null
       state.renderedObstacles = appendRenderedObstacles(state.renderedObstacles, result.historicalObstacles)
       state.bootstrapStatus = 'success'
       state.bootstrapMessage = '系统初始化完成。'
     } catch (error) {
+      state.airports = []
+      state.selectedAirportId = ''
+      state.visibleStations = []
       state.bootstrapStatus = 'error'
       state.bootstrapMessage =
         error instanceof Error ? `${error.message} 已降级到默认视角。` : '系统初始化失败，已降级到默认视角。'
@@ -130,6 +162,10 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     const preservedBootstrapStatus = state.bootstrapStatus
     const preservedBootstrapMessage = state.bootstrapMessage
     const preservedInitialCameraTarget = state.initialCameraTarget
+    const preservedAirports = [...state.airports]
+    const preservedSelectedAirportId = state.selectedAirportId
+    const preservedVisibleStations = [...state.visibleStations]
+    const preservedStationPanelOpen = state.stationPanelOpen
     const preservedProtectionZoneTree = state.protectionZoneTree
     const preservedProtectionZonePanelOpen = state.protectionZonePanelOpen
     const nextVisibleProtectionZones = flattenVisibleProtectionZones(preservedProtectionZoneTree)
@@ -139,10 +175,26 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       bootstrapStatus: preservedBootstrapStatus,
       bootstrapMessage: preservedBootstrapMessage,
       initialCameraTarget: preservedInitialCameraTarget,
+      airports: preservedAirports,
+      selectedAirportId: preservedSelectedAirportId,
+      visibleStations: preservedVisibleStations,
+      stationPanelOpen: preservedStationPanelOpen,
       protectionZonePanelOpen: preservedProtectionZonePanelOpen,
       protectionZoneTree: preservedProtectionZoneTree,
       visibleProtectionZones: nextVisibleProtectionZones,
     })
+  }
+
+  function selectAirport(airportId: string) {
+    const selectedAirport = state.airports.find((airport) => airport.id === airportId)
+
+    if (!selectedAirport) {
+      return
+    }
+
+    state.selectedAirportId = airportId
+    state.visibleStations = resolveVisibleStations(state.airports, airportId)
+    state.initialCameraTarget = buildAirportCameraTarget(selectedAirport)
   }
 
   async function submitImport(formValue: ImportFormValue) {
@@ -315,6 +367,14 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     state.protectionZonePanelOpen = false
   }
 
+  function openStationPanel() {
+    state.stationPanelOpen = true
+  }
+
+  function closeStationPanel() {
+    state.stationPanelOpen = false
+  }
+
   return {
     state,
     bootstrap,
@@ -326,6 +386,9 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     exportReport,
     openProtectionZonePanel,
     closeProtectionZonePanel,
+    openStationPanel,
+    closeStationPanel,
+    selectAirport,
     toggleProtectionZoneAirportVisibility,
     toggleProtectionZoneStationVisibility,
     toggleProtectionZoneVisibility,

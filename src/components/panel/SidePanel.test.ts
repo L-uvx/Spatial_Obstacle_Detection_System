@@ -43,10 +43,14 @@ function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): Pol
   return {
     isOpen: false,
     protectionZonePanelOpen: false,
+    stationPanelOpen: false,
     stage: 'analysis-result',
     bootstrapStatus: 'idle',
     bootstrapMessage: '',
     initialCameraTarget: null,
+    airports: [],
+    selectedAirportId: '',
+    visibleStations: [],
     projectName: '',
     obstacleType: '',
     fileName: '',
@@ -81,6 +85,19 @@ function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): Pol
 }
 
 describe('SidePanel', () => {
+  it('does not keep protection zone controls in the DOM when closed', () => {
+    const wrapper = mount(SidePanel, {
+      props: {
+        state: createState(),
+        isOpen: false,
+      },
+    })
+
+    expect(wrapper.find('aside.side-panel').exists()).toBe(false)
+    expect(wrapper.find('button.side-panel__close').exists()).toBe(false)
+    expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)
+  })
+
   it('renders protection zone controls as a global right-side panel when opened', () => {
     const wrapper = mount(SidePanel, {
       props: {

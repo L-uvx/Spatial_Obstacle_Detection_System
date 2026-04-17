@@ -298,6 +298,93 @@ describe('analysis service', () => {
     expect(result.protectionZones[1].stationId).toBe('101')
   })
 
+  it('normalizes radial band analytic surface protection zones', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 2,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'airport-1-station-4-zone-ndb_conical_clearance_3deg-region-default',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            ruleCode: 'ndb_conical_clearance_3deg',
+            ruleName: 'ndb_conical_clearance_3deg',
+            zoneCode: 'ndb_conical_clearance_3deg',
+            zoneName: 'NDB 3 degree conical clearance zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'radial_band',
+              center: { longitude: 103.935861, latitude: 30.554611 },
+              innerRadiusMeters: 50,
+              outerRadiusMeters: 37040,
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 491.1,
+              heightFunction: {
+                type: 'elevation_angle',
+                elevationAngleDegrees: 3,
+                distanceMetric: 'radial',
+                startDistanceMeters: 50,
+                endDistanceMeters: 37040,
+              },
+            },
+            properties: { label: '西南近无方向信标台 NDB 3 degree conical clearance zone default' },
+          },
+        ],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toHaveLength(1)
+    expect(result.protectionZones[0]).toEqual({
+      id: 'airport-1-station-4-zone-ndb_conical_clearance_3deg-region-default',
+      airportId: '1',
+      airportName: '双流机场',
+      stationId: '4',
+      stationName: '西南近无方向信标台',
+      stationType: 'NDB',
+      ruleCode: 'ndb_conical_clearance_3deg',
+      ruleName: 'ndb_conical_clearance_3deg',
+      zoneCode: 'ndb_conical_clearance_3deg',
+      zoneName: 'NDB 3 degree conical clearance zone',
+      regionCode: 'default',
+      regionName: 'default',
+      geometry: {
+        shapeType: 'radial_band',
+        center: { longitude: 103.935861, latitude: 30.554611 },
+        innerRadiusMeters: 50,
+        outerRadiusMeters: 37040,
+      },
+      vertical: {
+        mode: 'analytic_surface',
+        baseReference: 'station',
+        baseHeightMeters: 491.1,
+        heightFunction: {
+          type: 'elevation_angle',
+          elevationAngleDegrees: 3,
+          distanceMetric: 'radial',
+          startDistanceMeters: 50,
+          endDistanceMeters: 37040,
+        },
+      },
+      properties: { label: '西南近无方向信标台 NDB 3 degree conical clearance zone default' },
+    })
+  })
+
   it('drops unsupported protection zone combinations instead of crashing', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,

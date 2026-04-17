@@ -18,6 +18,8 @@ export interface AnalyticVerticalProfile {
   points: AnalyticVerticalProfilePoint[]
 }
 
+type VerticalProfile = FlatVerticalProfile | AnalyticVerticalProfile
+
 function clampRadialDistance(radialDistanceMeters: number, startDistanceMeters: number, endDistanceMeters: number) {
   return Math.min(Math.max(radialDistanceMeters, startDistanceMeters), endDistanceMeters)
 }
@@ -45,7 +47,7 @@ function buildSafeAnalyticHeight(vertical: ProtectionZoneAnalyticSurfaceVertical
 export function buildVerticalProfile(
   vertical: ProtectionZoneFlatVertical | ProtectionZoneAnalyticSurfaceVertical,
   footprint: SampledFootprintPoint[],
-): FlatVerticalProfile | AnalyticVerticalProfile {
+): VerticalProfile {
   if (vertical.mode === 'flat') {
     return {
       mode: 'flat',
@@ -56,11 +58,15 @@ export function buildVerticalProfile(
     }
   }
 
-  return {
-    mode: 'analytic_surface',
-    points: footprint.map((point) => ({
-      ...point,
-      heightMeters: buildSafeAnalyticHeight(vertical, point.radialDistanceMeters),
-    })),
+  if (vertical.mode === 'analytic_surface') {
+    return {
+      mode: 'analytic_surface',
+      points: footprint.map((point) => ({
+        ...point,
+        heightMeters: buildSafeAnalyticHeight(vertical, point.radialDistanceMeters),
+      })),
+    }
   }
+
+  throw new Error(`Unsupported protection zone vertical mode: ${(vertical as { mode?: string }).mode ?? 'unknown'}`)
 }

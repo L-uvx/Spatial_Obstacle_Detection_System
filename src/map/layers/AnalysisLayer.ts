@@ -3,7 +3,7 @@ import type {
   PolygonObstacleAnalysisState,
   ProtectionZoneSamplingConfig,
 } from '../../types/tool'
-import { buildCircleRing, buildSectorRing } from './analysis/sampling'
+import { buildCircleRing, buildRadialBandRing, buildRadialBandRings, buildSectorRing } from './analysis/sampling'
 import { buildVerticalProfile } from './analysis/vertical'
 
 const ENTITY_ID_PREFIX = 'analysis-zone-'
@@ -61,24 +61,43 @@ function toCartesianPosition(longitude: number, latitude: number, heightMeters: 
   return Cesium.Cartesian3.fromDegrees(longitude, latitude, heightMeters)
 }
 
-function createPolygonHierarchy(
+function resolveFootprint(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
   sampling: ProtectionZoneSamplingConfig,
 ) {
-  const footprint = region.geometry.shapeType === 'circle'
-    ? buildCircleRing(region.geometry, sampling)
-    : buildSectorRing(region.geometry, sampling)
-  const profile = buildVerticalProfile(region.vertical, footprint)
+  if (region.geometry.shapeType === 'circle') {
+    return buildCircleRing(region.geometry, sampling)
+  }
 
-  if (profile.mode === 'flat') {
-    return {
-      hierarchy: new Cesium.PolygonHierarchy(
-        profile.points.map((point) => toCartesianPosition(point.longitude, point.latitude, point.heightMeters)),
-      ),
-      perPositionHeight: false,
-      height: profile.points[0]?.heightMeters,
-      extrudedHeight: undefined,
-    }
+  if (region.geometry.shapeType === 'sector') {
+    return buildSectorRing(region.geometry, sampling)
+  }
+
+  if (region.geometry.shapeType === 'radial_band') {
+    return buildRadialBandRing(region.geometry, sampling)
+  }
+
+  throw new Error(`Unsupported protection zone geometry: ${(region.geometry as { shapeType?: string }).shapeType ?? 'unknown'}`)
+}
+
+function createFlatPolygonHierarchy(profile: ReturnType<typeof buildVerticalProfile>) {
+  if (profile.mode !== 'flat') {
+    return null
+  }
+
+  return {
+    hierarchy: new Cesium.PolygonHierarchy(
+      profile.points.map((point) => toCartesianPosition(point.longitude, point.latitude, point.heightMeters)),
+    ),
+    perPositionHeight: false,
+    height: profile.points[0]?.heightMeters,
+    extrudedHeight: undefined,
+  }
+}
+
+function createAnalyticSurfacePolygonHierarchy(profile: ReturnType<typeof buildVerticalProfile>) {
+  if (profile.mode !== 'analytic_surface') {
+    return null
   }
 
   return {
@@ -89,6 +108,64 @@ function createPolygonHierarchy(
     height: undefined,
     extrudedHeight: undefined,
   }
+}
+
+function createRadialBandAnalyticSurfacePolygonHierarchy(
+  region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
+  sampling: ProtectionZoneSamplingConfig,
+) {
+  if (region.geometry.shapeType !== 'radial_band' || region.vertical.mode !== 'analytic_surface') {
+    return null
+  }
+
+  const { outerRing, innerRing } = buildRadialBandRings(region.geometry, sampling)
+  const outerProfile = buildVerticalProfile(region.vertical, outerRing)
+  const innerProfile = buildVerticalProfile(region.vertical, innerRing)
+
+  if (outerProfile.mode !== 'analytic_surface' || innerProfile.mode !== 'analytic_surface') {
+    return null
+  }
+
+  return {
+    hierarchy: new Cesium.PolygonHierarchy(
+      outerProfile.points.map((point) => toCartesianPosition(point.longitude, point.latitude, point.heightMeters)),
+      [
+        new Cesium.PolygonHierarchy(
+          innerProfile.points.map((point) => toCartesianPosition(point.longitude, point.latitude, point.heightMeters)),
+        ),
+      ],
+    ),
+    perPositionHeight: true,
+    height: undefined,
+    extrudedHeight: undefined,
+  }
+}
+
+function createPolygonHierarchy(
+  region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
+  sampling: ProtectionZoneSamplingConfig,
+) {
+  const radialBandPolygon = createRadialBandAnalyticSurfacePolygonHierarchy(region, sampling)
+
+  if (radialBandPolygon) {
+    return radialBandPolygon
+  }
+
+  const footprint = resolveFootprint(region, sampling)
+  const profile = buildVerticalProfile(region.vertical, footprint)
+  const flatPolygon = createFlatPolygonHierarchy(profile)
+
+  if (flatPolygon) {
+    return flatPolygon
+  }
+
+  const analyticSurfacePolygon = createAnalyticSurfacePolygonHierarchy(profile)
+
+  if (analyticSurfacePolygon) {
+    return analyticSurfacePolygon
+  }
+
+  throw new Error(`Unsupported protection zone vertical mode: ${(profile as { mode?: string }).mode ?? 'unknown'}`)
 }
 
 function createEntity(

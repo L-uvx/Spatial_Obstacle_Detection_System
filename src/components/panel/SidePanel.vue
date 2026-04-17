@@ -15,7 +15,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <aside class="side-panel" :class="{ 'is-open': isOpen }" :aria-hidden="!isOpen">
+  <aside v-if="isOpen" class="side-panel is-open" aria-hidden="false">
     <div class="side-panel__header">
       <h2>保护区显示管理</h2>
       <button type="button" class="side-panel__close" @click="emit('close')">关闭</button>

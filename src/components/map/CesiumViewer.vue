@@ -4,16 +4,19 @@ import * as Cesium from 'cesium'
 import { mapConfig } from '../../config/map'
 import { syncAnalysisLayer } from '../../map/layers/AnalysisLayer'
 import { getObstacleFlyToOptions, syncObstacleLayer } from '../../map/layers/ObstacleLayer'
+import { syncStationLayer } from '../../map/layers/StationLayer'
 import type {
   InitialCameraTarget,
   PolygonObstacleAnalysisState,
   RenderedObstacle,
+  RenderedStation,
 } from '../../types/tool'
 import { buildCameraFlyToOptions, getInitialCameraKey, resolveResetCameraTarget } from './camera'
 
 const props = defineProps<{
   resetTick: number
   obstacles: RenderedObstacle[]
+  visibleStations: RenderedStation[]
   initialCameraTarget: InitialCameraTarget | null
   visibleProtectionZones: PolygonObstacleAnalysisState['visibleProtectionZones']
   protectionZoneSampling: PolygonObstacleAnalysisState['protectionZoneSampling']
@@ -55,6 +58,10 @@ function syncAnalysisZones(
   sampling: PolygonObstacleAnalysisState['protectionZoneSampling'],
 ) {
   syncAnalysisLayer(viewerRef.value, zones, sampling)
+}
+
+function syncStations(stations: RenderedStation[]) {
+  syncStationLayer(viewerRef.value, stations)
 }
 
 function buildTiandituUrl(layerType: string) {
@@ -164,6 +171,7 @@ async function initViewer() {
     viewerRef.value = viewer
     errorMessage.value = ''
     syncObstacles(props.obstacles, false)
+    syncStations(props.visibleStations)
     syncAnalysisZones(props.visibleProtectionZones, props.protectionZoneSampling)
 
     if (props.initialCameraTarget) {
@@ -194,6 +202,14 @@ watch(
   () => props.obstacles,
   (obstacles) => {
     syncObstacles(obstacles, shouldFlyToObstacleExtents())
+  },
+  { deep: true },
+)
+
+watch(
+  () => props.visibleStations,
+  (stations) => {
+    syncStations(stations)
   },
   { deep: true },
 )

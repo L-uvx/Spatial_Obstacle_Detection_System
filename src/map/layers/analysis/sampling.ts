@@ -1,5 +1,6 @@
 import type {
   ProtectionZoneCircleGeometry,
+  ProtectionZoneRadialBandGeometry,
   ProtectionZoneSamplingConfig,
   ProtectionZoneSectorGeometry,
 } from '../../../types/tool'
@@ -100,4 +101,28 @@ export function buildSectorRing(
     : [{ ...geometry.center, radialDistanceMeters: 0 }]
 
   return closeRing([...outerArc, ...innerArc])
+}
+
+export function buildRadialBandRing(
+  geometry: ProtectionZoneRadialBandGeometry,
+  sampling: ProtectionZoneSamplingConfig,
+): SampledFootprintPoint[] {
+  const { outerRing, innerRing } = buildRadialBandRings(geometry, sampling)
+
+  return closeRing([...outerRing.slice(0, -1), ...innerRing.slice(0, -1)])
+}
+
+export function buildRadialBandRings(
+  geometry: ProtectionZoneRadialBandGeometry,
+  sampling: ProtectionZoneSamplingConfig,
+): { outerRing: SampledFootprintPoint[]; innerRing: SampledFootprintPoint[] } {
+  const stepDegrees = resolvePositiveStep(sampling.sectorAngleStepDegrees)
+  const outerAngles = buildAngleSequence(0, 360, stepDegrees)
+  const outerArc = outerAngles.slice(0, -1).map((angleDegrees) => samplePoint(geometry.center, angleDegrees, geometry.outerRadiusMeters))
+  const innerArc = outerAngles.slice(0, -1).map((angleDegrees) => samplePoint(geometry.center, angleDegrees, geometry.innerRadiusMeters))
+
+  return {
+    outerRing: closeRing(outerArc),
+    innerRing: closeRing(innerArc),
+  }
 }

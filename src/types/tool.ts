@@ -53,6 +53,24 @@ export interface RenderedObstacle {
   geometry: MultiPolygonGeometry
 }
 
+export interface RenderedStation {
+  id: string
+  airportId: string
+  name: string
+  stationType: string
+  longitude: number
+  latitude: number
+  altitude: number
+}
+
+export interface RenderedAirport {
+  id: string
+  name: string
+  longitude: number
+  latitude: number
+  stations: RenderedStation[]
+}
+
 export interface InitialCameraTarget {
   longitude: number
   latitude: number
@@ -92,6 +110,16 @@ export interface ProtectionZoneSectorGeometry {
   endAzimuthDegrees: number
 }
 
+export interface ProtectionZoneRadialBandGeometry {
+  shapeType: 'radial_band'
+  center: {
+    longitude: number
+    latitude: number
+  }
+  innerRadiusMeters: number
+  outerRadiusMeters: number
+}
+
 export interface ProtectionZoneFlatVertical {
   mode: 'flat'
   baseReference: 'station'
@@ -124,7 +152,7 @@ export interface ProtectionZoneRegion {
   zoneName: string
   regionCode: string
   regionName: string
-  geometry: ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry
+  geometry: ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry | ProtectionZoneRadialBandGeometry
   vertical: ProtectionZoneFlatVertical | ProtectionZoneAnalyticSurfaceVertical
   properties: ProtectionZoneRegionProperties
 }
@@ -173,7 +201,7 @@ export interface VisibleProtectionZoneRegion {
   ruleName: string
   regionCode: string
   regionName: string
-  geometry: ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry
+  geometry: ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry | ProtectionZoneRadialBandGeometry
   vertical: ProtectionZoneFlatVertical | ProtectionZoneAnalyticSurfaceVertical
   properties: ProtectionZoneRegionProperties
 }
@@ -188,10 +216,14 @@ export interface ImportFormValue {
 export interface PolygonObstacleAnalysisState {
   isOpen: boolean
   protectionZonePanelOpen: boolean
+  stationPanelOpen: boolean
   stage: WizardStage
   bootstrapStatus: BootstrapStatus
   bootstrapMessage: string
   initialCameraTarget: InitialCameraTarget | null
+  airports: RenderedAirport[]
+  selectedAirportId: string
+  visibleStations: RenderedStation[]
   projectName: string
   obstacleType: string
   fileName: string

@@ -1,6 +1,7 @@
 import type {
   AnalysisSelectedTarget,
   ProtectionZoneAnalyticSurfaceVertical,
+  ProtectionZoneRadialBandGeometry,
   ProtectionZoneCircleGeometry,
   ProtectionZoneFlatVertical,
   ProtectionZoneRegion,
@@ -67,7 +68,7 @@ function isFiniteNumber(value: unknown): value is number {
 
 function normalizeProtectionZoneGeometry(
   geometry: unknown,
-): ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry | null {
+): ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry | ProtectionZoneRadialBandGeometry | null {
   if (!geometry || typeof geometry !== 'object') {
     return null
   }
@@ -119,6 +120,29 @@ function normalizeProtectionZoneGeometry(
       outerRadiusMeters: candidate.outerRadiusMeters,
       startAzimuthDegrees: candidate.startAzimuthDegrees,
       endAzimuthDegrees: candidate.endAzimuthDegrees,
+    }
+  }
+
+  if (candidate.shapeType === 'radial_band') {
+    const center = candidate.center as Record<string, unknown> | undefined
+
+    if (
+      !isFiniteNumber(center?.longitude)
+      || !isFiniteNumber(center?.latitude)
+      || !isFiniteNumber(candidate.innerRadiusMeters)
+      || !isFiniteNumber(candidate.outerRadiusMeters)
+    ) {
+      return null
+    }
+
+    return {
+      shapeType: 'radial_band',
+      center: {
+        longitude: center.longitude,
+        latitude: center.latitude,
+      },
+      innerRadiusMeters: candidate.innerRadiusMeters,
+      outerRadiusMeters: candidate.outerRadiusMeters,
     }
   }
 
@@ -195,6 +219,10 @@ function normalizeProtectionZone(zone: ProtectionZoneResponse): ProtectionZoneRe
   }
 
   if (geometry.shapeType === 'sector' && vertical.mode !== 'analytic_surface') {
+    return null
+  }
+
+  if (geometry.shapeType === 'radial_band' && vertical.mode !== 'analytic_surface') {
     return null
   }
 

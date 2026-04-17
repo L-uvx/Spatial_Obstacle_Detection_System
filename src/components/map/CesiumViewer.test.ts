@@ -7,11 +7,13 @@ import CesiumViewer from './CesiumViewer.vue'
 import { syncAnalysisLayer } from '../../map/layers/AnalysisLayer'
 import { buildCameraFlyToOptions, getInitialCameraKey, resolveResetCameraTarget } from './camera'
 import { getObstacleFlyToOptions, type ObstacleLayerSyncResult } from '../../map/layers/ObstacleLayer'
-import type { InitialCameraTarget, PolygonObstacleAnalysisState, RenderedObstacle } from '../../types/tool'
+import { syncStationLayer } from '../../map/layers/StationLayer'
+import type { InitialCameraTarget, PolygonObstacleAnalysisState, RenderedObstacle, RenderedStation } from '../../types/tool'
 
-const { syncObstacleLayerMock, syncAnalysisLayerMock, flyToMock, flyToBoundingSphereMock, addImageryProviderMock, destroyMock } = vi.hoisted(() => ({
+const { syncObstacleLayerMock, syncAnalysisLayerMock, syncStationLayerMock, flyToMock, flyToBoundingSphereMock, addImageryProviderMock, destroyMock } = vi.hoisted(() => ({
   syncObstacleLayerMock: vi.fn(),
   syncAnalysisLayerMock: vi.fn(),
+  syncStationLayerMock: vi.fn(),
   flyToMock: vi.fn(),
   flyToBoundingSphereMock: vi.fn(),
   addImageryProviderMock: vi.fn(),
@@ -68,6 +70,17 @@ vi.mock('../../map/layers/AnalysisLayer', async () => {
   }
 })
 
+vi.mock('../../map/layers/StationLayer', async () => {
+  const actual = await vi.importActual<typeof import('../../map/layers/StationLayer')>(
+    '../../map/layers/StationLayer',
+  )
+
+  return {
+    ...actual,
+    syncStationLayer: syncStationLayerMock,
+  }
+})
+
 function createObstacle(id: string): RenderedObstacle {
   return {
     id,
@@ -98,6 +111,19 @@ function createBootstrapTarget(): InitialCameraTarget {
     latitude: 30.57972,
     height: 10000,
     pitch: -90,
+  }
+}
+
+function createStation(id: string, overrides: Partial<RenderedStation> = {}): RenderedStation {
+  return {
+    id,
+    airportId: 'airport-1',
+    name: `台站-${id}`,
+    stationType: 'NDB',
+    longitude: 103.935861,
+    latitude: 30.554611,
+    altitude: 491.1,
+    ...overrides,
   }
 }
 
@@ -240,6 +266,7 @@ describe('CesiumViewer camera rules', () => {
   beforeEach(() => {
     syncObstacleLayerMock.mockReset()
     syncAnalysisLayerMock.mockReset()
+    syncStationLayerMock.mockReset()
     flyToMock.mockReset()
     flyToBoundingSphereMock.mockReset()
     addImageryProviderMock.mockReset()
@@ -248,6 +275,11 @@ describe('CesiumViewer camera rules', () => {
       message: '分析保护区无增量变化。',
       addedKeys: [],
       updatedKeys: [],
+    })
+    syncStationLayerMock.mockReturnValue({
+      message: '台站已同步到地图图层。',
+      addedEntityIds: [],
+      removedEntityIds: [],
     })
   })
 
@@ -263,6 +295,7 @@ describe('CesiumViewer camera rules', () => {
       props: {
         resetTick: 0,
         obstacles: [],
+        visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
         protectionZoneSampling: createProtectionZoneSampling(),
@@ -301,6 +334,7 @@ describe('CesiumViewer camera rules', () => {
       props: {
         resetTick: 0,
         obstacles: [createObstacle('history-1')],
+        visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
         protectionZoneSampling: createProtectionZoneSampling(),
@@ -350,6 +384,7 @@ describe('CesiumViewer camera rules', () => {
       props: {
         resetTick: 0,
         obstacles: [createObstacle('history-1')],
+        visibleStations: [],
         initialCameraTarget: createBootstrapTarget(),
         visibleProtectionZones: [],
         protectionZoneSampling: createProtectionZoneSampling(),
@@ -384,6 +419,7 @@ describe('CesiumViewer camera rules', () => {
       props: {
         resetTick: 0,
         obstacles: [],
+        visibleStations: [],
         initialCameraTarget: target,
         visibleProtectionZones: [],
         protectionZoneSampling: createProtectionZoneSampling(),
@@ -413,6 +449,7 @@ describe('CesiumViewer camera rules', () => {
       props: {
         resetTick: 0,
         obstacles: [createObstacle('history-1')],
+        visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
         protectionZoneSampling: createProtectionZoneSampling(),
@@ -442,6 +479,7 @@ describe('CesiumViewer camera rules', () => {
       props: {
         resetTick: 0,
         obstacles: [],
+        visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
         protectionZoneSampling: createProtectionZoneSampling(),
@@ -474,6 +512,7 @@ describe('CesiumViewer camera rules', () => {
       props: {
         resetTick: 0,
         obstacles: [createObstacle('history-1')],
+        visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
         protectionZoneSampling: createProtectionZoneSampling(),
@@ -512,6 +551,7 @@ describe('CesiumViewer camera rules', () => {
       props: {
         resetTick: 0,
         obstacles: [],
+        visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [createVisibleProtectionZoneRegion()],
         protectionZoneSampling: initialSampling,
@@ -560,6 +600,64 @@ describe('CesiumViewer camera rules', () => {
 
     expect(flyToMock).toHaveBeenCalledTimes(1)
     expect(flyToBoundingSphereMock).toHaveBeenCalledTimes(0)
+
+    wrapper.unmount()
+  })
+
+  it('syncs visible stations on init and when the selected airport stations change', async () => {
+    syncObstacleLayerMock.mockReturnValue(createSyncResult())
+
+    const wrapper = mount(CesiumViewer, {
+      props: {
+        resetTick: 0,
+        obstacles: [],
+        visibleStations: [createStation('station-1')],
+        initialCameraTarget: createBootstrapTarget(),
+        visibleProtectionZones: [],
+        protectionZoneSampling: createProtectionZoneSampling(),
+      },
+    })
+
+    await flushPromises()
+
+    expect(syncStationLayer).toHaveBeenCalledWith(
+      expect.objectContaining({ camera: expect.anything() }),
+      [createStation('station-1')],
+    )
+
+    await wrapper.setProps({
+      visibleStations: [
+        createStation('station-2', {
+          airportId: 'airport-2',
+          name: '下一机场台站',
+          longitude: 104.45,
+          latitude: 30.31,
+          altitude: 600,
+        }),
+      ],
+      initialCameraTarget: {
+        longitude: 104.44194,
+        latitude: 30.31252,
+        height: 10000,
+        pitch: -90,
+      },
+    })
+
+    await flushPromises()
+
+    expect(syncStationLayer).toHaveBeenLastCalledWith(
+      expect.objectContaining({ camera: expect.anything() }),
+      [
+        createStation('station-2', {
+          airportId: 'airport-2',
+          name: '下一机场台站',
+          longitude: 104.45,
+          latitude: 30.31,
+          altitude: 600,
+        }),
+      ],
+    )
+    expect(flyToMock).toHaveBeenCalledTimes(2)
 
     wrapper.unmount()
   })

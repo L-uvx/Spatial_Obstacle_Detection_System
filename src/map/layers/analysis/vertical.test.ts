@@ -117,6 +117,31 @@ describe('vertical helpers', () => {
     })
   })
 
+  it('builds analytic surface profiles through an explicit mode match', () => {
+    const vertical: ProtectionZoneAnalyticSurfaceVertical = {
+      mode: 'analytic_surface',
+      baseReference: 'station',
+      baseHeightMeters: 500,
+      heightFunction: {
+        type: 'elevation_angle',
+        distanceMetric: 'radial',
+        elevationAngleDegrees: 3,
+        startDistanceMeters: 50,
+        endDistanceMeters: 100,
+      },
+    }
+    const footprint = [
+      { longitude: 114.2, latitude: 30.7, radialDistanceMeters: 50 },
+      { longitude: 114.21, latitude: 30.71, radialDistanceMeters: 100 },
+    ]
+
+    const profile = buildVerticalProfile(vertical, footprint)
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points[0]?.heightMeters).toBe(500)
+    expect(profile.points[1]?.heightMeters).toBeGreaterThan(500)
+  })
+
   it('falls back to base height when the elevation angle produces a non-finite tangent', () => {
     const vertical: ProtectionZoneAnalyticSurfaceVertical = {
       mode: 'analytic_surface',

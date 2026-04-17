@@ -10,6 +10,9 @@ const {
   bootstrap,
   openModal,
   closeModal,
+  openStationPanel,
+  closeStationPanel,
+  selectAirport,
   submitImport,
   toggleTarget,
   startAnalysis,
@@ -35,6 +38,18 @@ function handleReset() {
 
 function handleCloseAnalysis() {
   closeModal()
+}
+
+function handleOpenStationPanel() {
+  openStationPanel()
+}
+
+function handleCloseStationPanel() {
+  closeStationPanel()
+}
+
+function handleSelectAirport(airportId: string) {
+  selectAirport(airportId)
 }
 
 function handleSubmitImport(formValue: ImportFormValue) {
@@ -80,6 +95,9 @@ function handleExportReport() {
     @open-analysis="handleOpenAnalysis"
     @reset="handleReset"
     @close-analysis="handleCloseAnalysis"
+    @open-station-panel="handleOpenStationPanel"
+    @close-station-panel="handleCloseStationPanel"
+    @select-airport="handleSelectAirport"
     @submit-import="handleSubmitImport"
     @toggle-target="handleToggleTarget"
     @set-airport-protection-zone-visibility="handleToggleProtectionZoneAirport"
