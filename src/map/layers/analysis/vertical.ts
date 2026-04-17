@@ -36,7 +36,8 @@ function buildSafeAnalyticHeight(vertical: ProtectionZoneAnalyticSurfaceVertical
     vertical.heightFunction.startDistanceMeters,
     vertical.heightFunction.endDistanceMeters,
   )
-  const heightMeters = vertical.baseHeightMeters + tangent * boundedDistance
+  const relativeDistance = boundedDistance - vertical.heightFunction.startDistanceMeters
+  const heightMeters = vertical.baseHeightMeters + tangent * relativeDistance
 
   return Number.isFinite(heightMeters) ? heightMeters : vertical.baseHeightMeters
 }

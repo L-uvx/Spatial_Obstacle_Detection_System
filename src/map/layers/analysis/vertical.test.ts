@@ -81,9 +81,38 @@ describe('vertical helpers', () => {
     expect(profile).toEqual({
       mode: 'analytic_surface',
       points: [
-        { longitude: 114.2, latitude: 30.7, radialDistanceMeters: 0, heightMeters: 110 },
-        { longitude: 114.21, latitude: 30.71, radialDistanceMeters: 15, heightMeters: 115 },
-        { longitude: 114.22, latitude: 30.72, radialDistanceMeters: 30, heightMeters: 120 },
+        { longitude: 114.2, latitude: 30.7, radialDistanceMeters: 0, heightMeters: 100 },
+        { longitude: 114.21, latitude: 30.71, radialDistanceMeters: 15, heightMeters: 105 },
+        { longitude: 114.22, latitude: 30.72, radialDistanceMeters: 30, heightMeters: 110 },
+      ],
+    })
+  })
+
+  it('keeps the analytic surface aligned with the base height at startDistanceMeters', () => {
+    const vertical: ProtectionZoneAnalyticSurfaceVertical = {
+      mode: 'analytic_surface',
+      baseReference: 'station',
+      baseHeightMeters: 491.1,
+      heightFunction: {
+        type: 'elevation_angle',
+        distanceMetric: 'radial',
+        elevationAngleDegrees: 3,
+        startDistanceMeters: 50,
+        endDistanceMeters: 37040,
+      },
+    }
+    const footprint = [
+      { longitude: 103.935861, latitude: 30.554611, radialDistanceMeters: 50 },
+      { longitude: 103.936, latitude: 30.555, radialDistanceMeters: 60 },
+    ]
+
+    const profile = buildVerticalProfile(vertical, footprint)
+
+    expect(profile).toEqual({
+      mode: 'analytic_surface',
+      points: [
+        { longitude: 103.935861, latitude: 30.554611, radialDistanceMeters: 50, heightMeters: 491.1 },
+        { longitude: 103.936, latitude: 30.555, radialDistanceMeters: 60, heightMeters: 491.62407779283046 },
       ],
     })
   })
