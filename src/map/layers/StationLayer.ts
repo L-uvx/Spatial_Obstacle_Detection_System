@@ -9,18 +9,22 @@ export interface StationLayerSyncResult {
   removedEntityIds: string[]
 }
 
+// 为台站实体生成稳定 id。
 function createEntityId(stationId: string) {
   return `${ENTITY_ID_PREFIX}-${stationId}`
 }
 
+// 收集本轮期望保留的台站实体 id 集合。
 function getStationEntityIds(stations: RenderedStation[]) {
   return new Set(stations.map((station) => createEntityId(station.id)))
 }
 
+// 判断实体是否属于台站图层。
 function isStationLayerEntity(entity: Cesium.Entity) {
   return typeof entity.id === 'string' && entity.id.startsWith(`${ENTITY_ID_PREFIX}-`)
 }
 
+// 构造挂载到台站实体上的业务属性。
 function createEntityProperties(station: RenderedStation) {
   return {
     stationId: station.id,
@@ -30,6 +34,7 @@ function createEntityProperties(station: RenderedStation) {
   }
 }
 
+// 构造台站点位的统一样式。
 function createStationPointGraphics() {
   return {
     pixelSize: 8,
@@ -40,6 +45,7 @@ function createStationPointGraphics() {
   }
 }
 
+// 构造台站名称标签的统一样式。
 function createStationLabelGraphics(station: RenderedStation) {
   return {
     text: station.name,
@@ -54,6 +60,7 @@ function createStationLabelGraphics(station: RenderedStation) {
   }
 }
 
+// 更新台站实体的地理位置。
 function setEntityPosition(entity: Cesium.Entity, station: RenderedStation) {
   ;(entity as unknown as { position: Cesium.Cartesian3 }).position = Cesium.Cartesian3.fromDegrees(
     station.longitude,
@@ -62,6 +69,7 @@ function setEntityPosition(entity: Cesium.Entity, station: RenderedStation) {
   )
 }
 
+// 复用统一样式和属性更新已有台站实体。
 function updateStationEntity(entity: Cesium.Entity, station: RenderedStation) {
   ;(entity as unknown as { name: string }).name = station.name
   setEntityPosition(entity, station)
@@ -73,6 +81,7 @@ function updateStationEntity(entity: Cesium.Entity, station: RenderedStation) {
     createStationLabelGraphics(station)
 }
 
+// 从当前实体集合中找出已经不再可见的旧台站实体。
 function collectStaleStationEntities(
   entities: Cesium.Entity[],
   expectedEntityIds: Set<string>,
@@ -88,6 +97,7 @@ function collectStaleStationEntities(
   })
 }
 
+// 将当前机场的台站同步到地图，并清理过期实体。
 export function syncStationLayer(
   viewer: Cesium.Viewer | null | undefined,
   stations: RenderedStation[] = [],

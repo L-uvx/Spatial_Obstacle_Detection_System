@@ -7,6 +7,7 @@ const emit = defineEmits<{
   reset: []
 }>()
 
+// 根据工具项类型派发打开分析或地图复位事件。
 function handleClick(item: ToolbarItem) {
   if (item.opensModal) {
     emit('openAnalysis')

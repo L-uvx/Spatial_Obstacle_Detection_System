@@ -35,14 +35,17 @@ const emit = defineEmits<{
   exportReport: []
 }>()
 
+// 转发机场级保护区显隐切换事件。
 function handleToggleProtectionZoneAirport(airportId: string, visible: boolean) {
   emit('setAirportProtectionZoneVisibility', airportId, visible)
 }
 
+// 转发台站级保护区显隐切换事件。
 function handleToggleProtectionZoneStation(airportId: string, stationId: string, visible: boolean) {
   emit('setStationProtectionZoneVisibility', airportId, stationId, visible)
 }
 
+// 转发单个保护区节点的显隐切换事件。
 function handleToggleProtectionZone(
   airportId: string,
   stationId: string,
@@ -52,6 +55,7 @@ function handleToggleProtectionZone(
   emit('setZoneProtectionZoneVisibility', airportId, stationId, zoneCode, visible)
 }
 
+// 根据当前状态切换保护区侧边栏的开关。
 function handleProtectionZonePanelToggle() {
   if (props.analysisState.protectionZonePanelOpen) {
     emit('closeProtectionZonePanel')
@@ -61,6 +65,7 @@ function handleProtectionZonePanelToggle() {
   emit('openProtectionZonePanel')
 }
 
+// 读取当前选中机场的展示名称。
 function getCurrentAirportLabel() {
   const selectedAirport = props.analysisState.airports.find(
     (airport) => airport.id === props.analysisState.selectedAirportId,
@@ -69,6 +74,7 @@ function getCurrentAirportLabel() {
   return selectedAirport?.name ?? '暂无数据'
 }
 
+// 根据当前状态切换机场选择浮层的开关。
 function handleStationPanelToggle() {
   if (props.analysisState.stationPanelOpen) {
     emit('closeStationPanel')
@@ -78,6 +84,7 @@ function handleStationPanelToggle() {
   emit('openStationPanel')
 }
 
+// 从下拉框读取机场选择结果并通知上层。
 function handleSelectAirport(event: Event) {
   const target = event.target as HTMLSelectElement | null
 

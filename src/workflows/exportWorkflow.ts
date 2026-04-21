@@ -23,12 +23,14 @@ interface ExportWorkflowProgress {
   exportMessage: string
 }
 
+// 为轮询流程提供统一的等待间隔。
 function delay(ms: number) {
   return new Promise((resolve) => {
     globalThis.setTimeout(resolve, ms)
   })
 }
 
+// 统一对外派发导出进度，避免调用方直接依赖内部状态对象。
 function emitProgress(
   onProgress: (progress: ExportWorkflowProgress) => void,
   progress: ExportWorkflowProgress,
@@ -36,6 +38,7 @@ function emitProgress(
   onProgress(progress)
 }
 
+// 串联导出任务创建、轮询、结果解析和下载触发。
 export async function runExportWorkflow(input: {
   analysisTaskId: string
   onProgress: (progress: ExportWorkflowProgress) => void

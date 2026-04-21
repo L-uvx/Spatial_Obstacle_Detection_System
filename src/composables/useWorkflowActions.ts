@@ -19,12 +19,14 @@ import { runAnalyzeWorkflow } from '../workflows/analyzeWorkflow'
 import { runExportWorkflow } from '../workflows/exportWorkflow'
 import { runImportWorkflow } from '../workflows/importWorkflow'
 
+// 提供可测试环境复用的异步等待工具。
 function delay(ms: number) {
   return new Promise((resolve) => {
     globalThis.setTimeout(resolve, ms)
   })
 }
 
+// 以 obstacle id 去重追加障碍物，保留已有地图状态。
 function appendRenderedObstacles(
   existingObstacles: RenderedObstacle[],
   nextObstacles: RenderedObstacle[],
@@ -40,6 +42,7 @@ function appendRenderedObstacles(
   return [...obstacleById.values()]
 }
 
+// 将机场中心点转换为统一的相机目标参数。
 function buildAirportCameraTarget(airport: RenderedAirport): InitialCameraTarget {
   return {
     longitude: airport.longitude,
@@ -49,11 +52,13 @@ function buildAirportCameraTarget(airport: RenderedAirport): InitialCameraTarget
   }
 }
 
+// 根据当前选中机场派生需要显示的台站列表。
 function resolveVisibleStations(airports: RenderedAirport[], selectedAirportId: string) {
   const selectedAirport = airports.find((airport) => airport.id === selectedAirportId)
   return selectedAirport ? [...selectedAirport.stations] : []
 }
 
+// 通过临时链接触发浏览器下载。
 function triggerDownload(downloadUrl: string) {
   if (typeof document === 'undefined') {
     return
@@ -72,11 +77,13 @@ function triggerDownload(downloadUrl: string) {
   link.click()
 }
 
+// 只允许安全的下载地址回写到页面链接中。
 function getAllowedDownloadUrl(downloadUrl: string) {
   const isAllowedDownloadUrl = /^https?:\/\//.test(downloadUrl) || /^\/(?!\/)/.test(downloadUrl)
   return isAllowedDownloadUrl ? downloadUrl : ''
 }
 
+// 构造单入口流程的初始状态基线。
 function createInitialState(renderedObstacles: RenderedObstacle[] = []): PolygonObstacleAnalysisState {
   return {
     isOpen: false,
@@ -125,6 +132,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
   const state = reactive(createInitialState(initialObstacles))
   let exportRunId = 0
 
+  // 启动系统初始化，加载机场基线和历史障碍物。
   async function bootstrap() {
     state.bootstrapStatus = 'loading'
     state.bootstrapMessage = '正在加载机场基线和历史障碍物。'
@@ -151,12 +159,14 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     }
   }
 
+  // 打开分析弹窗并切回导入起始步骤。
   function openModal() {
     state.isOpen = true
     state.stage = 'import-form'
     state.statusMessage = '请填写项目名称、障碍物类型并上传 Excel。'
   }
 
+  // 关闭弹窗时重置会话状态，但保留地图长期状态。
   function closeModal() {
     const preservedObstacles = [...state.renderedObstacles]
     const preservedBootstrapStatus = state.bootstrapStatus
@@ -185,6 +195,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     })
   }
 
+  // 切换当前机场，并同步可见台站和复位目标。
   function selectAirport(airportId: string) {
     const selectedAirport = state.airports.find((airport) => airport.id === airportId)
 
@@ -197,6 +208,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     state.initialCameraTarget = buildAirportCameraTarget(selectedAirport)
   }
 
+  // 提交导入表单，拉起导入任务并切到对象选择阶段。
   async function submitImport(formValue: ImportFormValue) {
     if (!formValue.file) {
       state.stage = 'error'
@@ -236,6 +248,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     }
   }
 
+  // 切换候选分析对象的勾选状态。
   function toggleTarget(targetId: string) {
     const index = state.selectedTargetIds.indexOf(targetId)
 
@@ -247,6 +260,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     state.selectedTargetIds.push(targetId)
   }
 
+  // 提交分析任务并把返回的保护区合并进长期状态。
   async function startAnalysis() {
     if (state.selectedTargetIds.length === 0) {
       state.statusMessage = '请至少选择一个机场/空管局后再开始分析。'
@@ -278,6 +292,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     }
   }
 
+  // 发起 Word 导出，并通过运行 id 防止旧请求覆盖新状态。
   async function exportReport() {
     if (state.stage !== 'analysis-result' || !state.analysisTaskId) {
       return
@@ -333,16 +348,19 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     }
   }
 
+  // 切换机场节点及其子保护区的可见性。
   function toggleProtectionZoneAirportVisibility(airportId: string, visible: boolean) {
     state.protectionZoneTree = toggleAirportVisibility(state.protectionZoneTree, airportId, visible)
     state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
   }
 
+  // 切换台站节点及其子保护区的可见性。
   function toggleProtectionZoneStationVisibility(airportId: string, stationId: string, visible: boolean) {
     state.protectionZoneTree = toggleStationVisibility(state.protectionZoneTree, airportId, stationId, visible)
     state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
   }
 
+  // 切换单个保护区节点的可见性。
   function toggleProtectionZoneVisibility(
     airportId: string,
     stationId: string,
@@ -359,18 +377,22 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
   }
 
+  // 打开保护区侧边栏。
   function openProtectionZonePanel() {
     state.protectionZonePanelOpen = true
   }
 
+  // 关闭保护区侧边栏。
   function closeProtectionZonePanel() {
     state.protectionZonePanelOpen = false
   }
 
+  // 打开机场选择浮层。
   function openStationPanel() {
     state.stationPanelOpen = true
   }
 
+  // 关闭机场选择浮层。
   function closeStationPanel() {
     state.stationPanelOpen = false
   }

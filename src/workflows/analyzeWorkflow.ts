@@ -10,12 +10,14 @@ export interface AnalyzeWorkflowResult {
   protectionZones: ProtectionZoneRegion[]
 }
 
+// 为轮询流程提供统一的等待间隔。
 function delay(ms: number) {
   return new Promise((resolve) => {
     globalThis.setTimeout(resolve, ms)
   })
 }
 
+// 轮询分析任务，直到后端返回成功、失败或超时。
 async function waitForAnalysisCompletion(taskId: string) {
   for (let attempt = 0; attempt < 60; attempt += 1) {
     const statusResult = await getAnalysisTaskStatus(taskId)
@@ -34,6 +36,7 @@ async function waitForAnalysisCompletion(taskId: string) {
   throw new Error('分析任务超时，请稍后重试。')
 }
 
+// 串联分析任务创建、轮询和结果获取。
 export async function runAnalyzeWorkflow(input: {
   importTaskId: string
   targetIds: string[]

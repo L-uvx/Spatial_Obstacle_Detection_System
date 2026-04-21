@@ -12,6 +12,8 @@ const emit = defineEmits<{
   setStationProtectionZoneVisibility: [airportId: string, stationId: string, visible: boolean]
   setZoneProtectionZoneVisibility: [airportId: string, stationId: string, zoneCode: string, visible: boolean]
 }>()
+
+// 该面板只负责展示保护区树，并将勾选变化透传给上层状态管理。
 </script>
 
 <template>

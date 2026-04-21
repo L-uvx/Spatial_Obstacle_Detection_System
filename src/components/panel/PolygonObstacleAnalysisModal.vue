@@ -24,6 +24,7 @@ const formValue = reactive<ImportFormValue>({
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
+// 将导入表单恢复到初始状态，并清空原生文件输入框。
 function resetFormValue() {
   formValue.projectName = ''
   formValue.obstacleType = obstacleTypeOptions[0]
@@ -35,10 +36,12 @@ function resetFormValue() {
   }
 }
 
+// 触发隐藏的原生文件选择框。
 function triggerFileSelect() {
   fileInputRef.value?.click()
 }
 
+// 读取用户刚选择的 Excel 文件并同步到表单状态。
 function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement
   const selectedFile = input.files?.[0]
@@ -48,6 +51,7 @@ function handleFileChange(event: Event) {
   input.value = ''
 }
 
+// 校验表单后向上层提交导入请求。
 function handleImportSubmit() {
   if (!formValue.projectName || !formValue.obstacleType || !formValue.fileName || !formValue.file) {
     return

@@ -26,6 +26,7 @@ export interface AnalysisLayerSyncResult {
 
 const cacheByViewer = new WeakMap<object, AnalysisLayerCache>()
 
+// 获取当前 Viewer 对应的保护区同步缓存。
 function getLayerCache(viewer: Cesium.Viewer) {
   const existing = cacheByViewer.get(viewer)
 
@@ -41,10 +42,12 @@ function getLayerCache(viewer: Cesium.Viewer) {
   return next
 }
 
+// 为保护区实体生成稳定 id。
 function createEntityId(regionKey: string) {
   return `${ENTITY_ID_PREFIX}${regionKey}`
 }
 
+// 为保护区生成指纹，用于判断是否需要重建实体。
 function createRegionFingerprint(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
   sampling: ProtectionZoneSamplingConfig,
@@ -57,10 +60,12 @@ function createRegionFingerprint(
   })
 }
 
+// 将经纬度和高程转换为 Cesium 笛卡尔坐标。
 function toCartesianPosition(longitude: number, latitude: number, heightMeters: number) {
   return Cesium.Cartesian3.fromDegrees(longitude, latitude, heightMeters)
 }
 
+// 根据几何类型采样出保护区的平面轮廓。
 function resolveFootprint(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
   sampling: ProtectionZoneSamplingConfig,
@@ -80,6 +85,7 @@ function resolveFootprint(
   throw new Error(`Unsupported protection zone geometry: ${(region.geometry as { shapeType?: string }).shapeType ?? 'unknown'}`)
 }
 
+// 为平面型保护区构造贴地多边形参数。
 function createFlatPolygonHierarchy(profile: ReturnType<typeof buildVerticalProfile>) {
   if (profile.mode !== 'flat') {
     return null
@@ -95,6 +101,7 @@ function createFlatPolygonHierarchy(profile: ReturnType<typeof buildVerticalProf
   }
 }
 
+// 为解析曲面型保护区构造按点高程的多边形参数。
 function createAnalyticSurfacePolygonHierarchy(profile: ReturnType<typeof buildVerticalProfile>) {
   if (profile.mode !== 'analytic_surface') {
     return null
@@ -110,6 +117,7 @@ function createAnalyticSurfacePolygonHierarchy(profile: ReturnType<typeof buildV
   }
 }
 
+// 为径向带解析曲面保护区构造带孔的多边形参数。
 function createRadialBandAnalyticSurfacePolygonHierarchy(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
   sampling: ProtectionZoneSamplingConfig,
@@ -141,6 +149,7 @@ function createRadialBandAnalyticSurfacePolygonHierarchy(
   }
 }
 
+// 根据保护区几何和垂向模式组装最终的多边形参数。
 function createPolygonHierarchy(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
   sampling: ProtectionZoneSamplingConfig,
@@ -168,6 +177,7 @@ function createPolygonHierarchy(
   throw new Error(`Unsupported protection zone vertical mode: ${(profile as { mode?: string }).mode ?? 'unknown'}`)
 }
 
+// 将单个保护区区域构造成 Cesium 实体定义。
 function createEntity(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
   sampling: ProtectionZoneSamplingConfig,
@@ -197,6 +207,7 @@ function createEntity(
   }
 }
 
+// 将可见保护区增量同步到地图，并复用缓存避免无效重建。
 export function syncAnalysisLayer(
   viewer: Cesium.Viewer | null | undefined,
   zones: PolygonObstacleAnalysisState['visibleProtectionZones'] = [],

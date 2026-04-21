@@ -46,10 +46,12 @@ export interface BootstrapDataResult {
   airports: RenderedAirport[]
 }
 
+// 统一判断后端返回的数值字段是否可用。
 function isFiniteNumber(value: number | null): value is number {
   return Number.isFinite(value)
 }
 
+// 校验单个二维坐标点是否合法。
 function isValidPositionCoordinate(value: unknown): value is [number, number] {
   return Array.isArray(value)
     && value.length === 2
@@ -57,18 +59,22 @@ function isValidPositionCoordinate(value: unknown): value is [number, number] {
     && isFiniteNumber(value[1] as number | null)
 }
 
+// 校验单个线环坐标数组是否合法。
 function isValidLinearRingCoordinates(value: unknown): boolean {
   return Array.isArray(value) && value.every((coordinate) => isValidPositionCoordinate(coordinate))
 }
 
+// 校验单个多边形坐标数组是否合法。
 function isValidPolygonCoordinates(value: unknown): boolean {
   return Array.isArray(value) && value.every((ring) => isValidLinearRingCoordinates(ring))
 }
 
+// 校验 MultiPolygon 坐标结构是否合法。
 function isValidMultiPolygonCoordinates(value: unknown): value is MultiPolygonCoordinates {
   return Array.isArray(value) && value.every((polygon) => isValidPolygonCoordinates(polygon))
 }
 
+// 将后端台站数据规范化为前端长期状态结构。
 function normalizeStation(airportId: string, station: BootstrapStationResponse): RenderedStation | null {
   if (!isFiniteNumber(station.longitude) || !isFiniteNumber(station.latitude)) {
     return null
@@ -85,6 +91,7 @@ function normalizeStation(airportId: string, station: BootstrapStationResponse):
   }
 }
 
+// 将后端机场数据规范化，并过滤无效坐标或台站项。
 function normalizeAirport(airport: BootstrapAirportResponse): RenderedAirport | null {
   if (!isFiniteNumber(airport.longitude) || !isFiniteNumber(airport.latitude)) {
     return null
@@ -106,6 +113,7 @@ function normalizeAirport(airport: BootstrapAirportResponse): RenderedAirport | 
   }
 }
 
+// 将后端历史障碍物规范化为可直接上图的结构。
 function normalizeObstacle(item: BootstrapObstacleResponseItem): RenderedObstacle | null {
   if (
     !item.geometry
@@ -128,6 +136,7 @@ function normalizeObstacle(item: BootstrapObstacleResponseItem): RenderedObstacl
   }
 }
 
+// 请求系统初始化接口，并返回机场基线和历史障碍物。
 export async function getBootstrapData(): Promise<BootstrapDataResult> {
   const response = await fetch('/polygon-obstacle/bootstrap')
 

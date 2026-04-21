@@ -28,6 +28,7 @@ const errorMessage = ref('')
 const appliedInitialCameraKeyRef = ref<string | null>(null)
 const hasSyncedInitialObstaclesRef = ref(false)
 
+// 判断本轮障碍物同步后是否应该按新增范围自动飞行。
 function shouldFlyToObstacleExtents() {
   if (appliedInitialCameraKeyRef.value !== null) {
     return true
@@ -40,6 +41,7 @@ function shouldFlyToObstacleExtents() {
   return hasSyncedInitialObstaclesRef.value
 }
 
+// 同步障碍物图层，并在需要时飞到本次新增障碍物范围。
 function syncObstacles(obstacles: RenderedObstacle[], flyToNewlyAdded: boolean) {
   const result = syncObstacleLayer(viewerRef.value, obstacles, { flyToNewlyAdded })
   const flyToOptions = getObstacleFlyToOptions(result)
@@ -53,6 +55,7 @@ function syncObstacles(obstacles: RenderedObstacle[], flyToNewlyAdded: boolean) 
   }
 }
 
+// 同步当前可见的保护区图层。
 function syncAnalysisZones(
   zones: PolygonObstacleAnalysisState['visibleProtectionZones'],
   sampling: PolygonObstacleAnalysisState['protectionZoneSampling'],
@@ -60,14 +63,17 @@ function syncAnalysisZones(
   syncAnalysisLayer(viewerRef.value, zones, sampling)
 }
 
+// 同步当前机场的台站点位与标签。
 function syncStations(stations: RenderedStation[]) {
   syncStationLayer(viewerRef.value, stations)
 }
 
+// 生成天地图影像或注记图层的模板地址。
 function buildTiandituUrl(layerType: string) {
   return `https://t{s}.tianditu.gov.cn/DataServer?T=${layerType}_w&x={x}&y={y}&l={z}&tk=${mapConfig.tdtKey}`
 }
 
+// 创建指定类型的天地图影像提供器。
 function createTiandituImageryProvider(layerType: 'img' | 'cia') {
   return new Cesium.UrlTemplateImageryProvider({
     url: buildTiandituUrl(layerType),
@@ -77,6 +83,7 @@ function createTiandituImageryProvider(layerType: 'img' | 'cia') {
   })
 }
 
+// 为天地图瓦片请求挂载有限次自动重试策略。
 function attachRetryOnError(provider: Cesium.UrlTemplateImageryProvider) {
   provider.errorEvent.addEventListener((error) => {
     if (error.timesRetried < 2) {
@@ -85,6 +92,7 @@ function attachRetryOnError(provider: Cesium.UrlTemplateImageryProvider) {
   })
 }
 
+// 将相机飞到当前目标位置。
 function flyToTarget(target: InitialCameraTarget | null) {
   if (!viewerRef.value || !target) {
     return
@@ -93,6 +101,7 @@ function flyToTarget(target: InitialCameraTarget | null) {
   viewerRef.value.camera.flyTo(buildCameraFlyToOptions(target))
 }
 
+// 按配置初始化 terrain，并在缺少 token 时降级为纯影像模式。
 async function buildTerrainProvider() {
   if (!mapConfig.terrain.enabled) {
     return undefined
@@ -111,6 +120,7 @@ async function buildTerrainProvider() {
   return Cesium.createWorldTerrainAsync()
 }
 
+// 使用基础影像和可选地形创建 Cesium Viewer 实例。
 function createViewer(
   imageryProvider: Cesium.UrlTemplateImageryProvider,
   terrainProvider?: Cesium.TerrainProvider,
@@ -132,12 +142,14 @@ function createViewer(
   })
 }
 
+// 安全销毁已有的 Viewer 实例。
 function destroyViewer(viewer?: Cesium.Viewer | null) {
   if (viewer && !viewer.isDestroyed()) {
     viewer.destroy()
   }
 }
 
+// 初始化 Viewer、底图、图层同步和首屏相机位置。
 async function initViewer() {
   if (!containerRef.value) {
     return

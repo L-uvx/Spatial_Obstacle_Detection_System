@@ -17,12 +17,14 @@ export interface ImportWorkflowResult {
   message: string
 }
 
+// 为轮询流程提供统一的等待间隔。
 function delay(ms: number) {
   return new Promise((resolve) => {
     globalThis.setTimeout(resolve, ms)
   })
 }
 
+// 轮询导入任务，直到后端返回成功、失败或超时。
 async function waitForImportCompletion(taskId: string) {
   for (let attempt = 0; attempt < 60; attempt += 1) {
     const statusResult = await getImportTaskStatus(taskId)
@@ -41,6 +43,7 @@ async function waitForImportCompletion(taskId: string) {
   throw new Error('导入任务超时，请稍后重试。')
 }
 
+// 串联导入创建、轮询、结果获取和候选对象查询。
 export async function runImportWorkflow(input: {
   projectName: string
   obstacleType: string
