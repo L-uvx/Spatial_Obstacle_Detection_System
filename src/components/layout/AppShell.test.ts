@@ -31,6 +31,7 @@ function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): Pol
     analysisSummary: '',
     analysisSelectedTargets: [],
     analysisObstacleCount: 0,
+    analysisRuleResults: [],
     statusMessage: '',
     exportTaskId: '',
     exportStatus: 'idle',

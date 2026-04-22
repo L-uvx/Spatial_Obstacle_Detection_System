@@ -110,6 +110,7 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
     analysisSummary: '',
     analysisSelectedTargets: [],
     analysisObstacleCount: 0,
+    analysisRuleResults: [],
     statusMessage: '等待打开多边形障碍物分析流程。',
     exportTaskId: '',
     exportStatus: 'idle',
@@ -281,6 +282,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       state.analysisSummary = workflowResult.summary
       state.analysisSelectedTargets = workflowResult.selectedTargets
       state.analysisObstacleCount = workflowResult.obstacleCount
+      state.analysisRuleResults = workflowResult.ruleResults
       state.protectionZoneTree = mergeProtectionZones(state.protectionZoneTree, workflowResult.protectionZones)
       state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
       state.protectionZonePanelOpen = state.protectionZoneTree.length > 0

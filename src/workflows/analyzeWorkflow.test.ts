@@ -79,6 +79,29 @@ describe('runAnalyzeWorkflow', () => {
       obstacleCount: 2,
       summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
       protectionZones: createProtectionZones(),
+      ruleResults: [
+        {
+          stationId: '4',
+          stationName: '西南近无方向信标台',
+          stationType: 'NDB',
+          obstacleId: '67',
+          obstacleName: '障碍物2',
+          rawObstacleType: '建筑物/构建物',
+          globalObstacleCategory: 'building_general',
+          ruleName: 'ndb_minimum_distance_50m',
+          zoneCode: 'ndb_minimum_distance_50m',
+          zoneName: 'NDB 50m minimum distance zone',
+          regionCode: 'default',
+          regionName: 'default',
+          isApplicable: true,
+          isCompliant: true,
+          message: 'distance meets minimum threshold',
+          standards: {
+            gb: { code: 'gb-code', text: '国标内容', isCompliant: true },
+            mh: { code: 'mh-code', text: '行标内容', isCompliant: true },
+          },
+        },
+      ],
     })
 
     const result = await runAnalyzeWorkflow({
@@ -102,6 +125,29 @@ describe('runAnalyzeWorkflow', () => {
       ],
       obstacleCount: 2,
       protectionZones: createProtectionZones(),
+      ruleResults: [
+        {
+          stationId: '4',
+          stationName: '西南近无方向信标台',
+          stationType: 'NDB',
+          obstacleId: '67',
+          obstacleName: '障碍物2',
+          rawObstacleType: '建筑物/构建物',
+          globalObstacleCategory: 'building_general',
+          ruleName: 'ndb_minimum_distance_50m',
+          zoneCode: 'ndb_minimum_distance_50m',
+          zoneName: 'NDB 50m minimum distance zone',
+          regionCode: 'default',
+          regionName: 'default',
+          isApplicable: true,
+          isCompliant: true,
+          message: 'distance meets minimum threshold',
+          standards: {
+            gb: { code: 'gb-code', text: '国标内容', isCompliant: true },
+            mh: { code: 'mh-code', text: '行标内容', isCompliant: true },
+          },
+        },
+      ],
     })
   })
 
@@ -131,6 +177,29 @@ describe('runAnalyzeWorkflow', () => {
       obstacleCount: 1,
       summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
       protectionZones: createProtectionZones(),
+      ruleResults: [
+        {
+          stationId: '4',
+          stationName: '西南近无方向信标台',
+          stationType: 'NDB',
+          obstacleId: '67',
+          obstacleName: '障碍物2',
+          rawObstacleType: '建筑物/构建物',
+          globalObstacleCategory: 'building_general',
+          ruleName: 'ndb_minimum_distance_50m',
+          zoneCode: 'ndb_minimum_distance_50m',
+          zoneName: 'NDB 50m minimum distance zone',
+          regionCode: 'default',
+          regionName: 'default',
+          isApplicable: true,
+          isCompliant: true,
+          message: 'distance meets minimum threshold',
+          standards: {
+            gb: { code: 'gb-code', text: '国标内容', isCompliant: true },
+            mh: { code: 'mh-code', text: '行标内容', isCompliant: true },
+          },
+        },
+      ],
     })
 
     const result = await runAnalyzeWorkflow({
@@ -181,6 +250,29 @@ describe('runAnalyzeWorkflow', () => {
       obstacleCount: 2,
       summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
       protectionZones: createProtectionZones(),
+      ruleResults: [
+        {
+          stationId: '4',
+          stationName: '西南近无方向信标台',
+          stationType: 'NDB',
+          obstacleId: '67',
+          obstacleName: '障碍物2',
+          rawObstacleType: '建筑物/构建物',
+          globalObstacleCategory: 'building_general',
+          ruleName: 'ndb_minimum_distance_50m',
+          zoneCode: 'ndb_minimum_distance_50m',
+          zoneName: 'NDB 50m minimum distance zone',
+          regionCode: 'default',
+          regionName: 'default',
+          isApplicable: true,
+          isCompliant: true,
+          message: 'distance meets minimum threshold',
+          standards: {
+            gb: { code: 'gb-code', text: '国标内容', isCompliant: true },
+            mh: { code: 'mh-code', text: '行标内容', isCompliant: true },
+          },
+        },
+      ],
     })
 
     const workflowPromise = runAnalyzeWorkflow({

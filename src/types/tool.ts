@@ -32,6 +32,34 @@ export interface AnalysisSelectedTarget {
   category: '机场' | '空管局'
 }
 
+export interface AnalysisRuleStandardResult {
+  code: string
+  text: string
+  isCompliant: boolean
+}
+
+export interface AnalysisRuleResult {
+  stationId: string
+  stationName: string
+  stationType: string
+  obstacleId: string
+  obstacleName: string
+  rawObstacleType: string
+  globalObstacleCategory: string
+  ruleName: string
+  zoneCode: string
+  zoneName: string
+  regionCode: string
+  regionName: string
+  isApplicable: boolean
+  isCompliant: boolean
+  message: string
+  standards: {
+    gb: AnalysisRuleStandardResult | null
+    mh: AnalysisRuleStandardResult | null
+  }
+}
+
 export type PositionCoordinate = [number, number]
 
 export type LinearRingCoordinates = PositionCoordinate[]
@@ -251,6 +279,7 @@ export interface PolygonObstacleAnalysisState {
   analysisSummary: string
   analysisSelectedTargets: AnalysisSelectedTarget[]
   analysisObstacleCount: number
+  analysisRuleResults: AnalysisRuleResult[]
   statusMessage: string
   exportTaskId: string
   exportStatus: ExportStatus

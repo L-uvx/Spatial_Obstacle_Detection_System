@@ -67,6 +67,7 @@ function createImportFormState(): PolygonObstacleAnalysisState {
     analysisSummary: '',
     analysisSelectedTargets: [],
     analysisObstacleCount: 0,
+    analysisRuleResults: [],
     statusMessage: '请填写项目名称、障碍物类型并上传 Excel。',
     exportTaskId: '',
     exportStatus: 'idle',
@@ -326,6 +327,58 @@ describe('PolygonObstacleAnalysisModal', () => {
     expect(wrapper.text()).not.toContain('保护区显示管理')
     expect(wrapper.text()).not.toContain('天河机场')
     expect(wrapper.text()).not.toContain('导航台A')
+  })
+
+  it('renders rule results grouped by station with gb and mh content', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: {
+          ...createImportFormState(),
+          stage: 'analysis-result',
+          analysisTaskId: 'analysis-task-1',
+          analysisSummary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
+          analysisRuleResults: [
+            {
+              stationId: '4',
+              stationName: '西南近无方向信标台',
+              stationType: 'NDB',
+              obstacleId: '67',
+              obstacleName: '障碍物2',
+              rawObstacleType: '建筑物/构建物',
+              globalObstacleCategory: 'building_general',
+              ruleName: 'ndb_minimum_distance_50m',
+              zoneCode: 'ndb_minimum_distance_50m',
+              zoneName: 'NDB 50m minimum distance zone',
+              regionCode: 'default',
+              regionName: 'default',
+              isApplicable: true,
+              isCompliant: true,
+              message: 'distance meets minimum threshold',
+              standards: {
+                gb: {
+                  code: 'GB_NDB_50m最小间距区域_50',
+                  text: '无方向信标天线与地形地物之间的最小间距国标内容',
+                  isCompliant: true,
+                },
+                mh: {
+                  code: 'MH_NDB_50m最小间距区域_50',
+                  text: '无方向信标天线与地形地物之间的最小间距行标内容',
+                  isCompliant: true,
+                },
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('西南近无方向信标台')
+    expect(wrapper.text()).toContain('障碍物2')
+    expect(wrapper.text()).toContain('ndb_minimum_distance_50m')
+    expect(wrapper.text()).toContain('国标内容')
+    expect(wrapper.text()).toContain('行标内容')
+    expect(wrapper.text()).toContain('GB_NDB_50m最小间距区域_50')
+    expect(wrapper.text()).toContain('MH_NDB_50m最小间距区域_50')
   })
 
   it('renders export running progress in analysis result view', () => {

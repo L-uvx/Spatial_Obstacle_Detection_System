@@ -1,4 +1,6 @@
 import type {
+  AnalysisRuleResult,
+  AnalysisRuleStandardResult,
   AnalysisSelectedTarget,
   ProtectionZoneAnalyticSurfaceVertical,
   ProtectionZoneRadialBandGeometry,
@@ -29,6 +31,35 @@ export interface AnalysisTaskResult {
   obstacleCount: number
   summary: string
   protectionZones: ProtectionZoneRegion[]
+  ruleResults: AnalysisRuleResult[]
+}
+
+interface AnalysisRuleStandardResponse {
+  code?: string
+  text?: string
+  isCompliant?: boolean
+}
+
+interface AnalysisRuleResultResponse {
+  stationId: number | string
+  stationName: string
+  stationType: string
+  obstacleId: number | string
+  obstacleName: string
+  rawObstacleType: string
+  globalObstacleCategory: string
+  ruleName: string
+  zoneCode: string
+  zoneName: string
+  regionCode: string
+  regionName: string
+  isApplicable: boolean
+  isCompliant: boolean
+  message: string
+  standards?: {
+    gb?: AnalysisRuleStandardResponse
+    mh?: AnalysisRuleStandardResponse
+  }
 }
 
 interface ProtectionZoneResponse {
@@ -62,6 +93,45 @@ interface AnalysisTaskResultResponse {
   obstacleCount: number
   summary: string
   protectionZones?: ProtectionZoneResponse[]
+  ruleResults?: AnalysisRuleResultResponse[]
+}
+
+function normalizeAnalysisRuleStandard(
+  standard: AnalysisRuleStandardResponse | undefined,
+): AnalysisRuleStandardResult | null {
+  if (!standard || typeof standard.code !== 'string' || typeof standard.text !== 'string') {
+    return null
+  }
+
+  return {
+    code: standard.code,
+    text: standard.text,
+    isCompliant: standard.isCompliant === true,
+  }
+}
+
+function normalizeAnalysisRuleResults(results: AnalysisRuleResultResponse[] = []): AnalysisRuleResult[] {
+  return results.map((item) => ({
+    stationId: String(item.stationId),
+    stationName: item.stationName,
+    stationType: item.stationType,
+    obstacleId: String(item.obstacleId),
+    obstacleName: item.obstacleName,
+    rawObstacleType: item.rawObstacleType,
+    globalObstacleCategory: item.globalObstacleCategory,
+    ruleName: item.ruleName,
+    zoneCode: item.zoneCode,
+    zoneName: item.zoneName,
+    regionCode: item.regionCode,
+    regionName: item.regionName,
+    isApplicable: item.isApplicable,
+    isCompliant: item.isCompliant,
+    message: item.message,
+    standards: {
+      gb: normalizeAnalysisRuleStandard(item.standards?.gb),
+      mh: normalizeAnalysisRuleStandard(item.standards?.mh),
+    },
+  }))
 }
 
 function isFiniteNumber(value: unknown): value is number {
@@ -392,5 +462,6 @@ export async function getAnalysisTaskResult(taskId: string): Promise<AnalysisTas
     obstacleCount: result.obstacleCount,
     summary: result.summary,
     protectionZones: normalizeProtectionZones(result.protectionZones ?? []),
+    ruleResults: normalizeAnalysisRuleResults(result.ruleResults ?? []),
   }
 }

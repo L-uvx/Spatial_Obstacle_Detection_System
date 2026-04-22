@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { obstacleTypeOptions } from '../../types/tool'
 import type { ImportFormValue, PolygonObstacleAnalysisState } from '../../types/tool'
 
@@ -23,6 +23,34 @@ const formValue = reactive<ImportFormValue>({
 })
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const ruleResultGroups = computed(() => {
+  const groupMap = new Map<string, {
+    stationId: string
+    stationName: string
+    stationType: string
+    items: PolygonObstacleAnalysisState['analysisRuleResults']
+  }>()
+
+  for (const item of props.state.analysisRuleResults ?? []) {
+    const key = `${item.stationId}:${item.stationName}:${item.stationType}`
+    const existing = groupMap.get(key)
+
+    if (existing) {
+      existing.items.push(item)
+      continue
+    }
+
+    groupMap.set(key, {
+      stationId: item.stationId,
+      stationName: item.stationName,
+      stationType: item.stationType,
+      items: [item],
+    })
+  }
+
+  return [...groupMap.values()]
+})
 
 // 将导入表单恢复到初始状态，并清空原生文件输入框。
 function resetFormValue() {
@@ -199,6 +227,23 @@ watch(
                 {{ target.name }}
               </li>
             </ul>
+          </div>
+
+          <div v-if="ruleResultGroups.length > 0" class="analysis-modal__result-section analysis-modal__result-list">
+            <h4>规则结果</h4>
+            <div v-for="group in ruleResultGroups" :key="group.stationId" class="analysis-modal__rule-group">
+              <h5>{{ group.stationName }}（{{ group.stationType }}）</h5>
+              <ul>
+                <li v-for="item in group.items" :key="`${item.obstacleId}:${item.ruleName}:${item.regionCode}`">
+                  <p>障碍物：{{ item.obstacleName }}</p>
+                  <p>规则：{{ item.ruleName }}</p>
+                  <p>结论：{{ item.isCompliant ? '符合' : '不符合' }}</p>
+                  <p>{{ item.message }}</p>
+                  <p v-if="item.standards.gb">国标：{{ item.standards.gb.text }}（{{ item.standards.gb.code }}）</p>
+                  <p v-if="item.standards.mh">行标：{{ item.standards.mh.text }}（{{ item.standards.mh.code }}）</p>
+                </li>
+              </ul>
+            </div>
           </div>
 
         </div>

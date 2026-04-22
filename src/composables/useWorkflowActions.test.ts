@@ -169,6 +169,29 @@ vi.mock('../workflows/analyzeWorkflow', () => ({
     ],
     obstacleCount: 2,
     protectionZones: createProtectionZones(),
+    ruleResults: [
+      {
+        stationId: '4',
+        stationName: '西南近无方向信标台',
+        stationType: 'NDB',
+        obstacleId: '67',
+        obstacleName: '障碍物2',
+        rawObstacleType: '建筑物/构建物',
+        globalObstacleCategory: 'building_general',
+        ruleName: 'ndb_minimum_distance_50m',
+        zoneCode: 'ndb_minimum_distance_50m',
+        zoneName: 'NDB 50m minimum distance zone',
+        regionCode: 'default',
+        regionName: 'default',
+        isApplicable: true,
+        isCompliant: true,
+        message: 'distance meets minimum threshold',
+        standards: {
+          gb: { code: 'gb-code', text: '国标内容', isCompliant: true },
+          mh: { code: 'mh-code', text: '行标内容', isCompliant: true },
+        },
+      },
+    ],
   })),
 }))
 
@@ -234,8 +257,8 @@ describe('useWorkflowActions', () => {
     expect(state.protectionZoneTree).toEqual([])
     expect(state.visibleProtectionZones).toEqual([])
     expect(state.protectionZoneSampling).toEqual({
-      circleAngleStepDegrees: 5,
-      sectorAngleStepDegrees: 5,
+      circleAngleStepDegrees: 2.5,
+      sectorAngleStepDegrees: 2.5,
     })
   })
 
@@ -516,8 +539,8 @@ describe('useWorkflowActions', () => {
     expect(state.protectionZoneTree).toEqual([])
     expect(state.visibleProtectionZones).toEqual([])
     expect(state.protectionZoneSampling).toEqual({
-      circleAngleStepDegrees: 5,
-      sectorAngleStepDegrees: 5,
+      circleAngleStepDegrees: 2.5,
+      sectorAngleStepDegrees: 2.5,
     })
     const visibleRegion = createVisibleProtectionZoneRegion()
     expect(visibleRegion.regionCode).toBe('region-north')
@@ -602,6 +625,29 @@ describe('useWorkflowActions', () => {
       { id: '2', name: 'Airport Far', category: '机场' },
     ])
     expect(state.analysisObstacleCount).toBe(2)
+    expect(state.analysisRuleResults).toEqual([
+      {
+        stationId: '4',
+        stationName: '西南近无方向信标台',
+        stationType: 'NDB',
+        obstacleId: '67',
+        obstacleName: '障碍物2',
+        rawObstacleType: '建筑物/构建物',
+        globalObstacleCategory: 'building_general',
+        ruleName: 'ndb_minimum_distance_50m',
+        zoneCode: 'ndb_minimum_distance_50m',
+        zoneName: 'NDB 50m minimum distance zone',
+        regionCode: 'default',
+        regionName: 'default',
+        isApplicable: true,
+        isCompliant: true,
+        message: 'distance meets minimum threshold',
+        standards: {
+          gb: { code: 'gb-code', text: '国标内容', isCompliant: true },
+          mh: { code: 'mh-code', text: '行标内容', isCompliant: true },
+        },
+      },
+    ])
     expect(state.statusMessage).toBe('analysis task created')
     expect(state.protectionZonePanelOpen).toBe(true)
     expect(state.protectionZoneTree).toHaveLength(1)
