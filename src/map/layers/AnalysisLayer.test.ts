@@ -160,6 +160,40 @@ describe('syncAnalysisLayer', () => {
     expect((add.mock.calls[0][0].polygon?.hierarchy as { holes?: unknown[] } | undefined)?.holes).toHaveLength(1)
   })
 
+  it('renders multipolygon flat regions with nested holes preserved', () => {
+    const { viewer, add } = createViewer()
+
+    syncAnalysisLayer(viewer as never, [
+      createVisibleRegion({
+        geometry: {
+          shapeType: 'multipolygon',
+          coordinates: [
+            [
+              [
+                [103.93973520258326, 30.56145249078754],
+                [103.93974185985782, 30.561423542206647],
+                [103.95464580645513, 30.593430648117337],
+                [103.9397275266271, 30.561479625857245],
+                [103.93973520258326, 30.56145249078754],
+              ],
+            ],
+          ],
+        },
+        vertical: {
+          mode: 'flat',
+          baseReference: 'station',
+          baseHeightMeters: 492,
+        },
+      }),
+    ], createSampling())
+
+    expect(add).toHaveBeenCalledTimes(1)
+    expect(add.mock.calls[0][0].polygon?.perPositionHeight).toBe(false)
+    expect(add.mock.calls[0][0].polygon?.height).toBe(492)
+    expect(add.mock.calls[0][0].polygon?.extrudedHeight).toBeUndefined()
+    expect(add.mock.calls[0][0].polygon?.hierarchy).toBeDefined()
+  })
+
   it('rebuilds only the changed region key when visible region content changes', () => {
     const { viewer, add, removeById } = createViewer()
     const sampling = createSampling()

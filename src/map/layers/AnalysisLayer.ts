@@ -1,5 +1,6 @@
 import * as Cesium from 'cesium'
 import type {
+  MultiPolygonCoordinates,
   PolygonObstacleAnalysisState,
   ProtectionZoneSamplingConfig,
 } from '../../types/tool'
@@ -65,6 +66,28 @@ function toCartesianPosition(longitude: number, latitude: number, heightMeters: 
   return Cesium.Cartesian3.fromDegrees(longitude, latitude, heightMeters)
 }
 
+// 将 multipolygon 坐标转换为 Cesium PolygonHierarchy，保留外环与孔洞结构。
+function createMultipolygonHierarchy(coordinates: MultiPolygonCoordinates, heightMeters: number) {
+  const [firstPolygon] = coordinates
+
+  if (!firstPolygon) {
+    throw new Error('Unsupported protection zone multipolygon: empty coordinates')
+  }
+
+  const [outerRing, ...holeRings] = firstPolygon
+
+  if (!outerRing) {
+    throw new Error('Unsupported protection zone multipolygon: missing outer ring')
+  }
+
+  return new Cesium.PolygonHierarchy(
+    outerRing.map(([longitude, latitude]) => toCartesianPosition(longitude, latitude, heightMeters)),
+    holeRings.map((ring) => new Cesium.PolygonHierarchy(
+      ring.map(([longitude, latitude]) => toCartesianPosition(longitude, latitude, heightMeters)),
+    )),
+  )
+}
+
 // 根据几何类型采样出保护区的平面轮廓。
 function resolveFootprint(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
@@ -97,6 +120,20 @@ function createFlatPolygonHierarchy(profile: ReturnType<typeof buildVerticalProf
     ),
     perPositionHeight: false,
     height: profile.points[0]?.heightMeters,
+    extrudedHeight: undefined,
+  }
+}
+
+// 为 multipolygon 平面保护区直接构造多边形层级，避免圆/扇形采样逻辑介入。
+function createMultipolygonFlatHierarchy(region: PolygonObstacleAnalysisState['visibleProtectionZones'][number]) {
+  if (region.geometry.shapeType !== 'multipolygon' || region.vertical.mode !== 'flat') {
+    return null
+  }
+
+  return {
+    hierarchy: createMultipolygonHierarchy(region.geometry.coordinates, region.vertical.baseHeightMeters),
+    perPositionHeight: false,
+    height: region.vertical.baseHeightMeters,
     extrudedHeight: undefined,
   }
 }
@@ -154,6 +191,12 @@ function createPolygonHierarchy(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
   sampling: ProtectionZoneSamplingConfig,
 ) {
+  const multipolygonFlat = createMultipolygonFlatHierarchy(region)
+
+  if (multipolygonFlat) {
+    return multipolygonFlat
+  }
+
   const radialBandPolygon = createRadialBandAnalyticSurfacePolygonHierarchy(region, sampling)
 
   if (radialBandPolygon) {

@@ -4,9 +4,11 @@ import type {
   ProtectionZoneRadialBandGeometry,
   ProtectionZoneCircleGeometry,
   ProtectionZoneFlatVertical,
+  ProtectionZoneMultipolygonGeometry,
   ProtectionZoneRegion,
   ProtectionZoneRegionProperties,
   ProtectionZoneSectorGeometry,
+  MultiPolygonCoordinates,
 } from '../types/tool'
 
 export interface AnalysisTaskStatusResult {
@@ -68,12 +70,25 @@ function isFiniteNumber(value: unknown): value is number {
 
 function normalizeProtectionZoneGeometry(
   geometry: unknown,
-): ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry | ProtectionZoneRadialBandGeometry | null {
+): ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry | ProtectionZoneRadialBandGeometry | ProtectionZoneMultipolygonGeometry | null {
   if (!geometry || typeof geometry !== 'object') {
     return null
   }
 
   const candidate = geometry as Record<string, unknown>
+
+  if (candidate.shapeType === 'multipolygon') {
+    const coordinates = candidate.coordinates
+
+    if (!Array.isArray(coordinates) || !isValidMultiPolygonCoordinates(coordinates)) {
+      return null
+    }
+
+    return {
+      shapeType: 'multipolygon',
+      coordinates,
+    }
+  }
 
   if (candidate.shapeType === 'circle') {
     const center = candidate.center as Record<string, unknown> | undefined
@@ -147,6 +162,25 @@ function normalizeProtectionZoneGeometry(
   }
 
   return null
+}
+
+function isValidPositionCoordinate(value: unknown): value is MultiPolygonCoordinates[number][number][number][number] {
+  return Array.isArray(value)
+    && value.length >= 2
+    && isFiniteNumber(value[0])
+    && isFiniteNumber(value[1])
+}
+
+function isValidLinearRingCoordinates(value: unknown): value is MultiPolygonCoordinates[number][number][number] {
+  return Array.isArray(value) && value.length >= 4 && value.every(isValidPositionCoordinate)
+}
+
+function isValidPolygonCoordinates(value: unknown): value is MultiPolygonCoordinates[number][number] {
+  return Array.isArray(value) && value.length > 0 && value.every(isValidLinearRingCoordinates)
+}
+
+function isValidMultiPolygonCoordinates(value: unknown): value is MultiPolygonCoordinates {
+  return Array.isArray(value) && value.length > 0 && value.every(isValidPolygonCoordinates)
 }
 
 function normalizeProtectionZoneVertical(
@@ -223,6 +257,10 @@ function normalizeProtectionZone(zone: ProtectionZoneResponse): ProtectionZoneRe
   }
 
   if (geometry.shapeType === 'radial_band' && vertical.mode !== 'analytic_surface') {
+    return null
+  }
+
+  if (geometry.shapeType === 'multipolygon' && vertical.mode !== 'flat') {
     return null
   }
 

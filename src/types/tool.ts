@@ -120,6 +120,11 @@ export interface ProtectionZoneRadialBandGeometry {
   outerRadiusMeters: number
 }
 
+export interface ProtectionZoneMultipolygonGeometry {
+  shapeType: 'multipolygon'
+  coordinates: MultiPolygonCoordinates
+}
+
 export interface ProtectionZoneFlatVertical {
   mode: 'flat'
   baseReference: 'station'
@@ -152,7 +157,11 @@ export interface ProtectionZoneRegion {
   zoneName: string
   regionCode: string
   regionName: string
-  geometry: ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry | ProtectionZoneRadialBandGeometry
+  geometry:
+    | ProtectionZoneCircleGeometry
+    | ProtectionZoneSectorGeometry
+    | ProtectionZoneRadialBandGeometry
+    | ProtectionZoneMultipolygonGeometry
   vertical: ProtectionZoneFlatVertical | ProtectionZoneAnalyticSurfaceVertical
   properties: ProtectionZoneRegionProperties
 }
@@ -201,7 +210,11 @@ export interface VisibleProtectionZoneRegion {
   ruleName: string
   regionCode: string
   regionName: string
-  geometry: ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry | ProtectionZoneRadialBandGeometry
+  geometry:
+    | ProtectionZoneCircleGeometry
+    | ProtectionZoneSectorGeometry
+    | ProtectionZoneRadialBandGeometry
+    | ProtectionZoneMultipolygonGeometry
   vertical: ProtectionZoneFlatVertical | ProtectionZoneAnalyticSurfaceVertical
   properties: ProtectionZoneRegionProperties
 }

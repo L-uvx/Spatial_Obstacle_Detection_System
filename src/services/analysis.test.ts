@@ -385,6 +385,96 @@ describe('analysis service', () => {
     })
   })
 
+  it('normalizes multipolygon flat protection zones', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 2,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'airport-1-station-7-zone-loc_site_protection-region-default',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 7,
+            stationName: 'LOC20R',
+            stationType: 'LOC',
+            ruleCode: 'loc_site_protection',
+            ruleName: 'loc_site_protection',
+            zoneCode: 'loc_site_protection',
+            zoneName: 'LOC site protection zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.93973520258326, 30.56145249078754],
+                    [103.93974185985782, 30.561423542206647],
+                    [103.95464580645513, 30.593430648117337],
+                    [103.9397275266271, 30.561479625857245],
+                    [103.93973520258326, 30.56145249078754],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'flat',
+              baseReference: 'station',
+              baseHeightMeters: 492,
+            },
+            properties: { label: 'LOC20R LOC site protection zone default' },
+          },
+        ],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([
+      {
+        id: 'airport-1-station-7-zone-loc_site_protection-region-default',
+        airportId: '1',
+        airportName: '双流机场',
+        stationId: '7',
+        stationName: 'LOC20R',
+        stationType: 'LOC',
+        ruleCode: 'loc_site_protection',
+        ruleName: 'loc_site_protection',
+        zoneCode: 'loc_site_protection',
+        zoneName: 'LOC site protection zone',
+        regionCode: 'default',
+        regionName: 'default',
+        geometry: {
+          shapeType: 'multipolygon',
+          coordinates: [
+            [
+              [
+                [103.93973520258326, 30.56145249078754],
+                [103.93974185985782, 30.561423542206647],
+                [103.95464580645513, 30.593430648117337],
+                [103.9397275266271, 30.561479625857245],
+                [103.93973520258326, 30.56145249078754],
+              ],
+            ],
+          ],
+        },
+        vertical: {
+          mode: 'flat',
+          baseReference: 'station',
+          baseHeightMeters: 492,
+        },
+        properties: { label: 'LOC20R LOC site protection zone default' },
+      },
+    ])
+  })
+
   it('drops unsupported protection zone combinations instead of crashing', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
