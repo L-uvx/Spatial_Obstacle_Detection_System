@@ -258,7 +258,7 @@ describe('analysis service', () => {
     })
   })
 
-  it('normalizes supported protection zone shapes and ids', async () => {
+  it('normalizes multipolygon geometry and preserves the formal analytic surface structure', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -271,109 +271,7 @@ describe('analysis service', () => {
         summary: 'summary',
         protectionZones: [
           {
-            id: 'airport-1-station-101-zone-flat-region-default',
-            airportId: 1,
-            airportName: 'Airport A',
-            stationId: 101,
-            stationName: 'NDB Station',
-            stationType: 'NDB',
-            ruleCode: 'flat_rule',
-            ruleName: 'flat_rule',
-            zoneCode: 'flat_zone',
-            zoneName: 'Flat Zone',
-            regionCode: 'default',
-            regionName: 'default',
-            geometry: {
-              shapeType: 'circle',
-              center: { longitude: 104.1, latitude: 30.1 },
-              radiusMeters: 50,
-            },
-            vertical: { mode: 'flat', baseReference: 'station', baseHeightMeters: 500 },
-            properties: { label: 'Flat Zone' },
-          },
-          {
-            id: 'airport-1-station-101-zone-surface-region-default',
-            airportId: 1,
-            airportName: 'Airport A',
-            stationId: 101,
-            stationName: 'NDB Station',
-            stationType: 'NDB',
-            ruleCode: 'surface_rule',
-            ruleName: 'surface_rule',
-            zoneCode: 'surface_zone',
-            zoneName: 'Surface Zone',
-            regionCode: 'default',
-            regionName: 'default',
-            geometry: {
-              shapeType: 'sector',
-              center: { longitude: 104.1, latitude: 30.1 },
-              innerRadiusMeters: 50,
-              outerRadiusMeters: 37040,
-              startAzimuthDegrees: 0,
-              endAzimuthDegrees: 360,
-            },
-            vertical: {
-              mode: 'analytic_surface',
-              baseReference: 'station',
-              baseHeightMeters: 500,
-              heightFunction: {
-                type: 'elevation_angle',
-                elevationAngleDegrees: 3,
-                distanceMetric: 'radial',
-                startDistanceMeters: 50,
-                endDistanceMeters: 37040,
-              },
-            },
-            properties: { label: 'Surface Zone' },
-          },
-        ],
-      }),
-    } as Response)
-
-    const result = await getAnalysisTaskResult('analysis-task-1')
-
-    expect(result.protectionZones).toHaveLength(2)
-    expect(result.protectionZones[0]).toEqual({
-      id: 'airport-1-station-101-zone-flat-region-default',
-      airportId: '1',
-      airportName: 'Airport A',
-      stationId: '101',
-      stationName: 'NDB Station',
-      stationType: 'NDB',
-      ruleCode: 'flat_rule',
-      ruleName: 'flat_rule',
-      zoneCode: 'flat_zone',
-      zoneName: 'Flat Zone',
-      regionCode: 'default',
-      regionName: 'default',
-      geometry: {
-        shapeType: 'circle',
-        center: { longitude: 104.1, latitude: 30.1 },
-        radiusMeters: 50,
-      },
-      vertical: { mode: 'flat', baseReference: 'station', baseHeightMeters: 500 },
-      properties: { label: 'Flat Zone' },
-    })
-    expect(result.protectionZones[1].geometry.shapeType).toBe('sector')
-    expect(result.protectionZones[1].vertical.mode).toBe('analytic_surface')
-    expect(result.protectionZones[1].airportId).toBe('1')
-    expect(result.protectionZones[1].stationId).toBe('101')
-  })
-
-  it('normalizes radial band analytic surface protection zones', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 2,
-        summary: 'summary',
-        protectionZones: [
-          {
-            id: 'airport-1-station-4-zone-ndb_conical_clearance_3deg-region-default',
+            id: 'zone-1',
             airportId: 1,
             airportName: '双流机场',
             stationId: 4,
@@ -386,65 +284,529 @@ describe('analysis service', () => {
             regionCode: 'default',
             regionName: 'default',
             geometry: {
-              shapeType: 'radial_band',
-              center: { longitude: 103.935861, latitude: 30.554611 },
-              innerRadiusMeters: 50,
-              outerRadiusMeters: 37040,
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                  [
+                    [103.944, 30.557],
+                    [103.946, 30.557],
+                    [103.946, 30.553],
+                    [103.944, 30.553],
+                    [103.944, 30.557],
+                  ],
+                ],
+              ],
             },
             vertical: {
               mode: 'analytic_surface',
               baseReference: 'station',
               baseHeightMeters: 491.1,
-              heightFunction: {
-                type: 'elevation_angle',
-                elevationAngleDegrees: 3,
+              surface: {
+                type: 'distance_parameterized',
+                distanceSource: {
+                  kind: 'point',
+                  point: [0, 0],
+                },
                 distanceMetric: 'radial',
-                startDistanceMeters: 50,
-                endDistanceMeters: 37040,
+                clampRange: {
+                  startMeters: 50,
+                  endMeters: 37040,
+                },
+                heightModel: {
+                  type: 'angle_linear_rise',
+                  angleDegrees: 3,
+                  distanceOffsetMeters: 50,
+                },
               },
             },
-            properties: { label: '西南近无方向信标台 NDB 3 degree conical clearance zone default' },
+            properties: { label: 'NDB 3 degree conical clearance zone' },
           },
         ],
+        ruleResults: [],
       }),
     } as Response)
 
     const result = await getAnalysisTaskResult('analysis-task-1')
 
     expect(result.protectionZones).toHaveLength(1)
-    expect(result.protectionZones[0]).toEqual({
-      id: 'airport-1-station-4-zone-ndb_conical_clearance_3deg-region-default',
-      airportId: '1',
-      airportName: '双流机场',
-      stationId: '4',
-      stationName: '西南近无方向信标台',
-      stationType: 'NDB',
-      ruleCode: 'ndb_conical_clearance_3deg',
-      ruleName: 'ndb_conical_clearance_3deg',
-      zoneCode: 'ndb_conical_clearance_3deg',
-      zoneName: 'NDB 3 degree conical clearance zone',
-      regionCode: 'default',
-      regionName: 'default',
-      geometry: {
-        shapeType: 'radial_band',
-        center: { longitude: 103.935861, latitude: 30.554611 },
-        innerRadiusMeters: 50,
-        outerRadiusMeters: 37040,
-      },
-      vertical: {
-        mode: 'analytic_surface',
-        baseReference: 'station',
-        baseHeightMeters: 491.1,
-        heightFunction: {
-          type: 'elevation_angle',
-          elevationAngleDegrees: 3,
-          distanceMetric: 'radial',
-          startDistanceMeters: 50,
-          endDistanceMeters: 37040,
+    expect(result.protectionZones[0].geometry).toEqual({
+      shapeType: 'multipolygon',
+      coordinates: [
+        [
+          [
+            [103.94, 30.56],
+            [103.95, 30.56],
+            [103.95, 30.55],
+            [103.94, 30.55],
+            [103.94, 30.56],
+          ],
+          [
+            [103.944, 30.557],
+            [103.946, 30.557],
+            [103.946, 30.553],
+            [103.944, 30.553],
+            [103.944, 30.557],
+          ],
+        ],
+      ],
+    })
+    expect(result.protectionZones[0].vertical).toEqual({
+      mode: 'analytic_surface',
+      baseReference: 'station',
+      baseHeightMeters: 491.1,
+      surface: {
+        type: 'distance_parameterized',
+        distanceSource: {
+          kind: 'point',
+          point: [0, 0],
+        },
+        distanceMetric: 'radial',
+        clampRange: {
+          startMeters: 50,
+          endMeters: 37040,
+        },
+        heightModel: {
+          type: 'angle_linear_rise',
+          angleDegrees: 3,
+          distanceOffsetMeters: 50,
         },
       },
-      properties: { label: '西南近无方向信标台 NDB 3 degree conical clearance zone default' },
     })
+  })
+
+  it('accepts formal analytic_surface payloads when coordinateSystem is omitted', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-2',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            ruleCode: 'ndb_conical_clearance_3deg',
+            ruleName: 'ndb_conical_clearance_3deg',
+            zoneCode: 'ndb_conical_clearance_3deg',
+            zoneName: 'NDB 3 degree conical clearance zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 491.1,
+              surface: {
+                type: 'distance_parameterized',
+                distanceSource: {
+                  kind: 'point',
+                  point: [103.935861, 30.554611],
+                },
+                distanceMetric: 'radial',
+                clampRange: {
+                  startMeters: 50,
+                  endMeters: 37040,
+                },
+                heightModel: {
+                  type: 'angle_linear_rise',
+                  angleDegrees: 3,
+                  distanceOffsetMeters: 50,
+                },
+              },
+            },
+            properties: { label: 'NDB 3 degree conical clearance zone' },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toHaveLength(1)
+    expect(result.protectionZones[0].vertical).toEqual({
+      mode: 'analytic_surface',
+      baseReference: 'station',
+      baseHeightMeters: 491.1,
+      surface: {
+        type: 'distance_parameterized',
+        distanceSource: {
+          kind: 'point',
+          point: [103.935861, 30.554611],
+        },
+        distanceMetric: 'radial',
+        clampRange: {
+          startMeters: 50,
+          endMeters: 37040,
+        },
+        heightModel: {
+          type: 'angle_linear_rise',
+          angleDegrees: 3,
+          distanceOffsetMeters: 50,
+        },
+      },
+    })
+  })
+
+  it('filters deprecated protection zone shapes and warns with region identity', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'legacy-zone',
+            airportId: 1,
+            airportName: 'Airport A',
+            stationId: 101,
+            stationName: 'Station A',
+            stationType: 'NDB',
+            ruleCode: 'legacy',
+            ruleName: 'legacy',
+            zoneCode: 'legacy-zone',
+            zoneName: 'Legacy Zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'circle',
+              center: { longitude: 104.1, latitude: 30.1 },
+              radiusMeters: 50,
+            },
+            vertical: { mode: 'flat', baseReference: 'station', baseHeightMeters: 500 },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+         airportId: '1',
+         stationId: '101',
+         zoneCode: 'legacy-zone',
+         regionCode: 'default',
+         reason: 'geometry is not a valid multipolygon',
+      }),
+    )
+  })
+
+  it('drops invalid vertical payloads and warns with region identity', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'invalid-vertical-zone',
+            airportId: 1,
+            airportName: 'Airport A',
+            stationId: 101,
+            stationName: 'Station A',
+            stationType: 'NDB',
+            ruleCode: 'ring',
+            ruleName: 'ring',
+            zoneCode: 'ring-zone',
+            zoneName: 'Ring Zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 500,
+              heightFunction: {
+                type: 'elevation_angle',
+                distanceMetric: 'radial',
+                elevationAngleDegrees: 3,
+                startDistanceMeters: 50,
+                endDistanceMeters: 37040,
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+         airportId: '1',
+         stationId: '101',
+         zoneCode: 'ring-zone',
+         regionCode: 'default',
+         reason: 'vertical is not a supported formal model',
+      }),
+    )
+  })
+
+  it('keeps a multipolygon ring hole structure intact during normalization', async () => {
+    const coordinates = [
+      [
+        [
+          [103.94, 30.56],
+          [103.95, 30.56],
+          [103.95, 30.55],
+          [103.94, 30.55],
+          [103.94, 30.56],
+        ],
+        [
+          [103.944, 30.557],
+          [103.946, 30.557],
+          [103.946, 30.553],
+          [103.944, 30.553],
+          [103.944, 30.557],
+        ],
+      ],
+    ]
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'ring-zone',
+            airportId: 1,
+            airportName: 'Airport A',
+            stationId: 101,
+            stationName: 'Station A',
+            stationType: 'NDB',
+            ruleCode: 'ring',
+            ruleName: 'ring',
+            zoneCode: 'ring-zone',
+            zoneName: 'Ring Zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates,
+            },
+            vertical: { mode: 'flat', baseReference: 'station', baseHeightMeters: 500 },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones[0].geometry.coordinates).toEqual(coordinates)
+  })
+
+  it('drops multipolygon geometry when a linear ring is not closed', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'open-ring-zone',
+            airportId: 1,
+            airportName: 'Airport A',
+            stationId: 101,
+            stationName: 'Station A',
+            stationType: 'NDB',
+            ruleCode: 'ring',
+            ruleName: 'ring',
+            zoneCode: 'ring-zone',
+            zoneName: 'Ring Zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                  ],
+                ],
+              ],
+            },
+            vertical: { mode: 'flat', baseReference: 'station', baseHeightMeters: 500 },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+        airportId: '1',
+        stationId: '101',
+        zoneCode: 'ring-zone',
+        regionCode: 'default',
+        reason: 'geometry is not a valid multipolygon',
+      }),
+    )
+  })
+
+  it('drops analytic surfaces when distance source point is not exactly a coordinate pair', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'invalid-point-zone',
+            airportId: 1,
+            airportName: 'Airport A',
+            stationId: 101,
+            stationName: 'Station A',
+            stationType: 'NDB',
+            ruleCode: 'ring',
+            ruleName: 'ring',
+            zoneCode: 'ring-zone',
+            zoneName: 'Ring Zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 500,
+              surface: {
+                type: 'distance_parameterized',
+                distanceSource: {
+                  kind: 'point',
+                  point: [0, 0, 100],
+                },
+                distanceMetric: 'radial',
+                clampRange: {
+                  startMeters: 50,
+                  endMeters: 37040,
+                },
+                heightModel: {
+                  type: 'angle_linear_rise',
+                  angleDegrees: 3,
+                },
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+        airportId: '1',
+        stationId: '101',
+        zoneCode: 'ring-zone',
+        regionCode: 'default',
+        reason: 'vertical is not a supported formal model',
+      }),
+    )
   })
 
   it('normalizes multipolygon flat protection zones', async () => {
@@ -537,234 +899,4 @@ describe('analysis service', () => {
     ])
   })
 
-  it('drops unsupported protection zone combinations instead of crashing', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [],
-        obstacleCount: 0,
-        summary: 'summary',
-        protectionZones: [
-          {
-            id: 'unsupported',
-            airportId: 1,
-            airportName: 'Airport A',
-            stationId: 101,
-            stationName: 'NDB Station',
-            stationType: 'NDB',
-            ruleCode: 'unsupported',
-            ruleName: 'unsupported',
-            zoneCode: 'unsupported',
-            zoneName: 'unsupported',
-            regionCode: 'default',
-            regionName: 'default',
-            geometry: { shapeType: 'polygon', type: 'Polygon', coordinates: [] },
-            vertical: { mode: 'flat' },
-            properties: { label: 'unsupported' },
-          },
-          {
-            id: 'unsupported-vertical',
-            airportId: 1,
-            airportName: 'Airport A',
-            stationId: 101,
-            stationName: 'NDB Station',
-            stationType: 'NDB',
-            ruleCode: 'unsupported-vertical',
-            ruleName: 'unsupported-vertical',
-            zoneCode: 'unsupported-vertical',
-            zoneName: 'unsupported-vertical',
-            regionCode: 'default',
-            regionName: 'default',
-            geometry: {
-              shapeType: 'circle',
-              center: { longitude: 104.1, latitude: 30.1 },
-              radiusMeters: 50,
-            },
-            vertical: {
-              mode: 'analytic_surface',
-              baseReference: 'station',
-              baseHeightMeters: 500,
-              heightFunction: {
-                type: 'elevation_angle',
-                elevationAngleDegrees: 3,
-                distanceMetric: 'radial',
-                startDistanceMeters: 50,
-                endDistanceMeters: 37040,
-              },
-            },
-            properties: { label: 'unsupported vertical' },
-          },
-        ],
-      }),
-    } as Response)
-
-    const result = await getAnalysisTaskResult('analysis-task-1')
-
-    expect(result.protectionZones).toEqual([])
-  })
-
-  it('drops protection zones with non-finite numeric fields instead of normalizing them', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [],
-        obstacleCount: 0,
-        summary: 'summary',
-        protectionZones: [
-          {
-            id: 'bad-circle',
-            airportId: 1,
-            airportName: 'Airport A',
-            stationId: 101,
-            stationName: 'NDB Station',
-            stationType: 'NDB',
-            ruleCode: 'bad-circle',
-            ruleName: 'bad-circle',
-            zoneCode: 'bad-circle',
-            zoneName: 'bad-circle',
-            regionCode: 'default',
-            regionName: 'default',
-            geometry: {
-              shapeType: 'circle',
-              center: { longitude: Number.NaN, latitude: 30.1 },
-              radiusMeters: 50,
-            },
-            vertical: { mode: 'flat' },
-            properties: { label: 'bad-circle' },
-          },
-          {
-            id: 'bad-sector',
-            airportId: 1,
-            airportName: 'Airport A',
-            stationId: 101,
-            stationName: 'NDB Station',
-            stationType: 'NDB',
-            ruleCode: 'bad-sector',
-            ruleName: 'bad-sector',
-            zoneCode: 'bad-sector',
-            zoneName: 'bad-sector',
-            regionCode: 'default',
-            regionName: 'default',
-            geometry: {
-              shapeType: 'sector',
-              center: { longitude: 104.1, latitude: 30.1 },
-              innerRadiusMeters: 50,
-              outerRadiusMeters: Number.POSITIVE_INFINITY,
-              startAzimuthDegrees: 0,
-              endAzimuthDegrees: 360,
-            },
-            vertical: {
-              mode: 'analytic_surface',
-              baseReference: 'station',
-              baseHeightMeters: 500,
-              heightFunction: {
-                type: 'elevation_angle',
-                elevationAngleDegrees: 3,
-                distanceMetric: 'radial',
-                startDistanceMeters: 50,
-                endDistanceMeters: 37040,
-              },
-            },
-            properties: { label: 'bad-sector' },
-          },
-          {
-            id: 'bad-vertical',
-            airportId: 1,
-            airportName: 'Airport A',
-            stationId: 101,
-            stationName: 'NDB Station',
-            stationType: 'NDB',
-            ruleCode: 'bad-vertical',
-            ruleName: 'bad-vertical',
-            zoneCode: 'bad-vertical',
-            zoneName: 'bad-vertical',
-            regionCode: 'default',
-            regionName: 'default',
-            geometry: {
-              shapeType: 'sector',
-              center: { longitude: 104.1, latitude: 30.1 },
-              innerRadiusMeters: 50,
-              outerRadiusMeters: 37040,
-              startAzimuthDegrees: 0,
-              endAzimuthDegrees: 360,
-            },
-            vertical: {
-              mode: 'analytic_surface',
-              baseReference: 'station',
-              baseHeightMeters: Number.NaN,
-              heightFunction: {
-                type: 'elevation_angle',
-                elevationAngleDegrees: 3,
-                distanceMetric: 'radial',
-                startDistanceMeters: 50,
-                endDistanceMeters: 37040,
-              },
-            },
-            properties: { label: 'bad-vertical' },
-          },
-        ],
-      }),
-    } as Response)
-
-    const result = await getAnalysisTaskResult('analysis-task-1')
-
-    expect(result.protectionZones).toEqual([])
-  })
-
-  it('drops analytic surface protection zones missing heightFunction instead of throwing', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [],
-        obstacleCount: 0,
-        summary: 'summary',
-        protectionZones: [
-          {
-            id: 'missing-height-function',
-            airportId: 1,
-            airportName: 'Airport A',
-            stationId: 101,
-            stationName: 'NDB Station',
-            stationType: 'NDB',
-            ruleCode: 'missing-height-function',
-            ruleName: 'missing-height-function',
-            zoneCode: 'missing-height-function',
-            zoneName: 'missing-height-function',
-            regionCode: 'default',
-            regionName: 'default',
-            geometry: {
-              shapeType: 'sector',
-              center: { longitude: 104.1, latitude: 30.1 },
-              innerRadiusMeters: 50,
-              outerRadiusMeters: 37040,
-              startAzimuthDegrees: 0,
-              endAzimuthDegrees: 360,
-            },
-            vertical: {
-              mode: 'analytic_surface',
-              baseReference: 'station',
-              baseHeightMeters: 500,
-            },
-            properties: { label: 'missing-height-function' },
-          },
-        ],
-      }),
-    } as Response)
-
-    await expect(getAnalysisTaskResult('analysis-task-1')).resolves.toMatchObject({
-      protectionZones: [],
-    })
-  })
 })

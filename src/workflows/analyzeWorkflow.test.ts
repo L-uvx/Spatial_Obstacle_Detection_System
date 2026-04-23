@@ -19,12 +19,18 @@ function createProtectionZones(): ProtectionZoneRegion[] {
       regionCode: 'region-north',
       regionName: '北侧区域',
       geometry: {
-        shapeType: 'circle',
-        center: {
-          longitude: 114.2,
-          latitude: 30.7,
-        },
-        radiusMeters: 500,
+        shapeType: 'multipolygon',
+        coordinates: [
+          [
+            [
+              [114.2, 30.7],
+              [114.21, 30.7],
+              [114.21, 30.69],
+              [114.2, 30.69],
+              [114.2, 30.7],
+            ],
+          ],
+        ],
       },
       vertical: {
         mode: 'flat',

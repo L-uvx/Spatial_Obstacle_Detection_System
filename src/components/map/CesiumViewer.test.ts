@@ -145,17 +145,47 @@ function createVisibleProtectionZoneRegion(
     regionCode: 'region-north',
     regionName: '北侧区域',
     geometry: {
-      shapeType: 'circle',
-      center: {
-        longitude: 114.2,
-        latitude: 30.7,
-      },
-      radiusMeters: 500,
+      shapeType: 'multipolygon',
+      coordinates: [
+        [
+          [
+            [114.2, 30.7],
+            [114.205, 30.7],
+            [114.205, 30.695],
+            [114.2, 30.695],
+            [114.2, 30.7],
+          ],
+          [
+            [114.201, 30.699],
+            [114.204, 30.699],
+            [114.204, 30.696],
+            [114.201, 30.696],
+            [114.201, 30.699],
+          ],
+        ],
+      ],
     },
     vertical: {
-      mode: 'flat',
+      mode: 'analytic_surface',
       baseReference: 'station',
       baseHeightMeters: 500,
+      surface: {
+        type: 'distance_parameterized',
+        distanceSource: {
+          kind: 'point',
+          point: [0, 0],
+        },
+        distanceMetric: 'radial',
+        clampRange: {
+          startMeters: 50,
+          endMeters: 5000,
+        },
+        heightModel: {
+          type: 'angle_linear_rise',
+          angleDegrees: 3,
+          distanceOffsetMeters: 50,
+        },
+      },
     },
     properties: {
       label: '北侧区域',
@@ -164,11 +194,24 @@ function createVisibleProtectionZoneRegion(
   }
 }
 
-function createProtectionZoneSampling(): PolygonObstacleAnalysisState['protectionZoneSampling'] {
-  return {
-    circleAngleStepDegrees: 5,
-    sectorAngleStepDegrees: 5,
-  }
+function createFlatVisibleProtectionZoneRegion(
+  overrides: Partial<PolygonObstacleAnalysisState['visibleProtectionZones'][number]> = {},
+): PolygonObstacleAnalysisState['visibleProtectionZones'][number] {
+  return createVisibleProtectionZoneRegion({
+    key: 'airport-1:station-1:zone-a:rule-a:region-flat',
+    id: 'airport-1-station-1-zone-a-rule-a-region-flat',
+    regionCode: 'region-flat',
+    regionName: '平面区域',
+    vertical: {
+      mode: 'flat',
+      baseReference: 'station',
+      baseHeightMeters: 500,
+    },
+    properties: {
+      label: '平面区域',
+    },
+    ...overrides,
+  })
 }
 
 function createSyncResult(overrides: Partial<ObstacleLayerSyncResult> = {}): ObstacleLayerSyncResult {
@@ -283,6 +326,72 @@ describe('CesiumViewer camera rules', () => {
     })
   })
 
+  it('forwards analytic_surface zones and the real analysis layer renders them', async () => {
+    const actualAnalysisLayer = await vi.importActual<typeof import('../../map/layers/AnalysisLayer')>(
+      '../../map/layers/AnalysisLayer',
+    )
+    const add = vi.fn()
+    const removeById = vi.fn()
+    const zone = createVisibleProtectionZoneRegion()
+
+    syncObstacleLayerMock.mockReturnValue(createSyncResult())
+    syncAnalysisLayerMock.mockReturnValue({
+      message: '分析保护区无增量变化。',
+      addedKeys: [],
+      updatedKeys: [],
+      removedKeys: [],
+    })
+
+    const wrapper = mount(CesiumViewer, {
+      props: {
+        resetTick: 0,
+        obstacles: [],
+        visibleStations: [],
+        initialCameraTarget: null,
+        visibleProtectionZones: [zone],
+      },
+    })
+
+    await flushPromises()
+
+    expect(syncAnalysisLayer).toHaveBeenCalledWith(
+      expect.objectContaining({ camera: expect.anything() }),
+      [zone],
+    )
+
+    const result = actualAnalysisLayer.syncAnalysisLayer(
+      {
+        entities: {
+          add,
+          removeById,
+        },
+      } as unknown as Cesium.Viewer,
+      [zone],
+    )
+
+    expect(add).toHaveBeenCalledTimes(1)
+    expect(removeById).not.toHaveBeenCalled()
+    expect(add.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        id: 'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0',
+        name: '北侧区域',
+        polygon: expect.objectContaining({
+          perPositionHeight: true,
+          height: undefined,
+          extrudedHeight: undefined,
+        }),
+      }),
+    )
+    expect(result).toEqual({
+      message: '分析保护区已同步到地图图层。',
+      addedKeys: [zone.key],
+      updatedKeys: [],
+      removedKeys: [],
+    })
+
+    wrapper.unmount()
+  })
+
   it('does not trigger obstacle-extent fly when bootstrap obstacles arrive before the airport target', async () => {
     syncObstacleLayerMock
       .mockReturnValueOnce(createSyncResult())
@@ -298,7 +407,6 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
-        protectionZoneSampling: createProtectionZoneSampling(),
       },
     })
 
@@ -337,7 +445,6 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
-        protectionZoneSampling: createProtectionZoneSampling(),
       },
     })
 
@@ -387,7 +494,6 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: createBootstrapTarget(),
         visibleProtectionZones: [],
-        protectionZoneSampling: createProtectionZoneSampling(),
       },
     })
 
@@ -422,7 +528,6 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: target,
         visibleProtectionZones: [],
-        protectionZoneSampling: createProtectionZoneSampling(),
       },
     })
 
@@ -452,7 +557,6 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
-        protectionZoneSampling: createProtectionZoneSampling(),
       },
     })
 
@@ -482,7 +586,6 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
-        protectionZoneSampling: createProtectionZoneSampling(),
       },
     })
 
@@ -515,7 +618,6 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
-        protectionZoneSampling: createProtectionZoneSampling(),
       },
     })
 
@@ -545,16 +647,24 @@ describe('CesiumViewer camera rules', () => {
 
   it('syncs visible protection zones on init and when zone inputs change', async () => {
     syncObstacleLayerMock.mockReturnValue(createSyncResult())
+    const initialZone = createFlatVisibleProtectionZoneRegion()
+    const nextZone = createFlatVisibleProtectionZoneRegion({
+      key: 'airport-1:station-1:zone-a:rule-a:region-south',
+      id: 'airport-1-station-1-zone-a-rule-a-region-south',
+      regionCode: 'region-south',
+      regionName: '南侧区域',
+      properties: {
+        label: '南侧区域',
+      },
+    })
 
-    const initialSampling = createProtectionZoneSampling()
     const wrapper = mount(CesiumViewer, {
       props: {
         resetTick: 0,
         obstacles: [],
         visibleStations: [],
         initialCameraTarget: null,
-        visibleProtectionZones: [createVisibleProtectionZoneRegion()],
-        protectionZoneSampling: initialSampling,
+        visibleProtectionZones: [initialZone],
       },
     })
 
@@ -562,40 +672,18 @@ describe('CesiumViewer camera rules', () => {
 
     expect(syncAnalysisLayer).toHaveBeenCalledWith(
       expect.objectContaining({ camera: expect.anything() }),
-      [createVisibleProtectionZoneRegion()],
-      initialSampling,
+      [initialZone],
     )
 
-    const nextSampling = {
-      circleAngleStepDegrees: 10,
-      sectorAngleStepDegrees: 15,
-    }
-
     await wrapper.setProps({
-      visibleProtectionZones: [
-        createVisibleProtectionZoneRegion({
-          key: 'airport-1:station-1:zone-a:rule-a:region-south',
-          id: 'airport-1-station-1-zone-a-rule-a-region-south',
-          regionCode: 'region-south',
-          regionName: '南侧区域',
-        }),
-      ],
-      protectionZoneSampling: nextSampling,
+      visibleProtectionZones: [nextZone],
     })
 
     await flushPromises()
 
     expect(syncAnalysisLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({ camera: expect.anything() }),
-      [
-        createVisibleProtectionZoneRegion({
-          key: 'airport-1:station-1:zone-a:rule-a:region-south',
-          id: 'airport-1-station-1-zone-a-rule-a-region-south',
-          regionCode: 'region-south',
-          regionName: '南侧区域',
-        }),
-      ],
-      nextSampling,
+      [nextZone],
     )
 
     expect(flyToMock).toHaveBeenCalledTimes(1)
@@ -614,7 +702,6 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [createStation('station-1')],
         initialCameraTarget: createBootstrapTarget(),
         visibleProtectionZones: [],
-        protectionZoneSampling: createProtectionZoneSampling(),
       },
     })
 

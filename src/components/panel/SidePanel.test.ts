@@ -19,7 +19,7 @@ function createProtectionZoneTree(): ProtectionZoneAirportNode[] {
           visible: false,
           zones: [
             {
-              key: 'airport-1:station-1:zone-a',
+              key: 'airport-1:station-1:zone-a:rule-a',
               airportId: 'airport-1',
               airportName: '天河机场',
               stationId: 'station-1',
@@ -77,10 +77,6 @@ function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): Pol
     renderedObstacles: [],
     protectionZoneTree: createProtectionZoneTree(),
     visibleProtectionZones: [],
-    protectionZoneSampling: {
-      circleAngleStepDegrees: 5,
-      sectorAngleStepDegrees: 5,
-    },
     ...overrides,
   }
 }
@@ -122,7 +118,7 @@ describe('SidePanel', () => {
       },
     })
 
-    const zoneCheckbox = wrapper.get('[data-zone-key="airport-1:station-1:zone-a"]')
+    const zoneCheckbox = wrapper.get('[data-zone-key="airport-1:station-1:zone-a:rule-a"]')
 
     await zoneCheckbox.setValue(true)
 

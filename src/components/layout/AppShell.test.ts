@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { mount } from '@vue/test-utils'
+import { defineComponent } from 'vue'
 import { describe, expect, it } from 'vitest'
 import AppShell from './AppShell.vue'
 import type { PolygonObstacleAnalysisState } from '../../types/tool'
@@ -50,10 +51,6 @@ function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): Pol
       },
     ],
     visibleProtectionZones: [],
-    protectionZoneSampling: {
-      circleAngleStepDegrees: 5,
-      sectorAngleStepDegrees: 5,
-    },
     ...overrides,
   }
 }
@@ -196,5 +193,103 @@ describe('AppShell', () => {
     await wrapper.get('[data-testid="station-airport-select"]').setValue('airport-2')
 
     expect(wrapper.emitted('selectAirport')).toEqual([['airport-2']])
+  })
+
+  it('passes visibleProtectionZones into CesiumViewer and does not pass any sampling prop', () => {
+    let receivedViewerProps: { visibleProtectionZones: unknown[] } | Record<string, unknown> | null = null
+    const analysisState = createState({
+      visibleProtectionZones: [
+        {
+          key: 'airport-1:station-1:zone-a:rule-a:region-north',
+          id: 'airport-1-station-1-zone-a-rule-a-region-north',
+          airportId: 'airport-1',
+          airportName: '天河机场',
+          stationId: 'station-1',
+          stationName: '导航台A',
+          stationType: 'VOR',
+          zoneCode: 'zone-a',
+          zoneName: 'A区',
+          ruleCode: 'rule-a',
+          ruleName: '规则A',
+          regionCode: 'region-north',
+          regionName: '北侧区域',
+          geometry: {
+            shapeType: 'multipolygon',
+            coordinates: [
+              [
+                [
+                  [114.2, 30.7],
+                  [114.205, 30.7],
+                  [114.205, 30.695],
+                  [114.2, 30.695],
+                  [114.2, 30.7],
+                ],
+              ],
+            ],
+          },
+          vertical: {
+            mode: 'analytic_surface',
+            baseReference: 'station',
+            baseHeightMeters: 500,
+            surface: {
+              type: 'distance_parameterized',
+              distanceSource: {
+                kind: 'point',
+                point: [0, 0],
+              },
+              distanceMetric: 'radial',
+              clampRange: {
+                startMeters: 50,
+                endMeters: 5000,
+              },
+              heightModel: {
+                type: 'angle_linear_rise',
+                angleDegrees: 3,
+                distanceOffsetMeters: 50,
+              },
+            },
+          },
+          properties: {
+            label: '北侧区域',
+          },
+        },
+      ],
+    })
+
+    mount(AppShell, {
+      props: {
+        analysisState,
+        resetTick: 0,
+        renderedObstacles: [],
+        initialCameraTarget: null,
+      },
+      global: {
+        stubs: {
+          CesiumViewer: defineComponent({
+            name: 'CesiumViewer',
+            props: ['resetTick', 'obstacles', 'visibleStations', 'initialCameraTarget', 'visibleProtectionZones'],
+            setup(props) {
+              receivedViewerProps = props as unknown as { visibleProtectionZones: unknown[] } & Record<string, unknown>
+              return () => null
+            },
+          }),
+          PolygonObstacleAnalysisModal: true,
+          SidePanel: true,
+          TopToolbar: true,
+        },
+      },
+    })
+
+    expect(receivedViewerProps).not.toBeNull()
+
+    if (receivedViewerProps === null) {
+      throw new Error('CesiumViewer props were not captured')
+    }
+
+    const viewerProps = receivedViewerProps as { visibleProtectionZones: unknown[] } & Record<string, unknown>
+
+    expect(viewerProps.visibleProtectionZones).toEqual(analysisState.visibleProtectionZones)
+    expect(Object.keys(viewerProps)).not.toContain('samplingStepDegrees')
+    expect(Object.keys(viewerProps)).not.toContain('samplingStep')
   })
 })

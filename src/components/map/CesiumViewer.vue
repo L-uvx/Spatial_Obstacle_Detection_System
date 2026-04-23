@@ -19,7 +19,6 @@ const props = defineProps<{
   visibleStations: RenderedStation[]
   initialCameraTarget: InitialCameraTarget | null
   visibleProtectionZones: PolygonObstacleAnalysisState['visibleProtectionZones']
-  protectionZoneSampling: PolygonObstacleAnalysisState['protectionZoneSampling']
 }>()
 
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -56,11 +55,8 @@ function syncObstacles(obstacles: RenderedObstacle[], flyToNewlyAdded: boolean) 
 }
 
 // 同步当前可见的保护区图层。
-function syncAnalysisZones(
-  zones: PolygonObstacleAnalysisState['visibleProtectionZones'],
-  sampling: PolygonObstacleAnalysisState['protectionZoneSampling'],
-) {
-  syncAnalysisLayer(viewerRef.value, zones, sampling)
+function syncAnalysisZones(zones: PolygonObstacleAnalysisState['visibleProtectionZones']) {
+  syncAnalysisLayer(viewerRef.value, zones)
 }
 
 // 同步当前机场的台站点位与标签。
@@ -184,7 +180,7 @@ async function initViewer() {
     errorMessage.value = ''
     syncObstacles(props.obstacles, false)
     syncStations(props.visibleStations)
-    syncAnalysisZones(props.visibleProtectionZones, props.protectionZoneSampling)
+    syncAnalysisZones(props.visibleProtectionZones)
 
     if (props.initialCameraTarget) {
       flyToTarget(props.initialCameraTarget)
@@ -227,9 +223,9 @@ watch(
 )
 
 watch(
-  () => [props.visibleProtectionZones, props.protectionZoneSampling] as const,
-  ([zones, sampling]) => {
-    syncAnalysisZones(zones, sampling)
+  () => props.visibleProtectionZones,
+  (zones) => {
+    syncAnalysisZones(zones)
   },
   { deep: true },
 )

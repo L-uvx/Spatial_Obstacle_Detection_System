@@ -9,8 +9,8 @@ import type { PolygonObstacleAnalysisState, ProtectionZoneAirportNode } from '..
 
 function createVisibleProtectionZoneRegion(): PolygonObstacleAnalysisState['visibleProtectionZones'][number] {
   return {
-    key: 'airport-1:station-1:zone-a:region-north',
-    id: 'airport-1-station-1-zone-a-region-north',
+    key: 'airport-1:station-1:zone-a:rule-a:region-north',
+    id: 'airport-1-station-1-zone-a-rule-a-region-north',
     airportId: 'airport-1',
     airportName: '天河机场',
     stationId: 'station-1',
@@ -23,12 +23,18 @@ function createVisibleProtectionZoneRegion(): PolygonObstacleAnalysisState['visi
     regionCode: 'region-north',
     regionName: '北侧区域',
     geometry: {
-      shapeType: 'circle',
-      center: {
-        longitude: 114.2,
-        latitude: 30.7,
-      },
-      radiusMeters: 500,
+      shapeType: 'multipolygon',
+      coordinates: [
+        [
+          [
+            [114.2, 30.7],
+            [114.205, 30.7],
+            [114.205, 30.695],
+            [114.2, 30.695],
+            [114.2, 30.7],
+          ],
+        ],
+      ],
     },
     vertical: {
       mode: 'flat',
@@ -79,10 +85,6 @@ function createImportFormState(): PolygonObstacleAnalysisState {
     renderedObstacles: [],
     protectionZoneTree: [],
     visibleProtectionZones: [createVisibleProtectionZoneRegion()],
-    protectionZoneSampling: {
-      circleAngleStepDegrees: 5,
-      sectorAngleStepDegrees: 5,
-    },
   }
 }
 
@@ -100,7 +102,7 @@ function createProtectionZoneTree(): ProtectionZoneAirportNode[] {
           visible: true,
           zones: [
             {
-              key: 'airport-1:station-1:zone-a',
+              key: 'airport-1:station-1:zone-a:rule-a',
               airportId: 'airport-1',
               airportName: '天河机场',
               stationId: 'station-1',
@@ -113,7 +115,7 @@ function createProtectionZoneTree(): ProtectionZoneAirportNode[] {
               visible: true,
               regions: [
                 {
-                  id: 'airport-1-station-1-zone-a-region-north',
+                  id: 'airport-1-station-1-zone-a-rule-a-region-north',
                   airportId: 'airport-1',
                   airportName: '天河机场',
                   stationId: 'station-1',
@@ -126,18 +128,24 @@ function createProtectionZoneTree(): ProtectionZoneAirportNode[] {
                   regionCode: 'region-north',
                   regionName: '北侧区域',
                   geometry: {
-                    shapeType: 'circle',
-                    center: {
-                      longitude: 114.2,
-                      latitude: 30.7,
-                    },
-                    radiusMeters: 500,
+                    shapeType: 'multipolygon',
+                    coordinates: [
+                      [
+                        [
+                          [114.2, 30.7],
+                          [114.205, 30.7],
+                          [114.205, 30.695],
+                          [114.2, 30.695],
+                          [114.2, 30.7],
+                        ],
+                      ],
+                    ],
                   },
-                    vertical: {
-                      mode: 'flat',
-                      baseReference: 'station',
-                      baseHeightMeters: 500,
-                    },
+                  vertical: {
+                    mode: 'flat',
+                    baseReference: 'station',
+                    baseHeightMeters: 500,
+                  },
                   properties: {
                     label: '北侧区域',
                   },

@@ -122,10 +122,6 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
     renderedObstacles,
     protectionZoneTree: [],
     visibleProtectionZones: [],
-    protectionZoneSampling: {
-      circleAngleStepDegrees: 2.5,
-      sectorAngleStepDegrees: 2.5,
-    },
   }
 }
 

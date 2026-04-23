@@ -8,8 +8,8 @@ import type { PolygonObstacleAnalysisState, ProtectionZoneRegion } from '../type
 
 function createVisibleProtectionZoneRegion(): PolygonObstacleAnalysisState['visibleProtectionZones'][number] {
   return {
-    key: 'airport-1:station-1:zone-a:region-north',
-    id: 'airport-1-station-1-zone-a-region-north',
+    key: 'airport-1:station-1:zone-a:rule-a:region-north',
+    id: 'airport-1-station-1-zone-a-rule-a-region-north',
     airportId: 'airport-1',
     airportName: '天河机场',
     stationId: 'station-1',
@@ -22,12 +22,18 @@ function createVisibleProtectionZoneRegion(): PolygonObstacleAnalysisState['visi
     regionCode: 'region-north',
     regionName: '北侧区域',
     geometry: {
-      shapeType: 'circle',
-      center: {
-        longitude: 114.2,
-        latitude: 30.7,
-      },
-      radiusMeters: 500,
+      shapeType: 'multipolygon',
+      coordinates: [
+        [
+          [
+            [114.2, 30.7],
+            [114.205, 30.7],
+            [114.205, 30.695],
+            [114.2, 30.695],
+            [114.2, 30.7],
+          ],
+        ],
+      ],
     },
     vertical: {
       mode: 'flat',
@@ -56,18 +62,24 @@ function createProtectionZones(): ProtectionZoneRegion[] {
       regionCode: 'region-north',
       regionName: '北侧区域',
       geometry: {
-        shapeType: 'circle',
-        center: {
-          longitude: 114.2,
-          latitude: 30.7,
-        },
-        radiusMeters: 500,
+        shapeType: 'multipolygon',
+        coordinates: [
+          [
+            [
+              [114.2, 30.7],
+              [114.205, 30.7],
+              [114.205, 30.695],
+              [114.2, 30.695],
+              [114.2, 30.7],
+            ],
+          ],
+        ],
       },
-        vertical: {
-          mode: 'flat',
-          baseReference: 'station',
-          baseHeightMeters: 500,
-        },
+      vertical: {
+        mode: 'flat',
+        baseReference: 'station',
+        baseHeightMeters: 500,
+      },
       properties: {
         label: '北侧区域',
       },
@@ -86,26 +98,46 @@ function createProtectionZones(): ProtectionZoneRegion[] {
       regionCode: 'region-south',
       regionName: '南侧区域',
       geometry: {
-        shapeType: 'sector',
-        center: {
-          longitude: 114.21,
-          latitude: 30.69,
-        },
-        innerRadiusMeters: 100,
-        outerRadiusMeters: 1000,
-        startAzimuthDegrees: 90,
-        endAzimuthDegrees: 180,
+        shapeType: 'multipolygon',
+        coordinates: [
+          [
+            [
+              [114.21, 30.69],
+              [114.218, 30.69],
+              [114.218, 30.682],
+              [114.21, 30.682],
+              [114.21, 30.69],
+            ],
+            [
+              [114.212, 30.688],
+              [114.216, 30.688],
+              [114.216, 30.684],
+              [114.212, 30.684],
+              [114.212, 30.688],
+            ],
+          ],
+        ],
       },
       vertical: {
         mode: 'analytic_surface',
         baseReference: 'station',
         baseHeightMeters: 48,
-        heightFunction: {
-          type: 'elevation_angle',
+        surface: {
+          type: 'distance_parameterized',
+          distanceSource: {
+            kind: 'point',
+            point: [0, 0],
+          },
           distanceMetric: 'radial',
-          elevationAngleDegrees: 3,
-          startDistanceMeters: 100,
-          endDistanceMeters: 1000,
+          clampRange: {
+            startMeters: 100,
+            endMeters: 1000,
+          },
+          heightModel: {
+            type: 'angle_linear_rise',
+            angleDegrees: 3,
+            distanceOffsetMeters: 100,
+          },
         },
       },
       properties: {
@@ -256,10 +288,6 @@ describe('useWorkflowActions', () => {
     expect(state.renderedObstacles.map((item) => item.id)).toEqual(['history-17'])
     expect(state.protectionZoneTree).toEqual([])
     expect(state.visibleProtectionZones).toEqual([])
-    expect(state.protectionZoneSampling).toEqual({
-      circleAngleStepDegrees: 2.5,
-      sectorAngleStepDegrees: 2.5,
-    })
   })
 
   it('keeps the app usable when bootstrap fails', async () => {
@@ -538,14 +566,10 @@ describe('useWorkflowActions', () => {
     expect(state.stage).toBe('idle')
     expect(state.protectionZoneTree).toEqual([])
     expect(state.visibleProtectionZones).toEqual([])
-    expect(state.protectionZoneSampling).toEqual({
-      circleAngleStepDegrees: 2.5,
-      sectorAngleStepDegrees: 2.5,
-    })
     const visibleRegion = createVisibleProtectionZoneRegion()
     expect(visibleRegion.regionCode).toBe('region-north')
-    expect(visibleRegion.id).toBe('airport-1-station-1-zone-a-region-north')
-    expect(visibleRegion.geometry.shapeType).toBe('circle')
+    expect(visibleRegion.id).toBe('airport-1-station-1-zone-a-rule-a-region-north')
+    expect(visibleRegion.geometry.shapeType).toBe('multipolygon')
     expect(visibleRegion.vertical.mode).toBe('flat')
 
     openModal()
@@ -656,24 +680,41 @@ describe('useWorkflowActions', () => {
     expect(state.visibleProtectionZones).toEqual([])
     expect(state.protectionZoneTree[0].stations[0].zones.map((zone) => ({
       key: zone.key,
+      ruleCode: zone.ruleCode,
       visible: zone.visible,
     }))).toEqual([
-      { key: 'airport-1:station-1:zone-a', visible: false },
+      { key: 'airport-1:station-1:zone-a', ruleCode: 'rule-a', visible: false },
+    ])
+    expect(
+      state.protectionZoneTree[0].stations[0].zones[0].regions.map((region) => ({
+        key: `${region.airportId}:${region.stationId}:${region.zoneCode}:${region.ruleCode}:${region.regionCode}`,
+        ruleCode: region.ruleCode,
+      })),
+    ).toEqual([
+      {
+        key: 'airport-1:station-1:zone-a:rule-a:region-north',
+        ruleCode: 'rule-a',
+      },
+      {
+        key: 'airport-1:station-1:zone-a:rule-b:region-south',
+        ruleCode: 'rule-b',
+      },
     ])
 
     toggleProtectionZoneVisibility('airport-1', 'station-1', 'zone-a', true)
 
     expect(state.protectionZoneTree[0].stations[0].zones.map((zone) => ({
       key: zone.key,
+      ruleCode: zone.ruleCode,
       visible: zone.visible,
     }))).toEqual([
-      { key: 'airport-1:station-1:zone-a', visible: true },
+      { key: 'airport-1:station-1:zone-a', ruleCode: 'rule-a', visible: true },
     ])
     expect(state.protectionZoneTree[0].visible).toBe(true)
     expect(state.protectionZoneTree[0].stations[0].visible).toBe(true)
-    expect(state.visibleProtectionZones.map((item) => item.key)).toEqual([
-      'airport-1:station-1:zone-a:region-north',
-      'airport-1:station-1:zone-a:region-south',
+    expect(state.visibleProtectionZones.map((item) => ({ key: item.key, ruleCode: item.ruleCode }))).toEqual([
+      { key: 'airport-1:station-1:zone-a:rule-a:region-north', ruleCode: 'rule-a' },
+      { key: 'airport-1:station-1:zone-a:rule-b:region-south', ruleCode: 'rule-b' },
     ])
 
     toggleProtectionZoneAirportVisibility('airport-1', false)
@@ -684,9 +725,9 @@ describe('useWorkflowActions', () => {
 
     toggleProtectionZoneAirportVisibility('airport-1', true)
     toggleProtectionZoneVisibility('airport-1', 'station-1', 'zone-a', true)
-    expect(state.visibleProtectionZones.map((item) => item.key)).toEqual([
-      'airport-1:station-1:zone-a:region-north',
-      'airport-1:station-1:zone-a:region-south',
+    expect(state.visibleProtectionZones.map((item) => ({ key: item.key, ruleCode: item.ruleCode }))).toEqual([
+      { key: 'airport-1:station-1:zone-a:rule-a:region-north', ruleCode: 'rule-a' },
+      { key: 'airport-1:station-1:zone-a:rule-b:region-south', ruleCode: 'rule-b' },
     ])
 
     const exportPromise = exportReport()
@@ -708,9 +749,9 @@ describe('useWorkflowActions', () => {
     expect(state.stage).toBe('idle')
     expect(state.renderedObstacles).toHaveLength(1)
     expect(state.protectionZoneTree).toHaveLength(1)
-    expect(state.visibleProtectionZones.map((item) => item.key)).toEqual([
-      'airport-1:station-1:zone-a:region-north',
-      'airport-1:station-1:zone-a:region-south',
+    expect(state.visibleProtectionZones.map((item) => ({ key: item.key, ruleCode: item.ruleCode }))).toEqual([
+      { key: 'airport-1:station-1:zone-a:rule-a:region-north', ruleCode: 'rule-a' },
+      { key: 'airport-1:station-1:zone-a:rule-b:region-south', ruleCode: 'rule-b' },
     ])
 
     vi.useRealTimers()

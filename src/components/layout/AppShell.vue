@@ -166,7 +166,6 @@ function handleSelectAirport(event: Event) {
         :visible-stations="analysisState.visibleStations"
         :initial-camera-target="initialCameraTarget"
         :visible-protection-zones="analysisState.visibleProtectionZones"
-        :protection-zone-sampling="analysisState.protectionZoneSampling"
         class="app-shell__map"
       />
       <SidePanel

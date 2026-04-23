@@ -1,17 +1,14 @@
 import * as Cesium from 'cesium'
 import type {
-  MultiPolygonCoordinates,
   PolygonObstacleAnalysisState,
-  ProtectionZoneSamplingConfig,
 } from '../../types/tool'
-import { buildCircleRing, buildRadialBandRing, buildRadialBandRings, buildSectorRing } from './analysis/sampling'
 import { buildVerticalProfile } from './analysis/vertical'
 
 const ENTITY_ID_PREFIX = 'analysis-zone-'
 
 interface SyncedRegionSnapshot {
   fingerprint: string
-  entityId: string
+  entityIds: string[]
 }
 
 interface AnalysisLayerCache {
@@ -44,20 +41,16 @@ function getLayerCache(viewer: Cesium.Viewer) {
 }
 
 // 为保护区实体生成稳定 id。
-function createEntityId(regionKey: string) {
-  return `${ENTITY_ID_PREFIX}${regionKey}`
+function createEntityId(regionKey: string, polygonIndex: number) {
+  return `${ENTITY_ID_PREFIX}${regionKey}-${polygonIndex}`
 }
 
 // 为保护区生成指纹，用于判断是否需要重建实体。
-function createRegionFingerprint(
-  region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
-  sampling: ProtectionZoneSamplingConfig,
-) {
+function createRegionFingerprint(region: PolygonObstacleAnalysisState['visibleProtectionZones'][number]) {
   return JSON.stringify({
     key: region.key,
     geometry: region.geometry,
     vertical: region.vertical,
-    sampling,
   })
 }
 
@@ -66,15 +59,12 @@ function toCartesianPosition(longitude: number, latitude: number, heightMeters: 
   return Cesium.Cartesian3.fromDegrees(longitude, latitude, heightMeters)
 }
 
-// 将 multipolygon 坐标转换为 Cesium PolygonHierarchy，保留外环与孔洞结构。
-function createMultipolygonHierarchy(coordinates: MultiPolygonCoordinates, heightMeters: number) {
-  const [firstPolygon] = coordinates
-
-  if (!firstPolygon) {
-    throw new Error('Unsupported protection zone multipolygon: empty coordinates')
-  }
-
-  const [outerRing, ...holeRings] = firstPolygon
+// 将单个 flat polygon 坐标转换为 Cesium PolygonHierarchy，保留外环与孔洞结构。
+function createFlatPolygonHierarchy(
+  polygon: PolygonObstacleAnalysisState['visibleProtectionZones'][number]['geometry']['coordinates'][number],
+  heightMeters: number,
+) {
+  const [outerRing, ...holeRings] = polygon
 
   if (!outerRing) {
     throw new Error('Unsupported protection zone multipolygon: missing outer ring')
@@ -88,147 +78,82 @@ function createMultipolygonHierarchy(coordinates: MultiPolygonCoordinates, heigh
   )
 }
 
-// 根据几何类型采样出保护区的平面轮廓。
-function resolveFootprint(
-  region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
-  sampling: ProtectionZoneSamplingConfig,
+// 为 analytic_surface ring 生成逐点高程坐标。
+function createAnalyticRingPositions(
+  vertical: PolygonObstacleAnalysisState['visibleProtectionZones'][number]['vertical'],
+  ring: PolygonObstacleAnalysisState['visibleProtectionZones'][number]['geometry']['coordinates'][number][number],
 ) {
-  if (region.geometry.shapeType === 'circle') {
-    return buildCircleRing(region.geometry, sampling)
-  }
+  const profile = buildVerticalProfile(
+    vertical,
+    ring.map(([longitude, latitude]) => ({
+      longitude,
+      latitude,
+      radialDistanceMeters: 0,
+    })),
+  )
 
-  if (region.geometry.shapeType === 'sector') {
-    return buildSectorRing(region.geometry, sampling)
-  }
-
-  if (region.geometry.shapeType === 'radial_band') {
-    return buildRadialBandRing(region.geometry, sampling)
-  }
-
-  throw new Error(`Unsupported protection zone geometry: ${(region.geometry as { shapeType?: string }).shapeType ?? 'unknown'}`)
-}
-
-// 为平面型保护区构造贴地多边形参数。
-function createFlatPolygonHierarchy(profile: ReturnType<typeof buildVerticalProfile>) {
-  if (profile.mode !== 'flat') {
-    return null
-  }
-
-  return {
-    hierarchy: new Cesium.PolygonHierarchy(
-      profile.points.map((point) => toCartesianPosition(point.longitude, point.latitude, point.heightMeters)),
-    ),
-    perPositionHeight: false,
-    height: profile.points[0]?.heightMeters,
-    extrudedHeight: undefined,
-  }
-}
-
-// 为 multipolygon 平面保护区直接构造多边形层级，避免圆/扇形采样逻辑介入。
-function createMultipolygonFlatHierarchy(region: PolygonObstacleAnalysisState['visibleProtectionZones'][number]) {
-  if (region.geometry.shapeType !== 'multipolygon' || region.vertical.mode !== 'flat') {
-    return null
-  }
-
-  return {
-    hierarchy: createMultipolygonHierarchy(region.geometry.coordinates, region.vertical.baseHeightMeters),
-    perPositionHeight: false,
-    height: region.vertical.baseHeightMeters,
-    extrudedHeight: undefined,
-  }
-}
-
-// 为解析曲面型保护区构造按点高程的多边形参数。
-function createAnalyticSurfacePolygonHierarchy(profile: ReturnType<typeof buildVerticalProfile>) {
   if (profile.mode !== 'analytic_surface') {
-    return null
+    throw new Error(`Expected analytic_surface profile but received ${profile.mode}`)
   }
 
-  return {
-    hierarchy: new Cesium.PolygonHierarchy(
-      profile.points.map((point) => toCartesianPosition(point.longitude, point.latitude, point.heightMeters)),
-    ),
-    perPositionHeight: true,
-    height: undefined,
-    extrudedHeight: undefined,
-  }
+  return profile.points.map((point) =>
+    toCartesianPosition(point.longitude, point.latitude, point.heightMeters),
+  )
 }
 
-// 为径向带解析曲面保护区构造带孔的多边形参数。
-function createRadialBandAnalyticSurfacePolygonHierarchy(
+// 将单个 analytic_surface polygon 坐标转换为 Cesium PolygonHierarchy，保留外环与孔洞结构。
+function createAnalyticPolygonHierarchy(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
-  sampling: ProtectionZoneSamplingConfig,
+  polygon: PolygonObstacleAnalysisState['visibleProtectionZones'][number]['geometry']['coordinates'][number],
 ) {
-  if (region.geometry.shapeType !== 'radial_band' || region.vertical.mode !== 'analytic_surface') {
-    return null
+  const [outerRing, ...holeRings] = polygon
+
+  if (!outerRing) {
+    throw new Error('Unsupported protection zone multipolygon: missing outer ring')
   }
 
-  const { outerRing, innerRing } = buildRadialBandRings(region.geometry, sampling)
-  const outerProfile = buildVerticalProfile(region.vertical, outerRing)
-  const innerProfile = buildVerticalProfile(region.vertical, innerRing)
-
-  if (outerProfile.mode !== 'analytic_surface' || innerProfile.mode !== 'analytic_surface') {
-    return null
-  }
-
-  return {
-    hierarchy: new Cesium.PolygonHierarchy(
-      outerProfile.points.map((point) => toCartesianPosition(point.longitude, point.latitude, point.heightMeters)),
-      [
-        new Cesium.PolygonHierarchy(
-          innerProfile.points.map((point) => toCartesianPosition(point.longitude, point.latitude, point.heightMeters)),
-        ),
-      ],
-    ),
-    perPositionHeight: true,
-    height: undefined,
-    extrudedHeight: undefined,
-  }
-}
-
-// 根据保护区几何和垂向模式组装最终的多边形参数。
-function createPolygonHierarchy(
-  region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
-  sampling: ProtectionZoneSamplingConfig,
-) {
-  const multipolygonFlat = createMultipolygonFlatHierarchy(region)
-
-  if (multipolygonFlat) {
-    return multipolygonFlat
-  }
-
-  const radialBandPolygon = createRadialBandAnalyticSurfacePolygonHierarchy(region, sampling)
-
-  if (radialBandPolygon) {
-    return radialBandPolygon
-  }
-
-  const footprint = resolveFootprint(region, sampling)
-  const profile = buildVerticalProfile(region.vertical, footprint)
-  const flatPolygon = createFlatPolygonHierarchy(profile)
-
-  if (flatPolygon) {
-    return flatPolygon
-  }
-
-  const analyticSurfacePolygon = createAnalyticSurfacePolygonHierarchy(profile)
-
-  if (analyticSurfacePolygon) {
-    return analyticSurfacePolygon
-  }
-
-  throw new Error(`Unsupported protection zone vertical mode: ${(profile as { mode?: string }).mode ?? 'unknown'}`)
+  return new Cesium.PolygonHierarchy(
+    createAnalyticRingPositions(region.vertical, outerRing),
+    holeRings.map((ring) => new Cesium.PolygonHierarchy(createAnalyticRingPositions(region.vertical, ring))),
+  )
 }
 
 // 将单个保护区区域构造成 Cesium 实体定义。
 function createEntity(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
-  sampling: ProtectionZoneSamplingConfig,
+  polygon: PolygonObstacleAnalysisState['visibleProtectionZones'][number]['geometry']['coordinates'][number],
+  polygonIndex: number,
 ) {
-  const polygon = createPolygonHierarchy(region, sampling)
+  let polygonGraphics: {
+    hierarchy: Cesium.PolygonHierarchy
+    perPositionHeight: boolean
+    height: number | undefined
+    extrudedHeight: number | undefined
+  }
+
+  switch (region.vertical.mode) {
+    case 'flat':
+      polygonGraphics = {
+        hierarchy: createFlatPolygonHierarchy(polygon, region.vertical.baseHeightMeters),
+        perPositionHeight: false,
+        height: region.vertical.baseHeightMeters,
+        extrudedHeight: undefined,
+      }
+      break
+    case 'analytic_surface':
+      polygonGraphics = {
+        hierarchy: createAnalyticPolygonHierarchy(region, polygon),
+        perPositionHeight: true,
+        height: undefined,
+        extrudedHeight: undefined,
+      }
+      break
+    default:
+      throw new Error(`Unsupported protection zone vertical mode: ${(region.vertical as { mode?: string }).mode ?? 'unknown'}`)
+  }
 
   return {
-    id: createEntityId(region.key),
+    id: createEntityId(region.key, polygonIndex),
     name: region.properties.label || region.regionName || region.zoneName,
     properties: {
       airportId: region.airportId,
@@ -239,10 +164,7 @@ function createEntity(
       regionId: region.id,
     },
     polygon: {
-      hierarchy: polygon.hierarchy,
-      perPositionHeight: polygon.perPositionHeight,
-      height: polygon.height,
-      extrudedHeight: polygon.extrudedHeight,
+      ...polygonGraphics,
       material: Cesium.Color.fromCssColorString('#4db3ff').withAlpha(0.28),
       outline: true,
       outlineColor: Cesium.Color.fromCssColorString('#7cc7ff'),
@@ -254,7 +176,6 @@ function createEntity(
 export function syncAnalysisLayer(
   viewer: Cesium.Viewer | null | undefined,
   zones: PolygonObstacleAnalysisState['visibleProtectionZones'] = [],
-  sampling: ProtectionZoneSamplingConfig,
 ): AnalysisLayerSyncResult {
   if (!viewer) {
     return {
@@ -265,8 +186,9 @@ export function syncAnalysisLayer(
     }
   }
 
+  const renderableZones = zones
   const cache = getLayerCache(viewer)
-  const nextKeys = new Set(zones.map((zone) => zone.key))
+  const nextKeys = new Set(renderableZones.map((zone) => zone.key))
   const addedKeys: string[] = []
   const updatedKeys: string[] = []
   const removedKeys: string[] = []
@@ -276,14 +198,16 @@ export function syncAnalysisLayer(
       continue
     }
 
-    viewer.entities.removeById(cachedRegion.entityId)
+    for (const entityId of cachedRegion.entityIds) {
+      viewer.entities.removeById(entityId)
+    }
+
     cache.regionsByKey.delete(cachedKey)
     removedKeys.push(cachedKey)
   }
 
-  for (const region of zones) {
-    const entityId = createEntityId(region.key)
-    const fingerprint = createRegionFingerprint(region, sampling)
+  for (const region of renderableZones) {
+    const fingerprint = createRegionFingerprint(region)
     const cached = cache.regionsByKey.get(region.key)
 
     if (cached && cached.fingerprint === fingerprint) {
@@ -291,16 +215,24 @@ export function syncAnalysisLayer(
     }
 
     if (cached) {
-      viewer.entities.removeById(cached.entityId)
+      for (const entityId of cached.entityIds) {
+        viewer.entities.removeById(entityId)
+      }
+
       updatedKeys.push(region.key)
     } else {
       addedKeys.push(region.key)
     }
 
-    viewer.entities.add(createEntity(region, sampling))
+    const entityIds = region.geometry.coordinates.map((polygon, polygonIndex) => {
+      const entity = createEntity(region, polygon, polygonIndex)
+      viewer.entities.add(entity)
+      return entity.id
+    })
+
     cache.regionsByKey.set(region.key, {
       fingerprint,
-      entityId,
+      entityIds,
     })
   }
 

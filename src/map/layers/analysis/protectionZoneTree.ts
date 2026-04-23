@@ -12,8 +12,14 @@ function createZoneKey(
   return `${region.airportId}:${region.stationId}:${region.zoneCode}`
 }
 
+function createRegionRuleKey(
+  region: Pick<ProtectionZoneRegion, 'airportId' | 'stationId' | 'zoneCode' | 'ruleCode'>,
+) {
+  return `${createZoneKey(region)}:${region.ruleCode}`
+}
+
 export function createProtectionZoneKey(region: ProtectionZoneRegion) {
-  return `${createZoneKey(region)}:${region.regionCode}`
+  return `${createRegionRuleKey(region)}:${region.regionCode}`
 }
 
 function createZoneNode(region: ProtectionZoneRegion, regions: ProtectionZoneRegion[]): ProtectionZoneNode {

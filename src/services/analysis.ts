@@ -2,14 +2,12 @@ import type {
   AnalysisRuleResult,
   AnalysisRuleStandardResult,
   AnalysisSelectedTarget,
+  PositionCoordinate,
   ProtectionZoneAnalyticSurfaceVertical,
-  ProtectionZoneRadialBandGeometry,
-  ProtectionZoneCircleGeometry,
   ProtectionZoneFlatVertical,
   ProtectionZoneMultipolygonGeometry,
   ProtectionZoneRegion,
   ProtectionZoneRegionProperties,
-  ProtectionZoneSectorGeometry,
   MultiPolygonCoordinates,
 } from '../types/tool'
 
@@ -140,109 +138,48 @@ function isFiniteNumber(value: unknown): value is number {
 
 function normalizeProtectionZoneGeometry(
   geometry: unknown,
-): ProtectionZoneCircleGeometry | ProtectionZoneSectorGeometry | ProtectionZoneRadialBandGeometry | ProtectionZoneMultipolygonGeometry | null {
+): ProtectionZoneMultipolygonGeometry | null {
   if (!geometry || typeof geometry !== 'object') {
     return null
   }
 
   const candidate = geometry as Record<string, unknown>
 
-  if (candidate.shapeType === 'multipolygon') {
-    const coordinates = candidate.coordinates
-
-    if (!Array.isArray(coordinates) || !isValidMultiPolygonCoordinates(coordinates)) {
-      return null
-    }
-
-    return {
-      shapeType: 'multipolygon',
-      coordinates,
-    }
+  if (candidate.shapeType !== 'multipolygon') {
+    return null
   }
 
-  if (candidate.shapeType === 'circle') {
-    const center = candidate.center as Record<string, unknown> | undefined
+  const coordinates = candidate.coordinates
 
-    if (
-      !isFiniteNumber(center?.longitude)
-      || !isFiniteNumber(center?.latitude)
-      || !isFiniteNumber(candidate.radiusMeters)
-    ) {
-      return null
-    }
-
-    return {
-      shapeType: 'circle',
-      center: {
-        longitude: center.longitude,
-        latitude: center.latitude,
-      },
-      radiusMeters: candidate.radiusMeters,
-    }
+  if (!Array.isArray(coordinates) || !isValidMultiPolygonCoordinates(coordinates)) {
+    return null
   }
 
-  if (candidate.shapeType === 'sector') {
-    const center = candidate.center as Record<string, unknown> | undefined
-
-    if (
-      !isFiniteNumber(center?.longitude)
-      || !isFiniteNumber(center?.latitude)
-      || !isFiniteNumber(candidate.innerRadiusMeters)
-      || !isFiniteNumber(candidate.outerRadiusMeters)
-      || !isFiniteNumber(candidate.startAzimuthDegrees)
-      || !isFiniteNumber(candidate.endAzimuthDegrees)
-    ) {
-      return null
-    }
-
-    return {
-      shapeType: 'sector',
-      center: {
-        longitude: center.longitude,
-        latitude: center.latitude,
-      },
-      innerRadiusMeters: candidate.innerRadiusMeters,
-      outerRadiusMeters: candidate.outerRadiusMeters,
-      startAzimuthDegrees: candidate.startAzimuthDegrees,
-      endAzimuthDegrees: candidate.endAzimuthDegrees,
-    }
+  return {
+    shapeType: 'multipolygon',
+    coordinates,
   }
-
-  if (candidate.shapeType === 'radial_band') {
-    const center = candidate.center as Record<string, unknown> | undefined
-
-    if (
-      !isFiniteNumber(center?.longitude)
-      || !isFiniteNumber(center?.latitude)
-      || !isFiniteNumber(candidate.innerRadiusMeters)
-      || !isFiniteNumber(candidate.outerRadiusMeters)
-    ) {
-      return null
-    }
-
-    return {
-      shapeType: 'radial_band',
-      center: {
-        longitude: center.longitude,
-        latitude: center.latitude,
-      },
-      innerRadiusMeters: candidate.innerRadiusMeters,
-      outerRadiusMeters: candidate.outerRadiusMeters,
-    }
-  }
-
-  return null
 }
 
-function isValidPositionCoordinate(value: unknown): value is MultiPolygonCoordinates[number][number][number][number] {
+function isValidPositionCoordinate(value: unknown): value is PositionCoordinate {
   return Array.isArray(value)
-    && value.length >= 2
+    && value.length === 2
     && isFiniteNumber(value[0])
     && isFiniteNumber(value[1])
 }
 
+function isClosedLinearRing(value: PositionCoordinate[]) {
+  const firstPosition = value[0]
+  const lastPosition = value[value.length - 1]
+
+  return firstPosition[0] === lastPosition[0] && firstPosition[1] === lastPosition[1]
+}
+
 function isValidLinearRingCoordinates(value: unknown): value is MultiPolygonCoordinates[number][number][number] {
-  return Array.isArray(value) && value.length >= 4 && value.every(isValidPositionCoordinate)
+  return Array.isArray(value)
+    && value.length >= 4
+    && value.every(isValidPositionCoordinate)
+    && isClosedLinearRing(value)
 }
 
 function isValidPolygonCoordinates(value: unknown): value is MultiPolygonCoordinates[number][number] {
@@ -275,34 +212,54 @@ function normalizeProtectionZoneVertical(
   }
 
   if (candidate.mode === 'analytic_surface') {
-    const heightFunction = candidate.heightFunction as Record<string, unknown> | undefined
-
-    if (!heightFunction || typeof heightFunction !== 'object') {
-      return null
-    }
+    const surface = candidate.surface as Record<string, unknown> | undefined
+    const distanceSource = surface?.distanceSource as Record<string, unknown> | undefined
+    const clampRange = surface?.clampRange as Record<string, unknown> | undefined
+    const heightModel = surface?.heightModel as Record<string, unknown> | undefined
+    const point = distanceSource?.point
 
     if (
       candidate.baseReference !== 'station'
       || !isFiniteNumber(candidate.baseHeightMeters)
-      || heightFunction?.type !== 'elevation_angle'
-      || heightFunction.distanceMetric !== 'radial'
-      || !isFiniteNumber(heightFunction.elevationAngleDegrees)
-      || !isFiniteNumber(heightFunction.startDistanceMeters)
-      || !isFiniteNumber(heightFunction.endDistanceMeters)
+      || !surface
+      || surface.type !== 'distance_parameterized'
+      || !distanceSource
+      || distanceSource.kind !== 'point'
+      || !isValidPositionCoordinate(point)
+      || surface.distanceMetric !== 'radial'
+      || !clampRange
+      || !isFiniteNumber(clampRange.startMeters)
+      || !isFiniteNumber(clampRange.endMeters)
+      || !heightModel
+      || heightModel.type !== 'angle_linear_rise'
+      || !isFiniteNumber(heightModel.angleDegrees)
     ) {
       return null
     }
+
+    const normalizedPoint: PositionCoordinate = [point[0], point[1]]
+    const normalizedDistanceOffsetMeters = heightModel.distanceOffsetMeters as number
 
     return {
       mode: 'analytic_surface',
       baseReference: 'station',
       baseHeightMeters: candidate.baseHeightMeters,
-      heightFunction: {
-        type: 'elevation_angle',
+      surface: {
+        type: 'distance_parameterized',
+        distanceSource: {
+          kind: 'point',
+          point: normalizedPoint,
+        },
         distanceMetric: 'radial',
-        elevationAngleDegrees: heightFunction.elevationAngleDegrees,
-        startDistanceMeters: heightFunction.startDistanceMeters,
-        endDistanceMeters: heightFunction.endDistanceMeters,
+        clampRange: {
+          startMeters: clampRange.startMeters,
+          endMeters: clampRange.endMeters,
+        },
+        heightModel: {
+          type: 'angle_linear_rise',
+          angleDegrees: heightModel.angleDegrees,
+          distanceOffsetMeters: normalizedDistanceOffsetMeters,
+        },
       },
     }
   }
@@ -310,27 +267,28 @@ function normalizeProtectionZoneVertical(
   return null
 }
 
+function warnInvalidProtectionZone(zone: ProtectionZoneResponse, reason: string) {
+  console.warn('[analysis] Ignored invalid protection zone region.', {
+    airportId: String(zone.airportId),
+    stationId: String(zone.stationId),
+    zoneCode: zone.zoneCode,
+    regionCode: zone.regionCode,
+    reason,
+  })
+}
+
 function normalizeProtectionZone(zone: ProtectionZoneResponse): ProtectionZoneRegion | null {
   const geometry = normalizeProtectionZoneGeometry(zone.geometry)
+
+  if (!geometry) {
+    warnInvalidProtectionZone(zone, 'geometry is not a valid multipolygon')
+    return null
+  }
+
   const vertical = normalizeProtectionZoneVertical(zone.vertical)
 
-  if (!geometry || !vertical) {
-    return null
-  }
-
-  if (geometry.shapeType === 'circle' && vertical.mode !== 'flat') {
-    return null
-  }
-
-  if (geometry.shapeType === 'sector' && vertical.mode !== 'analytic_surface') {
-    return null
-  }
-
-  if (geometry.shapeType === 'radial_band' && vertical.mode !== 'analytic_surface') {
-    return null
-  }
-
-  if (geometry.shapeType === 'multipolygon' && vertical.mode !== 'flat') {
+  if (!vertical) {
+    warnInvalidProtectionZone(zone, 'vertical is not a supported formal model')
     return null
   }
 

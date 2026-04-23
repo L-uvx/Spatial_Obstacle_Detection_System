@@ -24,9 +24,18 @@ function createRegion(overrides: Partial<ProtectionZoneRegion> = {}): Protection
     regionCode: 'default',
     regionName: 'Default',
     geometry: {
-      shapeType: 'circle',
-      center: { longitude: 104.1, latitude: 30.1 },
-      radiusMeters: 50,
+      shapeType: 'multipolygon',
+      coordinates: [
+        [
+          [
+            [104.1, 30.1],
+            [104.1005, 30.1],
+            [104.1005, 30.1005],
+            [104.1, 30.1005],
+            [104.1, 30.1],
+          ],
+        ],
+      ],
     },
     vertical: { mode: 'flat', baseReference: 'station', baseHeightMeters: 500 },
     properties: { label: 'Zone 1' },
@@ -40,7 +49,7 @@ describe('protectionZoneTree', () => {
       createProtectionZoneKey(
         createRegion({ airportId: '1', stationId: '101', zoneCode: 'zone-1', regionCode: 'outer' }),
       ),
-    ).toBe('1:101:zone-1:outer')
+    ).toBe('1:101:zone-1:rule-1:outer')
   })
 
   it('applies duplicate incoming region keys deterministically with last incoming region winning', () => {
@@ -86,8 +95,8 @@ describe('protectionZoneTree', () => {
       }),
     ])
 
-    expect(nextTree[0].visible).toBe(true)
-    expect(nextTree[0].stations[0].visible).toBe(true)
+    expect(nextTree[0].visible).toBe(false)
+    expect(nextTree[0].stations[0].visible).toBe(false)
     expect(nextTree[0].stations[0].zones[0].visible).toBe(false)
     expect(nextTree[0].airportName).toBe('Airport A Updated')
     expect(nextTree[0].stations[0].zones[0].zoneName).toBe('Zone 1 Updated')
@@ -281,7 +290,7 @@ describe('protectionZoneTree', () => {
         regionIds: item.regions.map((region) => region.id),
       })),
     ).toEqual([
-      { key: '1:101:zone-1', zoneCode: 'zone-1', regionIds: ['region-rule-2'] },
+      { key: '1:101:zone-1', zoneCode: 'zone-1', regionIds: ['region-rule-1', 'region-rule-2'] },
     ])
   })
 
@@ -380,8 +389,8 @@ describe('protectionZoneTree', () => {
 
     expect(flattenVisibleProtectionZones(hiddenStationTree)).toEqual([])
     expect(flattenVisibleProtectionZones(restoredAirportTree).map((item) => item.key)).toEqual([
-      '1:101:zone-1:default',
-      '1:101:zone-1:inner',
+      '1:101:zone-1:rule-1:default',
+      '1:101:zone-1:rule-1:inner',
     ])
 
     const hiddenZoneTree = toggleZoneVisibility(restoredAirportTree, '1', '101', 'zone-1', false)

@@ -108,44 +108,8 @@ export interface InitialCameraTarget {
   roll?: number
 }
 
-export interface ProtectionZoneSamplingConfig {
-  circleAngleStepDegrees: number
-  sectorAngleStepDegrees: number
-}
-
 export interface ProtectionZoneRegionProperties {
   label?: string
-}
-
-export interface ProtectionZoneCircleGeometry {
-  shapeType: 'circle'
-  center: {
-    longitude: number
-    latitude: number
-  }
-  radiusMeters: number
-}
-
-export interface ProtectionZoneSectorGeometry {
-  shapeType: 'sector'
-  center: {
-    longitude: number
-    latitude: number
-  }
-  innerRadiusMeters: number
-  outerRadiusMeters: number
-  startAzimuthDegrees: number
-  endAzimuthDegrees: number
-}
-
-export interface ProtectionZoneRadialBandGeometry {
-  shapeType: 'radial_band'
-  center: {
-    longitude: number
-    latitude: number
-  }
-  innerRadiusMeters: number
-  outerRadiusMeters: number
 }
 
 export interface ProtectionZoneMultipolygonGeometry {
@@ -163,12 +127,22 @@ export interface ProtectionZoneAnalyticSurfaceVertical {
   mode: 'analytic_surface'
   baseReference: 'station'
   baseHeightMeters: number
-  heightFunction: {
-    type: 'elevation_angle'
+  surface: {
+    type: 'distance_parameterized'
+    distanceSource: {
+      kind: 'point'
+      point: [number, number]
+    }
     distanceMetric: 'radial'
-    elevationAngleDegrees: number
-    startDistanceMeters: number
-    endDistanceMeters: number
+    clampRange: {
+      startMeters: number
+      endMeters: number
+    }
+    heightModel: {
+      type: 'angle_linear_rise'
+      angleDegrees: number
+      distanceOffsetMeters: number
+    }
   }
 }
 
@@ -185,11 +159,7 @@ export interface ProtectionZoneRegion {
   zoneName: string
   regionCode: string
   regionName: string
-  geometry:
-    | ProtectionZoneCircleGeometry
-    | ProtectionZoneSectorGeometry
-    | ProtectionZoneRadialBandGeometry
-    | ProtectionZoneMultipolygonGeometry
+  geometry: ProtectionZoneMultipolygonGeometry
   vertical: ProtectionZoneFlatVertical | ProtectionZoneAnalyticSurfaceVertical
   properties: ProtectionZoneRegionProperties
 }
@@ -238,11 +208,7 @@ export interface VisibleProtectionZoneRegion {
   ruleName: string
   regionCode: string
   regionName: string
-  geometry:
-    | ProtectionZoneCircleGeometry
-    | ProtectionZoneSectorGeometry
-    | ProtectionZoneRadialBandGeometry
-    | ProtectionZoneMultipolygonGeometry
+  geometry: ProtectionZoneMultipolygonGeometry
   vertical: ProtectionZoneFlatVertical | ProtectionZoneAnalyticSurfaceVertical
   properties: ProtectionZoneRegionProperties
 }
@@ -291,7 +257,6 @@ export interface PolygonObstacleAnalysisState {
   renderedObstacles: RenderedObstacle[]
   protectionZoneTree: ProtectionZoneAirportNode[]
   visibleProtectionZones: VisibleProtectionZoneRegion[]
-  protectionZoneSampling: ProtectionZoneSamplingConfig
 }
 
 export const toolbarItems: ToolbarItem[] = [
