@@ -480,6 +480,30 @@ body {
   margin-top: 10px;
 }
 
+.side-panel__tree-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.side-panel__tree-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.side-panel__fold {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 6px;
+  padding: 0;
+  color: #d8e4ff;
+  background: rgba(15, 23, 42, 0.72);
+  line-height: 1;
+  cursor: pointer;
+}
+
 .side-panel__action {
   margin-top: 12px;
   border: 0;
