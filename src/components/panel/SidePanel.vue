@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { PolygonObstacleAnalysisState } from '../../types/tool'
+import type { PolygonObstacleAnalysisState, ProtectionZoneNode } from '../../types/tool'
 
 const props = defineProps<{
   state: PolygonObstacleAnalysisState
@@ -12,6 +12,7 @@ const emit = defineEmits<{
   setAirportProtectionZoneVisibility: [airportId: string, visible: boolean]
   setStationProtectionZoneVisibility: [airportId: string, stationId: string, visible: boolean]
   setZoneProtectionZoneVisibility: [airportId: string, stationId: string, zoneCode: string, visible: boolean]
+  flyToZone: [zone: ProtectionZoneNode]
 }>()
 
 const expandedAirportIds = ref(new Set<string>())
@@ -56,6 +57,10 @@ function getAirportToggleLabel(airportName: string, expanded: boolean) {
 
 function getStationToggleLabel(stationName: string, expanded: boolean) {
   return `${expanded ? '收起' : '展开'}台站 ${stationName} 下的保护区列表`
+}
+
+function getLocateZoneLabel(zoneName: string) {
+  return `定位到保护区 ${zoneName}`
 }
 
 watch(
@@ -127,15 +132,26 @@ watch(
               </div>
               <ul v-if="isStationExpanded(airport.airportId, station.stationId)">
                 <li v-for="zone in station.zones" :key="zone.key">
-                  <label class="side-panel__tree-label">
-                    <input
-                      :data-zone-key="zone.key"
-                      :checked="zone.visible"
-                      type="checkbox"
-                      @change="emit('setZoneProtectionZoneVisibility', airport.airportId, station.stationId, zone.zoneCode, ($event.target as HTMLInputElement).checked)"
-                    />
-                    {{ zone.zoneName }}
-                  </label>
+                  <div class="side-panel__tree-row">
+                    <label class="side-panel__tree-label">
+                      <input
+                        :data-zone-key="zone.key"
+                        :checked="zone.visible"
+                        type="checkbox"
+                        @change="emit('setZoneProtectionZoneVisibility', airport.airportId, station.stationId, zone.zoneCode, ($event.target as HTMLInputElement).checked)"
+                      />
+                      {{ zone.zoneName }}
+                    </label>
+                    <button
+                      type="button"
+                      class="side-panel__locate"
+                      :aria-label="getLocateZoneLabel(zone.zoneName)"
+                      title="定位到此保护区"
+                      @click="emit('flyToZone', zone)"
+                    >
+                      📍
+                    </button>
+                  </div>
                 </li>
               </ul>
             </li>

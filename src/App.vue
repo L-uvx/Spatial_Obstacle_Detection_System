@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import AppShell from './components/layout/AppShell.vue'
 import { useWorkflowActions } from './composables/useWorkflowActions'
-import type { ImportFormValue } from './types/tool'
+import type { ImportFormValue, ProtectionZoneNode } from './types/tool'
 
 const resetTick = ref(0)
 const {
@@ -22,6 +22,7 @@ const {
   toggleProtectionZoneAirportVisibility,
   toggleProtectionZoneStationVisibility,
   toggleProtectionZoneVisibility,
+  flyToProtectionZone,
 } = useWorkflowActions()
 
 onMounted(() => {
@@ -97,6 +98,11 @@ function handleStartAnalysis() {
 function handleExportReport() {
   void exportReport()
 }
+
+// 飞行到指定保护区的几何中心。
+function handleFlyToProtectionZone(zone: ProtectionZoneNode) {
+  flyToProtectionZone(zone)
+}
 </script>
 
 <template>
@@ -120,5 +126,6 @@ function handleExportReport() {
     @close-protection-zone-panel="closeProtectionZonePanel"
     @start-analysis="handleStartAnalysis"
     @export-report="handleExportReport"
+    @fly-to-protection-zone="handleFlyToProtectionZone"
   />
 </template>

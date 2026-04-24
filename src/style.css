@@ -504,6 +504,24 @@ body {
   cursor: pointer;
 }
 
+.side-panel__locate {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 6px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.side-panel__locate:hover {
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(37, 99, 235, 0.5);
+}
+
 .side-panel__action {
   margin-top: 12px;
   border: 0;

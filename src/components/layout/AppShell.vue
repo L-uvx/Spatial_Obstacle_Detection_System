@@ -7,6 +7,7 @@ import type {
   ImportFormValue,
   InitialCameraTarget,
   PolygonObstacleAnalysisState,
+  ProtectionZoneNode,
   RenderedObstacle,
 } from '../../types/tool'
 
@@ -33,6 +34,7 @@ const emit = defineEmits<{
   closeProtectionZonePanel: []
   startAnalysis: []
   exportReport: []
+  flyToProtectionZone: [zone: ProtectionZoneNode]
 }>()
 
 // 转发机场级保护区显隐切换事件。
@@ -166,6 +168,8 @@ function handleSelectAirport(event: Event) {
         :visible-stations="analysisState.visibleStations"
         :initial-camera-target="initialCameraTarget"
         :visible-protection-zones="analysisState.visibleProtectionZones"
+        :fly-to-target-tick="analysisState.flyToTargetTick"
+        :fly-to-target-payload="analysisState.flyToTargetPayload"
         class="app-shell__map"
       />
       <SidePanel
@@ -175,6 +179,7 @@ function handleSelectAirport(event: Event) {
         @set-airport-protection-zone-visibility="handleToggleProtectionZoneAirport"
         @set-station-protection-zone-visibility="handleToggleProtectionZoneStation"
         @set-zone-protection-zone-visibility="handleToggleProtectionZone"
+        @fly-to-zone="(zone) => emit('flyToProtectionZone', zone)"
       />
     </div>
   </div>

@@ -482,6 +482,165 @@ describe('useWorkflowActions', () => {
     expect(state.stationPanelOpen).toBe(false)
   })
 
+  it('flies to the largest protection zone region instead of merging distant regions', () => {
+    const { state, flyToProtectionZone } = useWorkflowActions()
+
+    const zone = {
+      key: 'airport-1:station-1:zone-a',
+      airportId: 'airport-1',
+      airportName: '天河机场',
+      stationId: 'station-1',
+      stationName: '导航台A',
+      stationType: 'VOR',
+      zoneCode: 'zone-a',
+      zoneName: 'A区',
+      ruleCode: 'rule-a',
+      ruleName: '规则A',
+      visible: true,
+      regions: [
+        {
+          id: 'region-small',
+          airportId: 'airport-1',
+          airportName: '天河机场',
+          stationId: 'station-1',
+          stationName: '导航台A',
+          stationType: 'VOR',
+          ruleCode: 'rule-a',
+          ruleName: '规则A',
+          zoneCode: 'zone-a',
+          zoneName: 'A区',
+          regionCode: 'region-small',
+          regionName: '小区域',
+          geometry: {
+            shapeType: 'multipolygon',
+            coordinates: [
+              [
+                [
+                  [10, 10],
+                  [11, 10],
+                  [11, 11],
+                  [10, 11],
+                  [10, 10],
+                ],
+              ],
+            ],
+          },
+          vertical: {
+            mode: 'flat',
+            baseReference: 'station',
+            baseHeightMeters: 500,
+          },
+          properties: {},
+        },
+        {
+          id: 'region-large',
+          airportId: 'airport-1',
+          airportName: '天河机场',
+          stationId: 'station-1',
+          stationName: '导航台A',
+          stationType: 'VOR',
+          ruleCode: 'rule-a',
+          ruleName: '规则A',
+          zoneCode: 'zone-a',
+          zoneName: 'A区',
+          regionCode: 'region-large',
+          regionName: '大区域',
+          geometry: {
+            shapeType: 'multipolygon',
+            coordinates: [
+              [
+                [
+                  [100, 100],
+                  [106, 100],
+                  [106, 106],
+                  [100, 106],
+                  [100, 100],
+                ],
+              ],
+            ],
+          },
+          vertical: {
+            mode: 'flat',
+            baseReference: 'station',
+            baseHeightMeters: 500,
+          },
+          properties: {},
+        },
+      ],
+    } satisfies Parameters<typeof flyToProtectionZone>[0]
+
+    flyToProtectionZone(zone)
+
+    expect(state.flyToTargetPayload).toMatchObject({
+      longitude: 103,
+      latitude: 103,
+      pitch: -90,
+    })
+  })
+
+  it('updates fly-to payload and increments fly-to tick when locating a protection zone', () => {
+    const { state, flyToProtectionZone } = useWorkflowActions()
+
+    const initialTick = state.flyToTargetTick
+    const zone = {
+      key: 'airport-1:station-1:zone-b',
+      airportId: 'airport-1',
+      airportName: '天河机场',
+      stationId: 'station-1',
+      stationName: '导航台A',
+      stationType: 'VOR',
+      zoneCode: 'zone-b',
+      zoneName: 'B区',
+      ruleCode: 'rule-b',
+      ruleName: '规则B',
+      visible: true,
+      regions: [
+        {
+          id: 'region-only',
+          airportId: 'airport-1',
+          airportName: '天河机场',
+          stationId: 'station-1',
+          stationName: '导航台A',
+          stationType: 'VOR',
+          ruleCode: 'rule-b',
+          ruleName: '规则B',
+          zoneCode: 'zone-b',
+          zoneName: 'B区',
+          regionCode: 'region-only',
+          regionName: '唯一区域',
+          geometry: {
+            shapeType: 'multipolygon',
+            coordinates: [
+              [
+                [
+                  [114.2, 30.7],
+                  [114.204, 30.7],
+                  [114.204, 30.696],
+                  [114.2, 30.696],
+                  [114.2, 30.7],
+                ],
+              ],
+            ],
+          },
+          vertical: {
+            mode: 'flat',
+            baseReference: 'station',
+            baseHeightMeters: 500,
+          },
+          properties: {},
+        },
+      ],
+    } satisfies Parameters<typeof flyToProtectionZone>[0]
+
+    flyToProtectionZone(zone)
+
+    expect(state.flyToTargetPayload?.longitude).toBeCloseTo(114.202, 6)
+    expect(state.flyToTargetPayload?.latitude).toBeCloseTo(30.698, 6)
+    expect(state.flyToTargetPayload?.height).toBeGreaterThan(2000)
+    expect(state.flyToTargetPayload?.pitch).toBe(-90)
+    expect(state.flyToTargetTick).toBe(initialTick + 1)
+  })
+
   it('preserves airport state when closing the modal', () => {
     const { state, openModal, closeModal } = useWorkflowActions()
 

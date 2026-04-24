@@ -77,6 +77,8 @@ function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): Pol
     renderedObstacles: [],
     protectionZoneTree: createProtectionZoneTree(),
     visibleProtectionZones: [],
+    flyToTargetTick: 0,
+    flyToTargetPayload: null,
     ...overrides,
   }
 }
@@ -197,6 +199,29 @@ describe('SidePanel', () => {
 
     expect(wrapper.emitted('setZoneProtectionZoneVisibility')).toEqual([
       ['airport-1', 'station-1', 'zone-a', true],
+    ])
+  })
+
+  it('emits flyToZone with the matching zone and exposes an accessible locate label', async () => {
+    const wrapper = mount(SidePanel, {
+      props: {
+        state: createState(),
+        isOpen: true,
+      },
+    })
+
+    await wrapper.get('[data-airport-toggle="airport-1"]').trigger('click')
+    await wrapper.get('[data-station-toggle="airport-1:station-1"]').trigger('click')
+
+    const locateButton = wrapper.get('button.side-panel__locate')
+
+    expect(locateButton.attributes('aria-label')).toBe('定位到保护区 A区')
+
+    await locateButton.trigger('click')
+
+    expect(wrapper.emitted('flyToZone')).toBeTruthy()
+    expect(wrapper.emitted('flyToZone')?.[0]).toEqual([
+      createProtectionZoneTree()[0].stations[0].zones[0],
     ])
   })
 })

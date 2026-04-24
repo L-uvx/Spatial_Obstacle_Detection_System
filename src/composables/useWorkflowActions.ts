@@ -1,9 +1,11 @@
 import { reactive } from 'vue'
 import { mapConfig } from '../config/map'
+import { computeMultiPolygonFlightTarget } from '../components/map/camera'
 import type {
   ImportFormValue,
   InitialCameraTarget,
   PolygonObstacleAnalysisState,
+  ProtectionZoneNode,
   RenderedAirport,
   RenderedObstacle,
 } from '../types/tool'
@@ -122,6 +124,8 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
     renderedObstacles,
     protectionZoneTree: [],
     visibleProtectionZones: [],
+    flyToTargetTick: 0,
+    flyToTargetPayload: null,
   }
 }
 
@@ -375,6 +379,30 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
   }
 
+  // 定位到指定保护区时优先选择面积最大的 region，避免分散区域合并后飞到空白位置。
+  function flyToProtectionZone(zone: ProtectionZoneNode) {
+    let largestRegionTarget: ReturnType<typeof computeMultiPolygonFlightTarget> = null
+
+    for (const region of zone.regions) {
+      const nextTarget = computeMultiPolygonFlightTarget(region.geometry.coordinates)
+
+      if (!nextTarget) {
+        continue
+      }
+
+      if (!largestRegionTarget || nextTarget.area > largestRegionTarget.area) {
+        largestRegionTarget = nextTarget
+      }
+    }
+
+    if (!largestRegionTarget) {
+      return
+    }
+
+    state.flyToTargetPayload = largestRegionTarget.target
+    state.flyToTargetTick += 1
+  }
+
   // 打开保护区侧边栏。
   function openProtectionZonePanel() {
     state.protectionZonePanelOpen = true
@@ -412,5 +440,6 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     toggleProtectionZoneAirportVisibility,
     toggleProtectionZoneStationVisibility,
     toggleProtectionZoneVisibility,
+    flyToProtectionZone,
   }
 }

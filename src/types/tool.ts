@@ -257,6 +257,8 @@ export interface PolygonObstacleAnalysisState {
   renderedObstacles: RenderedObstacle[]
   protectionZoneTree: ProtectionZoneAirportNode[]
   visibleProtectionZones: VisibleProtectionZoneRegion[]
+  flyToTargetTick: number
+  flyToTargetPayload: InitialCameraTarget | null
 }
 
 export const toolbarItems: ToolbarItem[] = [

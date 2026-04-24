@@ -349,6 +349,8 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [zone],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
       },
     })
 
@@ -407,6 +409,8 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
       },
     })
 
@@ -445,6 +449,8 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
       },
     })
 
@@ -494,6 +500,8 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: createBootstrapTarget(),
         visibleProtectionZones: [],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
       },
     })
 
@@ -528,6 +536,8 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: target,
         visibleProtectionZones: [],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
       },
     })
 
@@ -557,6 +567,8 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
       },
     })
 
@@ -586,6 +598,8 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
       },
     })
 
@@ -618,6 +632,8 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
       },
     })
 
@@ -665,6 +681,8 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [],
         initialCameraTarget: null,
         visibleProtectionZones: [initialZone],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
       },
     })
 
@@ -702,6 +720,8 @@ describe('CesiumViewer camera rules', () => {
         visibleStations: [createStation('station-1')],
         initialCameraTarget: createBootstrapTarget(),
         visibleProtectionZones: [],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
       },
     })
 
@@ -745,6 +765,56 @@ describe('CesiumViewer camera rules', () => {
       ],
     )
     expect(flyToMock).toHaveBeenCalledTimes(2)
+
+    wrapper.unmount()
+  })
+
+  it('flies to the requested target when flyToTargetTick changes', async () => {
+    syncObstacleLayerMock.mockReturnValue(createSyncResult())
+
+    const wrapper = mount(CesiumViewer, {
+      props: {
+        resetTick: 0,
+        obstacles: [],
+        visibleStations: [],
+        initialCameraTarget: null,
+        visibleProtectionZones: [],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
+      },
+    })
+
+    await flushPromises()
+
+    expect(flyToMock).toHaveBeenCalledTimes(1)
+
+    const target: InitialCameraTarget = {
+      longitude: 114.2,
+      latitude: 30.7,
+      height: 12000,
+      pitch: -90,
+    }
+
+    await wrapper.setProps({
+      flyToTargetPayload: target,
+      flyToTargetTick: 1,
+    })
+
+    await flushPromises()
+
+    expect(flyToMock).toHaveBeenCalledTimes(2)
+
+    const flyToOptions = flyToMock.mock.calls[1]?.[0]
+
+    expect(flyToOptions).toEqual(
+      expect.objectContaining({
+        duration: 1.5,
+        destination: expect.any(Cesium.Cartesian3),
+        orientation: expect.objectContaining({
+          pitch: Cesium.Math.toRadians(-90),
+        }),
+      }),
+    )
 
     wrapper.unmount()
   })

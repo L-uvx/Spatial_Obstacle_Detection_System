@@ -19,6 +19,8 @@ const props = defineProps<{
   visibleStations: RenderedStation[]
   initialCameraTarget: InitialCameraTarget | null
   visibleProtectionZones: PolygonObstacleAnalysisState['visibleProtectionZones']
+  flyToTargetTick: number
+  flyToTargetPayload: InitialCameraTarget | null
 }>()
 
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -244,6 +246,15 @@ watch(
     appliedInitialCameraKeyRef.value = nextKey
   },
   { deep: true },
+)
+
+watch(
+  () => props.flyToTargetTick,
+  () => {
+    if (props.flyToTargetPayload) {
+      flyToTarget(props.flyToTargetPayload)
+    }
+  },
 )
 
 onBeforeUnmount(() => {
