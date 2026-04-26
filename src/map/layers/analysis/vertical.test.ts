@@ -5,6 +5,16 @@ import type {
 } from '../../../types/tool'
 import { buildVerticalProfile } from './vertical'
 
+function expectDistanceParameterizedSurface(vertical: ProtectionZoneAnalyticSurfaceVertical) {
+  expect(vertical.surface.type).toBe('distance_parameterized')
+
+  if (vertical.surface.type !== 'distance_parameterized') {
+    throw new Error(`Expected distance_parameterized surface but received ${vertical.surface.type}`)
+  }
+
+  return vertical.surface
+}
+
 describe('vertical helpers', () => {
   const metersPerDegreeLatitude = 111320
   const analyticVerticalBase: ProtectionZoneAnalyticSurfaceVertical = {
@@ -93,16 +103,17 @@ describe('vertical helpers', () => {
   })
 
   it('caps analytic_surface height growth at endMeters when geographic distance is beyond the clamp', () => {
+    const baseSurface = expectDistanceParameterizedSurface(analyticVerticalBase)
     const vertical: ProtectionZoneAnalyticSurfaceVertical = {
       ...analyticVerticalBase,
       surface: {
-        ...analyticVerticalBase.surface,
+        ...baseSurface,
         clampRange: {
           startMeters: 10,
           endMeters: 20,
         },
         heightModel: {
-          ...analyticVerticalBase.surface.heightModel,
+          ...baseSurface.heightModel,
           distanceOffsetMeters: 10,
         },
       },
@@ -127,16 +138,17 @@ describe('vertical helpers', () => {
   })
 
   it('uses distanceOffsetMeters to shift height growth for non-zero geographic distances inside clamp range', () => {
+    const baseSurface = expectDistanceParameterizedSurface(analyticVerticalBase)
     const vertical: ProtectionZoneAnalyticSurfaceVertical = {
       ...analyticVerticalBase,
       surface: {
-        ...analyticVerticalBase.surface,
+        ...baseSurface,
         clampRange: {
           startMeters: 0,
           endMeters: 1000,
         },
         heightModel: {
-          ...analyticVerticalBase.surface.heightModel,
+          ...baseSurface.heightModel,
           distanceOffsetMeters: 50,
         },
       },
@@ -162,13 +174,14 @@ describe('vertical helpers', () => {
   })
 
   it('falls back to base height when the elevation angle produces a non-finite tangent', () => {
+    const baseSurface = expectDistanceParameterizedSurface(analyticVerticalBase)
     const vertical: ProtectionZoneAnalyticSurfaceVertical = {
       ...analyticVerticalBase,
       baseHeightMeters: 250,
       surface: {
-        ...analyticVerticalBase.surface,
+        ...baseSurface,
         heightModel: {
-          ...analyticVerticalBase.surface.heightModel,
+          ...baseSurface.heightModel,
           angleDegrees: 90,
         },
       },

@@ -476,6 +476,245 @@ describe('analysis service', () => {
     })
   })
 
+  it('normalizes loc_building_restriction_zone_region_3 analytic surfaces', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-r3',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: 'LOC台',
+            stationType: 'LOC',
+            ruleCode: 'loc_building_restriction',
+            ruleName: 'loc_building_restriction',
+            zoneCode: 'loc_region_3',
+            zoneName: 'LOC region 3',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [[[
+                [103.95, 30.59],
+                [103.96, 30.59],
+                [103.96, 30.60],
+                [103.95, 30.60],
+                [103.95, 30.59],
+              ]]],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 492,
+              surface: {
+                type: 'loc_building_restriction_zone_region_3',
+                arcHeightMeters: 562,
+                alphaDegrees: 15.04,
+                stationPoint: [103.938972, 30.561306],
+                apexPoint: [103.95397513931144, 30.593665083709087],
+                rootLeftPoint: [103.949136618227, 30.59534448405252],
+                rootRightPoint: [103.95881349354343, 30.591985503088146],
+                arcRadiusMeters: 9865.303478328966,
+                arcPoints: [
+                  [103.95117724149101, 30.649664183802024],
+                  [103.95562327488403, 30.64911929778665],
+                  [103.96003752578038, 30.64840710649382],
+                ],
+              },
+            },
+            properties: { label: 'LOC区域3' },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones[0]?.vertical).toEqual({
+      mode: 'analytic_surface',
+      baseReference: 'station',
+      baseHeightMeters: 492,
+      surface: {
+        type: 'loc_building_restriction_zone_region_3',
+        arcHeightMeters: 562,
+        alphaDegrees: 15.04,
+        stationPoint: [103.938972, 30.561306],
+        apexPoint: [103.95397513931144, 30.593665083709087],
+        rootLeftPoint: [103.949136618227, 30.59534448405252],
+        rootRightPoint: [103.95881349354343, 30.591985503088146],
+        arcRadiusMeters: 9865.303478328966,
+        arcPoints: [
+          [103.95117724149101, 30.649664183802024],
+          [103.95562327488403, 30.64911929778665],
+          [103.96003752578038, 30.64840710649382],
+        ],
+      },
+    })
+  })
+
+  it('drops loc_building_restriction_zone_region_3 when arcPoints has fewer than two points', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-r3-invalid',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: 'LOC台',
+            stationType: 'LOC',
+            ruleCode: 'loc_building_restriction',
+            ruleName: 'loc_building_restriction',
+            zoneCode: 'loc_region_3',
+            zoneName: 'LOC region 3',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [[[
+                [103.95, 30.59],
+                [103.96, 30.59],
+                [103.96, 30.60],
+                [103.95, 30.60],
+                [103.95, 30.59],
+              ]]],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 492,
+              surface: {
+                type: 'loc_building_restriction_zone_region_3',
+                arcHeightMeters: 562,
+                alphaDegrees: 15.04,
+                stationPoint: [103.938972, 30.561306],
+                apexPoint: [103.95397513931144, 30.593665083709087],
+                rootLeftPoint: [103.949136618227, 30.59534448405252],
+                rootRightPoint: [103.95881349354343, 30.591985503088146],
+                arcRadiusMeters: 9865.303478328966,
+                arcPoints: [
+                  [103.95117724149101, 30.649664183802024],
+                ],
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+        airportId: '1',
+        stationId: '4',
+        zoneCode: 'loc_region_3',
+        regionCode: 'default',
+        reason: 'vertical is not a supported formal model',
+      }),
+    )
+  })
+
+  it('drops loc_building_restriction_zone_region_3 when numeric surface fields are not finite', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-r3-invalid-numeric',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: 'LOC台',
+            stationType: 'LOC',
+            ruleCode: 'loc_building_restriction',
+            ruleName: 'loc_building_restriction',
+            zoneCode: 'loc_region_3',
+            zoneName: 'LOC region 3',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [[[
+                [103.95, 30.59],
+                [103.96, 30.59],
+                [103.96, 30.60],
+                [103.95, 30.60],
+                [103.95, 30.59],
+              ]]],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 492,
+              surface: {
+                type: 'loc_building_restriction_zone_region_3',
+                arcHeightMeters: Number.POSITIVE_INFINITY,
+                alphaDegrees: 15.04,
+                stationPoint: [103.938972, 30.561306],
+                apexPoint: [103.95397513931144, 30.593665083709087],
+                rootLeftPoint: [103.949136618227, 30.59534448405252],
+                rootRightPoint: [103.95881349354343, 30.591985503088146],
+                arcRadiusMeters: 9865.303478328966,
+                arcPoints: [
+                  [103.95117724149101, 30.649664183802024],
+                  [103.95562327488403, 30.64911929778665],
+                ],
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+        airportId: '1',
+        stationId: '4',
+        zoneCode: 'loc_region_3',
+        regionCode: 'default',
+        reason: 'vertical is not a supported formal model',
+      }),
+    )
+  })
+
   it('filters deprecated protection zone shapes and warns with region identity', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 

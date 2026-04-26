@@ -168,6 +168,10 @@ function isValidPositionCoordinate(value: unknown): value is PositionCoordinate 
     && isFiniteNumber(value[1])
 }
 
+function isValidPositionCoordinateList(value: unknown, minimumLength = 1): value is PositionCoordinate[] {
+  return Array.isArray(value) && value.length >= minimumLength && value.every(isValidPositionCoordinate)
+}
+
 function isClosedLinearRing(value: PositionCoordinate[]) {
   const firstPosition = value[0]
   const lastPosition = value[value.length - 1]
@@ -213,16 +217,60 @@ function normalizeProtectionZoneVertical(
 
   if (candidate.mode === 'analytic_surface') {
     const surface = candidate.surface as Record<string, unknown> | undefined
+
+    if (
+      candidate.baseReference !== 'station'
+      || !isFiniteNumber(candidate.baseHeightMeters)
+      || !surface
+    ) {
+      return null
+    }
+
+    if (surface.type === 'loc_building_restriction_zone_region_3') {
+      const stationPoint = surface.stationPoint
+      const apexPoint = surface.apexPoint
+      const rootLeftPoint = surface.rootLeftPoint
+      const rootRightPoint = surface.rootRightPoint
+      const arcPoints = surface.arcPoints
+
+      if (
+        !isValidPositionCoordinate(stationPoint)
+        || !isValidPositionCoordinate(apexPoint)
+        || !isValidPositionCoordinate(rootLeftPoint)
+        || !isValidPositionCoordinate(rootRightPoint)
+        || !isValidPositionCoordinateList(arcPoints, 2)
+        || !isFiniteNumber(surface.arcRadiusMeters)
+        || !isFiniteNumber(surface.arcHeightMeters)
+        || !isFiniteNumber(surface.alphaDegrees)
+      ) {
+        return null
+      }
+
+      return {
+        mode: 'analytic_surface',
+        baseReference: 'station',
+        baseHeightMeters: candidate.baseHeightMeters,
+        surface: {
+          type: 'loc_building_restriction_zone_region_3',
+          stationPoint: [stationPoint[0], stationPoint[1]],
+          apexPoint: [apexPoint[0], apexPoint[1]],
+          rootLeftPoint: [rootLeftPoint[0], rootLeftPoint[1]],
+          rootRightPoint: [rootRightPoint[0], rootRightPoint[1]],
+          arcRadiusMeters: surface.arcRadiusMeters,
+          arcPoints: arcPoints.map((point) => [point[0], point[1]] as [number, number]),
+          arcHeightMeters: surface.arcHeightMeters,
+          alphaDegrees: surface.alphaDegrees,
+        },
+      }
+    }
+
     const distanceSource = surface?.distanceSource as Record<string, unknown> | undefined
     const clampRange = surface?.clampRange as Record<string, unknown> | undefined
     const heightModel = surface?.heightModel as Record<string, unknown> | undefined
     const point = distanceSource?.point
 
     if (
-      candidate.baseReference !== 'station'
-      || !isFiniteNumber(candidate.baseHeightMeters)
-      || !surface
-      || surface.type !== 'distance_parameterized'
+      surface.type !== 'distance_parameterized'
       || !distanceSource
       || distanceSource.kind !== 'point'
       || !isValidPositionCoordinate(point)

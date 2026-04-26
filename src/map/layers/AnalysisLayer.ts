@@ -45,6 +45,8 @@ function createEntityId(regionKey: string, polygonIndex: number) {
   return `${ENTITY_ID_PREFIX}${regionKey}-${polygonIndex}`
 }
 
+type RegionTriangleDefinition = Array<[number, number, number]>
+
 // 为保护区生成指纹，用于判断是否需要重建实体。
 function createRegionFingerprint(region: PolygonObstacleAnalysisState['visibleProtectionZones'][number]) {
   return JSON.stringify({
@@ -118,40 +120,62 @@ function createAnalyticPolygonHierarchy(
   )
 }
 
+// 将三角面定义转换为闭合的 Cesium PolygonHierarchy。
+function createClosedTriangleHierarchy(points: RegionTriangleDefinition) {
+  return new Cesium.PolygonHierarchy(
+    points.map(([longitude, latitude, heightMeters]) =>
+      toCartesianPosition(longitude, latitude, heightMeters),
+    ),
+  )
+}
+
+// 为 LOC region 3 解析面生成扇形三角片与左右封口三角片。
+function createLocRegion3TriangleDefinitions(
+  region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
+) {
+  if (region.vertical.mode !== 'analytic_surface' || region.vertical.surface.type !== 'loc_building_restriction_zone_region_3') {
+    return []
+  }
+
+  const { apexPoint, rootLeftPoint, rootRightPoint, arcPoints, arcHeightMeters } = region.vertical.surface
+  const baseHeightMeters = region.vertical.baseHeightMeters
+  const triangles: RegionTriangleDefinition[] = []
+
+  for (let index = 0; index < arcPoints.length - 1; index += 1) {
+    triangles.push([
+      [apexPoint[0], apexPoint[1], baseHeightMeters],
+      [arcPoints[index][0], arcPoints[index][1], arcHeightMeters],
+      [arcPoints[index + 1][0], arcPoints[index + 1][1], arcHeightMeters],
+      [apexPoint[0], apexPoint[1], baseHeightMeters],
+    ])
+  }
+
+  triangles.push([
+    [apexPoint[0], apexPoint[1], baseHeightMeters],
+    [rootLeftPoint[0], rootLeftPoint[1], baseHeightMeters],
+    [arcPoints[0][0], arcPoints[0][1], arcHeightMeters],
+    [apexPoint[0], apexPoint[1], baseHeightMeters],
+  ])
+
+  triangles.push([
+    [apexPoint[0], apexPoint[1], baseHeightMeters],
+    [rootRightPoint[0], rootRightPoint[1], baseHeightMeters],
+    [arcPoints[arcPoints.length - 1][0], arcPoints[arcPoints.length - 1][1], arcHeightMeters],
+    [apexPoint[0], apexPoint[1], baseHeightMeters],
+  ])
+
+  return triangles
+}
+
 // 将单个保护区区域构造成 Cesium 实体定义。
 function createEntity(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
-  polygon: PolygonObstacleAnalysisState['visibleProtectionZones'][number]['geometry']['coordinates'][number],
+  hierarchy: Cesium.PolygonHierarchy,
   polygonIndex: number,
+  perPositionHeight: boolean,
+  height: number | undefined,
+  outline: boolean,
 ) {
-  let polygonGraphics: {
-    hierarchy: Cesium.PolygonHierarchy
-    perPositionHeight: boolean
-    height: number | undefined
-    extrudedHeight: number | undefined
-  }
-
-  switch (region.vertical.mode) {
-    case 'flat':
-      polygonGraphics = {
-        hierarchy: createFlatPolygonHierarchy(polygon, region.vertical.baseHeightMeters),
-        perPositionHeight: false,
-        height: region.vertical.baseHeightMeters,
-        extrudedHeight: undefined,
-      }
-      break
-    case 'analytic_surface':
-      polygonGraphics = {
-        hierarchy: createAnalyticPolygonHierarchy(region, polygon),
-        perPositionHeight: true,
-        height: undefined,
-        extrudedHeight: undefined,
-      }
-      break
-    default:
-      throw new Error(`Unsupported protection zone vertical mode: ${(region.vertical as { mode?: string }).mode ?? 'unknown'}`)
-  }
-
   return {
     id: createEntityId(region.key, polygonIndex),
     name: region.properties.label || region.regionName || region.zoneName,
@@ -164,11 +188,59 @@ function createEntity(
       regionId: region.id,
     },
     polygon: {
-      ...polygonGraphics,
+      hierarchy,
+      perPositionHeight,
+      height,
+      extrudedHeight: undefined,
       material: Cesium.Color.fromCssColorString('#4db3ff').withAlpha(0.28),
-      outline: true,
+      outline,
       outlineColor: Cesium.Color.fromCssColorString('#7cc7ff'),
     },
+  }
+}
+
+// 将单个保护区区域展开为一个或多个 Cesium 实体定义。
+function createEntities(
+  region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
+) {
+  switch (region.vertical.mode) {
+    case 'flat':
+      return region.geometry.coordinates.map((polygon, polygonIndex) =>
+        createEntity(
+          region,
+          createFlatPolygonHierarchy(polygon, region.vertical.baseHeightMeters),
+          polygonIndex,
+          false,
+          region.vertical.baseHeightMeters,
+          true,
+        ),
+      )
+    case 'analytic_surface':
+      if (region.vertical.surface.type === 'loc_building_restriction_zone_region_3') {
+        return createLocRegion3TriangleDefinitions(region).map((triangle, polygonIndex) =>
+          createEntity(
+            region,
+            createClosedTriangleHierarchy(triangle),
+            polygonIndex,
+            true,
+            undefined,
+            false,
+          ),
+        )
+      }
+
+      return region.geometry.coordinates.map((polygon, polygonIndex) =>
+        createEntity(
+          region,
+          createAnalyticPolygonHierarchy(region, polygon),
+          polygonIndex,
+          true,
+          undefined,
+          true,
+        ),
+      )
+    default:
+      throw new Error(`Unsupported protection zone vertical mode: ${(region.vertical as { mode?: string }).mode ?? 'unknown'}`)
   }
 }
 
@@ -224,8 +296,7 @@ export function syncAnalysisLayer(
       addedKeys.push(region.key)
     }
 
-    const entityIds = region.geometry.coordinates.map((polygon, polygonIndex) => {
-      const entity = createEntity(region, polygon, polygonIndex)
+    const entityIds = createEntities(region).map((entity) => {
       viewer.entities.add(entity)
       return entity.id
     })

@@ -47,19 +47,27 @@ function buildExpectedAnalyticHeights(
   ring: PositionCoordinate[],
   vertical: Extract<PolygonObstacleAnalysisState['visibleProtectionZones'][number]['vertical'], { mode: 'analytic_surface' }>,
 ) {
+  expect(vertical.surface.type).toBe('distance_parameterized')
+
+  if (vertical.surface.type !== 'distance_parameterized') {
+    throw new Error(`Expected distance_parameterized surface but received ${vertical.surface.type}`)
+  }
+
+  const surface = vertical.surface
+
   return ring.map(([longitude, latitude]) => {
-    const [sourceLongitude, sourceLatitude] = vertical.surface.distanceSource.point
+    const [sourceLongitude, sourceLatitude] = surface.distanceSource.point
     const averageLatitude = (sourceLatitude + latitude) / 2
     const deltaLatitudeMeters = (latitude - sourceLatitude) * 111320
     const deltaLongitudeMeters = (longitude - sourceLongitude) * 111320 * Math.cos((averageLatitude * Math.PI) / 180)
     const radialDistanceMeters = Math.sqrt(deltaLatitudeMeters ** 2 + deltaLongitudeMeters ** 2)
     const boundedDistance = Math.min(
-      Math.max(radialDistanceMeters, vertical.surface.clampRange.startMeters),
-      vertical.surface.clampRange.endMeters,
+      Math.max(radialDistanceMeters, surface.clampRange.startMeters),
+      surface.clampRange.endMeters,
     )
-    const relativeDistance = Math.max(boundedDistance - vertical.surface.heightModel.distanceOffsetMeters, 0)
+    const relativeDistance = Math.max(boundedDistance - surface.heightModel.distanceOffsetMeters, 0)
 
-    return vertical.baseHeightMeters + Math.tan((vertical.surface.heightModel.angleDegrees * Math.PI) / 180) * relativeDistance
+    return vertical.baseHeightMeters + Math.tan((surface.heightModel.angleDegrees * Math.PI) / 180) * relativeDistance
   })
 }
 
@@ -104,6 +112,34 @@ function createVisibleRegion(
     },
     ...overrides,
   }
+}
+
+function createLocRegion3VisibleRegion(
+  overrides: Partial<PolygonObstacleAnalysisState['visibleProtectionZones'][number]> = {},
+): PolygonObstacleAnalysisState['visibleProtectionZones'][number] {
+  return createVisibleRegion({
+    vertical: {
+      mode: 'analytic_surface',
+      baseReference: 'station',
+      baseHeightMeters: 492,
+      surface: {
+        type: 'loc_building_restriction_zone_region_3',
+        stationPoint: [103.938972, 30.561306],
+        apexPoint: [103.95397513931144, 30.593665083709087],
+        rootLeftPoint: [103.949136618227, 30.59534448405252],
+        rootRightPoint: [103.95881349354343, 30.591985503088146],
+        arcRadiusMeters: 9865.303478328966,
+        arcPoints: [
+          [103.95117724149101, 30.649664183802024],
+          [103.95562327488403, 30.64911929778665],
+          [103.96003752578038, 30.64840710649382],
+        ],
+        arcHeightMeters: 562,
+        alphaDegrees: 15.04,
+      },
+    },
+    ...overrides,
+  })
 }
 
 function createViewer() {
@@ -305,6 +341,61 @@ describe('syncAnalysisLayer', () => {
     expect(holeHeights.some((height) => Math.abs(height - vertical.baseHeightMeters) > 0.01)).toBe(true)
   })
 
+  it('renders loc_building_restriction_zone_region_3 as fan triangles plus side closing triangles', () => {
+    const { viewer, add } = createViewer()
+
+    syncAnalysisLayer(viewer as never, [createLocRegion3VisibleRegion()])
+
+    expect(add).toHaveBeenCalledTimes(4)
+    expect(add.mock.calls.map((call) => call[0].id)).toEqual([
+      'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0',
+      'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1',
+      'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-2',
+      'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-3',
+    ])
+    expect(add.mock.calls.every((call) => call[0].polygon?.outline === false)).toBe(true)
+
+    const firstHierarchy = add.mock.calls[0][0].polygon?.hierarchy
+    const leftClosingHierarchy = add.mock.calls[2][0].polygon?.hierarchy
+    const rightClosingHierarchy = add.mock.calls[3][0].polygon?.hierarchy
+
+    expect(add.mock.calls[0][0].polygon?.perPositionHeight).toBe(true)
+    expect(add.mock.calls[0][0].polygon?.height).toBeUndefined()
+
+    expectHierarchyToMatchRing(
+      firstHierarchy,
+      [
+        [103.95397513931144, 30.593665083709087],
+        [103.95117724149101, 30.649664183802024],
+        [103.95562327488403, 30.64911929778665],
+        [103.95397513931144, 30.593665083709087],
+      ],
+      [492, 562, 562, 492],
+    )
+
+    expectHierarchyToMatchRing(
+      leftClosingHierarchy,
+      [
+        [103.95397513931144, 30.593665083709087],
+        [103.949136618227, 30.59534448405252],
+        [103.95117724149101, 30.649664183802024],
+        [103.95397513931144, 30.593665083709087],
+      ],
+      [492, 492, 562, 492],
+    )
+
+    expectHierarchyToMatchRing(
+      rightClosingHierarchy,
+      [
+        [103.95397513931144, 30.593665083709087],
+        [103.95881349354343, 30.591985503088146],
+        [103.96003752578038, 30.64840710649382],
+        [103.95397513931144, 30.593665083709087],
+      ],
+      [492, 492, 562, 492],
+    )
+  })
+
   it('renders all polygons from a multipolygon region', () => {
     const { viewer, add, entitiesById } = createViewer()
 
@@ -493,6 +584,55 @@ describe('syncAnalysisLayer', () => {
     expect(add.mock.calls[0][0].id).toBe('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
     expect(rebuiltEntity).not.toBe(originalEntity)
     expect(rebuiltEntity?.polygon?.height).toBe(540)
+    expect(result.addedKeys).toEqual([])
+    expect(result.updatedKeys).toEqual(['airport-1:station-1:zone-a:rule-a:region-north'])
+    expect(result.removedKeys).toEqual([])
+  })
+
+  it('rebuilds all cached triangle entity ids for loc_building_restriction_zone_region_3 updates', () => {
+    const { viewer, add, removeById } = createViewer()
+
+    syncAnalysisLayer(viewer as never, [createLocRegion3VisibleRegion()])
+    add.mockClear()
+    removeById.mockClear()
+
+    const result = syncAnalysisLayer(viewer as never, [
+      createLocRegion3VisibleRegion({
+        vertical: {
+          mode: 'analytic_surface',
+          baseReference: 'station',
+          baseHeightMeters: 500,
+          surface: {
+            type: 'loc_building_restriction_zone_region_3',
+            stationPoint: [103.938972, 30.561306],
+            apexPoint: [103.95397513931144, 30.593665083709087],
+            rootLeftPoint: [103.949136618227, 30.59534448405252],
+            rootRightPoint: [103.95881349354343, 30.591985503088146],
+            arcRadiusMeters: 9865.303478328966,
+            arcPoints: [
+              [103.95117724149101, 30.649664183802024],
+              [103.956, 30.6492],
+              [103.96003752578038, 30.64840710649382],
+            ],
+            arcHeightMeters: 570,
+            alphaDegrees: 15.04,
+          },
+        },
+      }),
+    ])
+
+    expect(removeById).toHaveBeenCalledTimes(4)
+    expect(removeById).toHaveBeenNthCalledWith(1, 'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
+    expect(removeById).toHaveBeenNthCalledWith(2, 'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')
+    expect(removeById).toHaveBeenNthCalledWith(3, 'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-2')
+    expect(removeById).toHaveBeenNthCalledWith(4, 'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-3')
+    expect(add).toHaveBeenCalledTimes(4)
+    expect(add.mock.calls.map((call) => call[0].id)).toEqual([
+      'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0',
+      'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1',
+      'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-2',
+      'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-3',
+    ])
     expect(result.addedKeys).toEqual([])
     expect(result.updatedKeys).toEqual(['airport-1:station-1:zone-a:rule-a:region-north'])
     expect(result.removedKeys).toEqual([])

@@ -123,27 +123,43 @@ export interface ProtectionZoneFlatVertical {
   baseHeightMeters: number
 }
 
+export interface ProtectionZoneDistanceParameterizedSurface {
+  type: 'distance_parameterized'
+  distanceSource: {
+    kind: 'point'
+    point: [number, number]
+  }
+  distanceMetric: 'radial'
+  clampRange: {
+    startMeters: number
+    endMeters: number
+  }
+  heightModel: {
+    type: 'angle_linear_rise'
+    angleDegrees: number
+    distanceOffsetMeters: number
+  }
+}
+
+export interface ProtectionZoneLocBuildingRestrictionZoneRegion3Surface {
+  type: 'loc_building_restriction_zone_region_3'
+  stationPoint: [number, number]
+  apexPoint: [number, number]
+  rootLeftPoint: [number, number]
+  rootRightPoint: [number, number]
+  arcRadiusMeters: number
+  arcPoints: Array<[number, number]>
+  arcHeightMeters: number
+  alphaDegrees: number
+}
+
 export interface ProtectionZoneAnalyticSurfaceVertical {
   mode: 'analytic_surface'
   baseReference: 'station'
   baseHeightMeters: number
-  surface: {
-    type: 'distance_parameterized'
-    distanceSource: {
-      kind: 'point'
-      point: [number, number]
-    }
-    distanceMetric: 'radial'
-    clampRange: {
-      startMeters: number
-      endMeters: number
-    }
-    heightModel: {
-      type: 'angle_linear_rise'
-      angleDegrees: number
-      distanceOffsetMeters: number
-    }
-  }
+  surface:
+    | ProtectionZoneDistanceParameterizedSurface
+    | ProtectionZoneLocBuildingRestrictionZoneRegion3Surface
 }
 
 export interface ProtectionZoneRegion {

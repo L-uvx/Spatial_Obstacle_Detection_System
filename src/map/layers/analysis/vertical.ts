@@ -54,6 +54,10 @@ function buildAnalyticSurfaceDistance(
   vertical: ProtectionZoneAnalyticSurfaceVertical,
   point: Pick<SampledFootprintPoint, 'longitude' | 'latitude'>,
 ) {
+  if (vertical.surface.type !== 'distance_parameterized') {
+    throw new Error(`Unsupported analytic surface type: ${vertical.surface.type}`)
+  }
+
   const [sourceLongitude, sourceLatitude] = vertical.surface.distanceSource.point
 
   return computeRadialDistanceMeters(
@@ -63,6 +67,10 @@ function buildAnalyticSurfaceDistance(
 }
 
 function buildSafeAnalyticHeight(vertical: ProtectionZoneAnalyticSurfaceVertical, radialDistanceMeters: number) {
+  if (vertical.surface.type !== 'distance_parameterized') {
+    throw new Error(`Unsupported analytic surface type: ${vertical.surface.type}`)
+  }
+
   const angleRadians = (vertical.surface.heightModel.angleDegrees * Math.PI) / 180
   const cosine = Math.cos(angleRadians)
   const tangent = Math.tan(angleRadians)

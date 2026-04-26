@@ -214,6 +214,34 @@ function createFlatVisibleProtectionZoneRegion(
   })
 }
 
+function createLocRegion3VisibleProtectionZoneRegion(
+  overrides: Partial<PolygonObstacleAnalysisState['visibleProtectionZones'][number]> = {},
+): PolygonObstacleAnalysisState['visibleProtectionZones'][number] {
+  return createVisibleProtectionZoneRegion({
+    vertical: {
+      mode: 'analytic_surface',
+      baseReference: 'station',
+      baseHeightMeters: 492,
+      surface: {
+        type: 'loc_building_restriction_zone_region_3',
+        stationPoint: [103.938972, 30.561306],
+        apexPoint: [103.95397513931144, 30.593665083709087],
+        rootLeftPoint: [103.949136618227, 30.59534448405252],
+        rootRightPoint: [103.95881349354343, 30.591985503088146],
+        arcRadiusMeters: 9865.303478328966,
+        arcPoints: [
+          [103.95117724149101, 30.649664183802024],
+          [103.95562327488403, 30.64911929778665],
+          [103.96003752578038, 30.64840710649382],
+        ],
+        arcHeightMeters: 562,
+        alphaDegrees: 15.04,
+      },
+    },
+    ...overrides,
+  })
+}
+
 function createSyncResult(overrides: Partial<ObstacleLayerSyncResult> = {}): ObstacleLayerSyncResult {
   return {
     message: '障碍物已同步到地图图层。',
@@ -390,6 +418,32 @@ describe('CesiumViewer camera rules', () => {
       updatedKeys: [],
       removedKeys: [],
     })
+
+    wrapper.unmount()
+  })
+
+  it('forwards loc_building_restriction_zone_region_3 zones unchanged to syncAnalysisLayer', async () => {
+    syncObstacleLayerMock.mockReturnValue(createSyncResult())
+
+    const zone = createLocRegion3VisibleProtectionZoneRegion()
+    const wrapper = mount(CesiumViewer, {
+      props: {
+        resetTick: 0,
+        obstacles: [],
+        visibleStations: [],
+        initialCameraTarget: null,
+        visibleProtectionZones: [zone],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
+      },
+    })
+
+    await flushPromises()
+
+    expect(syncAnalysisLayerMock).toHaveBeenCalledWith(
+      expect.objectContaining({ camera: expect.anything() }),
+      [zone],
+    )
 
     wrapper.unmount()
   })
