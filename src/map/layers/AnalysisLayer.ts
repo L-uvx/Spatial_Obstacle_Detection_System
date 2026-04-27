@@ -174,7 +174,6 @@ function createEntity(
   polygonIndex: number,
   perPositionHeight: boolean,
   height: number | undefined,
-  outline: boolean,
 ) {
   return {
     id: createEntityId(region.key, polygonIndex),
@@ -193,7 +192,7 @@ function createEntity(
       height,
       extrudedHeight: undefined,
       material: Cesium.Color.fromCssColorString('#4db3ff').withAlpha(0.28),
-      outline,
+      outline: false,
       outlineColor: Cesium.Color.fromCssColorString('#7cc7ff'),
     },
   }
@@ -212,7 +211,6 @@ function createEntities(
           polygonIndex,
           false,
           region.vertical.baseHeightMeters,
-          true,
         ),
       )
     case 'analytic_surface':
@@ -224,7 +222,6 @@ function createEntities(
             polygonIndex,
             true,
             undefined,
-            false,
           ),
         )
       }
@@ -236,7 +233,6 @@ function createEntities(
           polygonIndex,
           true,
           undefined,
-          true,
         ),
       )
     default:

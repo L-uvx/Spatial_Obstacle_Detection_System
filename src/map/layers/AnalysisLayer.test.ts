@@ -222,6 +222,7 @@ describe('syncAnalysisLayer', () => {
     expect(add).toHaveBeenCalledTimes(1)
     expect(add.mock.calls[0][0].id).toBe('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
     expect(add.mock.calls[0][0].polygon?.perPositionHeight).toBe(false)
+    expect(add.mock.calls[0][0].polygon?.outline).toBe(false)
     expect(add.mock.calls[0][0].polygon?.height).toBe(500)
     expect(add.mock.calls[0][0].polygon?.extrudedHeight).toBeUndefined()
     expectHierarchyToMatchRing(
@@ -295,6 +296,7 @@ describe('syncAnalysisLayer', () => {
 
     expect(add).toHaveBeenCalledTimes(1)
     expect(add.mock.calls[0][0].polygon?.perPositionHeight).toBe(true)
+    expect(add.mock.calls[0][0].polygon?.outline).toBe(false)
     expect(add.mock.calls[0][0].polygon?.height).toBeUndefined()
     expectHierarchyToMatchRing(hierarchy, ring, buildExpectedAnalyticHeights(ring, vertical))
     expect(result.addedKeys).toEqual(['airport-1:station-1:zone-a:rule-a:region-north'])
