@@ -398,6 +398,66 @@ describe('syncAnalysisLayer', () => {
     )
   })
 
+  it('uses region style fill as polygon material when provided', () => {
+    const { viewer, add } = createViewer()
+
+    syncAnalysisLayer(viewer as never, [
+      createVisibleRegion({
+        style: {
+          fill: 'rgba(255, 165, 0, 0.25)',
+        },
+      }),
+    ])
+
+    const material = add.mock.calls[0][0].polygon?.material as Cesium.Color
+
+    expect(material.equals(Cesium.Color.fromCssColorString('rgba(255, 165, 0, 0.25)'))).toBe(true)
+  })
+
+  it('falls back to the default material color when style fill is invalid', () => {
+    const { viewer, add } = createViewer()
+
+    syncAnalysisLayer(viewer as never, [
+      createVisibleRegion({
+        style: {
+          fill: 'not-a-color',
+        },
+      }),
+    ])
+
+    const material = add.mock.calls[0][0].polygon?.material as Cesium.Color
+
+    expect(material.equals(Cesium.Color.fromCssColorString('#4db3ff').withAlpha(0.28))).toBe(true)
+  })
+
+  it('rebuilds region entities when only fill color changes', () => {
+    const { viewer, add, removeById } = createViewer()
+
+    syncAnalysisLayer(viewer as never, [
+      createVisibleRegion({
+        style: {
+          fill: 'rgba(255, 165, 0, 0.25)',
+        },
+      }),
+    ])
+    add.mockClear()
+    removeById.mockClear()
+
+    syncAnalysisLayer(viewer as never, [
+      createVisibleRegion({
+        style: {
+          fill: 'rgba(255, 0, 0, 0.25)',
+        },
+      }),
+    ])
+
+    expect(removeById).toHaveBeenCalledTimes(1)
+    expect(removeById).toHaveBeenCalledWith('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
+    expect(add).toHaveBeenCalledTimes(1)
+    const material = add.mock.calls[0][0].polygon?.material as Cesium.Color
+    expect(material.equals(Cesium.Color.fromCssColorString('rgba(255, 0, 0, 0.25)'))).toBe(true)
+  })
+
   it('renders all polygons from a multipolygon region', () => {
     const { viewer, add, entitiesById } = createViewer()
 

@@ -1138,4 +1138,156 @@ describe('analysis service', () => {
     ])
   })
 
+  it('normalizes protection zone style fill when provided by backend', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-batch-1',
+        targetIds: [1],
+        selectedTargets: [],
+        obstacleCount: 0,
+        summary: 'ok',
+        protectionZones: [
+          {
+            id: 1,
+            airportId: 1,
+            airportName: '天河机场',
+            stationId: 10,
+            stationName: '导航台A',
+            stationType: 'VOR',
+            ruleCode: 'rule-a',
+            ruleName: '规则A',
+            zoneCode: 'zone-a',
+            zoneName: 'A区',
+            regionCode: 'region-north',
+            regionName: '北侧区域',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [[[114.2, 30.7], [114.21, 30.7], [114.21, 30.69], [114.2, 30.69], [114.2, 30.7]]],
+              ],
+            },
+            vertical: {
+              mode: 'flat',
+              baseReference: 'station',
+              baseHeightMeters: 500,
+            },
+            style: {
+              fill: 'rgba(255, 165, 0, 0.25)',
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(fetchMock).toHaveBeenCalledWith('/polygon-obstacle/analysis/analysis-task-1/result')
+    expect(result.protectionZones[0]?.style).toEqual({
+      fill: 'rgba(255, 165, 0, 0.25)',
+    })
+  })
+
+  it('keeps a protection zone when style fill is missing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-batch-1',
+        targetIds: [1],
+        selectedTargets: [],
+        obstacleCount: 0,
+        summary: 'ok',
+        protectionZones: [
+          {
+            id: 1,
+            airportId: 1,
+            airportName: '天河机场',
+            stationId: 10,
+            stationName: '导航台A',
+            stationType: 'VOR',
+            ruleCode: 'rule-a',
+            ruleName: '规则A',
+            zoneCode: 'zone-a',
+            zoneName: 'A区',
+            regionCode: 'region-north',
+            regionName: '北侧区域',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [[[114.2, 30.7], [114.21, 30.7], [114.21, 30.69], [114.2, 30.69], [114.2, 30.7]]],
+              ],
+            },
+            vertical: {
+              mode: 'flat',
+              baseReference: 'station',
+              baseHeightMeters: 500,
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toHaveLength(1)
+    expect(result.protectionZones[0]?.style).toBeUndefined()
+  })
+
+  it('keeps a protection zone when style fill is blank', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-batch-1',
+        targetIds: [1],
+        selectedTargets: [],
+        obstacleCount: 0,
+        summary: 'ok',
+        protectionZones: [
+          {
+            id: 1,
+            airportId: 1,
+            airportName: '天河机场',
+            stationId: 10,
+            stationName: '导航台A',
+            stationType: 'VOR',
+            ruleCode: 'rule-a',
+            ruleName: '规则A',
+            zoneCode: 'zone-a',
+            zoneName: 'A区',
+            regionCode: 'region-north',
+            regionName: '北侧区域',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [[[114.2, 30.7], [114.21, 30.7], [114.21, 30.69], [114.2, 30.69], [114.2, 30.7]]],
+              ],
+            },
+            vertical: {
+              mode: 'flat',
+              baseReference: 'station',
+              baseHeightMeters: 500,
+            },
+            style: {
+              fill: '   ',
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toHaveLength(1)
+    expect(result.protectionZones[0]?.style).toBeUndefined()
+  })
+
 })

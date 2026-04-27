@@ -290,6 +290,7 @@ export function flattenVisibleProtectionZones(tree: ProtectionZoneAirportNode[])
             geometry: region.geometry,
             vertical: region.vertical,
             properties: region.properties,
+            style: region.style,
           })
         }
       }

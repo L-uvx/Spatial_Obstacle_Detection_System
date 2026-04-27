@@ -238,6 +238,24 @@ describe('protectionZoneTree', () => {
     expect(nextTree[0].stations.map((item) => item.stationId)).toEqual(['101', '202'])
   })
 
+  it('preserves region style when flattening visible protection zones', () => {
+    const tree = mergeProtectionZones([], [
+      createRegion({
+        style: {
+          fill: 'rgba(255, 165, 0, 0.25)',
+        },
+      }),
+    ])
+    const visibleAirportTree = toggleAirportVisibility(tree, '1', true)
+
+    const visibleRegions = flattenVisibleProtectionZones(visibleAirportTree)
+
+    expect(visibleRegions).toHaveLength(1)
+    expect(visibleRegions[0]?.style).toEqual({
+      fill: 'rgba(255, 165, 0, 0.25)',
+    })
+  })
+
   it('refreshes station metadata when appending a new zone under an existing station', () => {
     const firstTree = mergeProtectionZones([], [
       createRegion({

@@ -112,6 +112,10 @@ export interface ProtectionZoneRegionProperties {
   label?: string
 }
 
+export interface ProtectionZoneStyle {
+  fill?: string
+}
+
 export interface ProtectionZoneMultipolygonGeometry {
   shapeType: 'multipolygon'
   coordinates: MultiPolygonCoordinates
@@ -178,6 +182,7 @@ export interface ProtectionZoneRegion {
   geometry: ProtectionZoneMultipolygonGeometry
   vertical: ProtectionZoneFlatVertical | ProtectionZoneAnalyticSurfaceVertical
   properties: ProtectionZoneRegionProperties
+  style?: ProtectionZoneStyle
 }
 
 export interface ProtectionZoneNode {
@@ -227,6 +232,7 @@ export interface VisibleProtectionZoneRegion {
   geometry: ProtectionZoneMultipolygonGeometry
   vertical: ProtectionZoneFlatVertical | ProtectionZoneAnalyticSurfaceVertical
   properties: ProtectionZoneRegionProperties
+  style?: ProtectionZoneStyle
 }
 
 export interface ImportFormValue {

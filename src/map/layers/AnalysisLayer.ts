@@ -5,6 +5,7 @@ import type {
 import { buildVerticalProfile } from './analysis/vertical'
 
 const ENTITY_ID_PREFIX = 'analysis-zone-'
+const DEFAULT_ZONE_MATERIAL = Cesium.Color.fromCssColorString('#4db3ff').withAlpha(0.28)
 
 interface SyncedRegionSnapshot {
   fingerprint: string
@@ -53,7 +54,21 @@ function createRegionFingerprint(region: PolygonObstacleAnalysisState['visiblePr
     key: region.key,
     geometry: region.geometry,
     vertical: region.vertical,
+    style: region.style,
   })
+}
+
+// 仅在 fill 可被 Cesium 正常解析时使用自定义填充色，否则回退默认蓝色。
+function resolveRegionMaterial(region: PolygonObstacleAnalysisState['visibleProtectionZones'][number]) {
+  const fill = region.style?.fill
+
+  if (!fill) {
+    return DEFAULT_ZONE_MATERIAL
+  }
+
+  const parsed = Cesium.Color.fromCssColorString(fill)
+
+  return parsed ?? DEFAULT_ZONE_MATERIAL
 }
 
 // 将经纬度和高程转换为 Cesium 笛卡尔坐标。
@@ -191,7 +206,7 @@ function createEntity(
       perPositionHeight,
       height,
       extrudedHeight: undefined,
-      material: Cesium.Color.fromCssColorString('#4db3ff').withAlpha(0.28),
+      material: resolveRegionMaterial(region),
       outline: false,
       outlineColor: Cesium.Color.fromCssColorString('#7cc7ff'),
     },

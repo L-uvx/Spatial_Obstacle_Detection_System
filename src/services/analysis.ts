@@ -8,6 +8,7 @@ import type {
   ProtectionZoneMultipolygonGeometry,
   ProtectionZoneRegion,
   ProtectionZoneRegionProperties,
+  ProtectionZoneStyle,
   MultiPolygonCoordinates,
 } from '../types/tool'
 
@@ -76,6 +77,9 @@ interface ProtectionZoneResponse {
   geometry: unknown
   vertical: unknown
   properties?: ProtectionZoneRegionProperties
+  style?: {
+    fill?: unknown
+  }
 }
 
 interface AnalysisTaskResultResponse {
@@ -134,6 +138,16 @@ function normalizeAnalysisRuleResults(results: AnalysisRuleResultResponse[] = []
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
+}
+
+function normalizeProtectionZoneStyle(style: ProtectionZoneResponse['style']): ProtectionZoneStyle | undefined {
+  if (!style || typeof style.fill !== 'string' || style.fill.trim().length === 0) {
+    return undefined
+  }
+
+  return {
+    fill: style.fill,
+  }
 }
 
 function normalizeProtectionZoneGeometry(
@@ -356,6 +370,7 @@ function normalizeProtectionZone(zone: ProtectionZoneResponse): ProtectionZoneRe
     geometry,
     vertical,
     properties: zone.properties ?? {},
+    style: normalizeProtectionZoneStyle(zone.style),
   }
 }
 
