@@ -556,4 +556,5 @@ describe('PolygonObstacleAnalysisModal', () => {
     expect(wrapper.text()).toContain('导出失败，请重试。')
     expect(wrapper.text()).toContain('report generation failed')
   })
+
 })
