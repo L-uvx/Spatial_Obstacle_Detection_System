@@ -222,6 +222,54 @@ describe('AppShell', () => {
     expect(wrapper.emitted('selectAirport')).toEqual([['airport-2']])
   })
 
+  it('closes the protection-zone panel before opening the station panel', async () => {
+    const wrapper = mount(AppShell, {
+      props: {
+        analysisState: createState({
+          stationPanelOpen: false,
+          protectionZonePanelOpen: true,
+          protectionZoneTree: [],
+        }),
+        resetTick: 0,
+        renderedObstacles: [],
+        initialCameraTarget: null,
+      },
+    })
+
+    await wrapper.get('[data-testid="station-panel-toggle"]').trigger('click')
+
+    expect(wrapper.emitted()).toMatchObject({
+      closeProtectionZonePanel: [[]],
+      openStationPanel: [[]],
+    })
+    const emittedEvents = Object.keys(wrapper.emitted()).filter((eventName) => eventName !== 'click')
+    expect(emittedEvents).toEqual(['closeProtectionZonePanel', 'openStationPanel'])
+  })
+
+  it('closes the station panel before opening the protection-zone panel', async () => {
+    const wrapper = mount(AppShell, {
+      props: {
+        analysisState: createState({
+          stationPanelOpen: true,
+          protectionZonePanelOpen: false,
+          protectionZoneTree: [],
+        }),
+        resetTick: 0,
+        renderedObstacles: [],
+        initialCameraTarget: null,
+      },
+    })
+
+    await wrapper.get('[data-testid="protection-zone-panel-toggle"]').trigger('click')
+
+    expect(wrapper.emitted()).toMatchObject({
+      closeStationPanel: [[]],
+      openProtectionZonePanel: [[]],
+    })
+    const emittedEvents = Object.keys(wrapper.emitted()).filter((eventName) => eventName !== 'click')
+    expect(emittedEvents).toEqual(['closeStationPanel', 'openProtectionZonePanel'])
+  })
+
   it('passes visibleProtectionZones into CesiumViewer and does not pass any sampling prop', () => {
     let receivedViewerProps: { visibleProtectionZones: unknown[] } | Record<string, unknown> | null = null
     const analysisState = createState({

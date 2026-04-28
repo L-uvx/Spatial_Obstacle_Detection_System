@@ -65,6 +65,10 @@ function handleProtectionZonePanelToggle() {
     return
   }
 
+  if (props.analysisState.stationPanelOpen) {
+    emit('closeStationPanel')
+  }
+
   emit('openProtectionZonePanel')
 }
 
@@ -82,6 +86,10 @@ function handleStationPanelToggle() {
   if (props.analysisState.stationPanelOpen) {
     emit('closeStationPanel')
     return
+  }
+
+  if (props.analysisState.protectionZonePanelOpen) {
+    emit('closeProtectionZonePanel')
   }
 
   emit('openStationPanel')
