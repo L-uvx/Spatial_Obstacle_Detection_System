@@ -256,15 +256,21 @@ describe('PolygonObstacleAnalysisModal', () => {
     ).toEqual(pointObstacleTypeOptions)
   })
 
-  it('submits selected excel file name through browser file picker flow', async () => {
+  it('submits selected excel file name through browser file picker flow in point mode', async () => {
     const wrapper = mount(PolygonObstacleAnalysisModal, {
       props: {
-        state: createImportFormState(),
+        state: {
+          ...createImportFormState(),
+          analysisMode: 'point',
+          statusMessage: '请上传点状障碍物 Excel。',
+        },
       },
     })
 
     await wrapper.get('.analysis-modal__project-input').setValue('武汉净空项目')
     await wrapper.get('.analysis-modal__obstacle-type-select').setValue('铁塔/高塔')
+
+    expect(wrapper.get('button.analysis-modal__primary').attributes('disabled')).toBeDefined()
 
     const file = new File(['demo'], 'obstacles.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -359,7 +365,7 @@ describe('PolygonObstacleAnalysisModal', () => {
     expect(wrapper.text()).not.toContain('导航台A')
   })
 
-  it('renders target category together with target name in the mixed selection table', () => {
+  it('renders only target name and distance in the mixed selection table', () => {
     const wrapper = mount(PolygonObstacleAnalysisModal, {
       props: {
         state: {
@@ -386,12 +392,15 @@ describe('PolygonObstacleAnalysisModal', () => {
       },
     })
 
+    const headers = wrapper.findAll('thead th')
     const rows = wrapper.findAll('tbody tr')
-    const bodyText = wrapper.get('tbody').text()
+    const firstRowCells = rows[0]?.findAll('td').map((cell) => cell.text()) ?? []
+    const secondRowCells = rows[1]?.findAll('td').map((cell) => cell.text()) ?? []
 
+    expect(headers).toHaveLength(3)
     expect(rows).toHaveLength(2)
-    expect(bodyText).toContain('机场 天河机场')
-    expect(bodyText).toContain('空管局 湖北空管局')
+    expect(firstRowCells).toEqual(['', '天河机场', '2.5km'])
+    expect(secondRowCells).toEqual(['', '湖北空管局', '8.0km'])
   })
 
   it('renders rule results grouped by station with gb and mh content', () => {

@@ -164,10 +164,6 @@ body {
   pointer-events: none;
 }
 
-.analysis-modal.is-open {
-  pointer-events: auto;
-}
-
 .analysis-modal__card {
   width: min(880px, 100%);
   max-height: calc(100vh - 120px);
@@ -177,6 +173,7 @@ body {
   background: rgba(8, 17, 31, 0.9);
   backdrop-filter: blur(18px);
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.42);
+  pointer-events: auto;
 }
 
 .analysis-modal__header {

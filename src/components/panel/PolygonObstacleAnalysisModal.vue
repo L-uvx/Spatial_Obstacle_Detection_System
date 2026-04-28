@@ -123,8 +123,12 @@ watch(
 </script>
 
 <template>
-  <section class="analysis-modal" :class="{ 'is-open': state.isOpen }">
-    <div v-if="state.isOpen" class="analysis-modal__card">
+  <section
+    class="analysis-modal"
+    :class="{ 'is-open': state.isOpen }"
+    :style="{ pointerEvents: 'none' }"
+  >
+    <div v-if="state.isOpen" class="analysis-modal__card" :style="{ pointerEvents: 'auto' }">
       <div class="analysis-modal__header">
         <div>
           <p class="analysis-modal__eyebrow">单入口业务流程</p>
