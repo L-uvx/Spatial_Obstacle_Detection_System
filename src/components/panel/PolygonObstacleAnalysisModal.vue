@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { obstacleTypeOptions } from '../../types/tool'
+import { pointObstacleTypeOptions, polygonObstacleTypeOptions } from '../../types/tool'
 import type { ImportFormValue, PolygonObstacleAnalysisState } from '../../types/tool'
 
 const props = defineProps<{
@@ -17,12 +17,18 @@ const emit = defineEmits<{
 
 const formValue = reactive<ImportFormValue>({
   projectName: '',
-  obstacleType: obstacleTypeOptions[0],
+  obstacleType: polygonObstacleTypeOptions[0],
   fileName: '',
   file: null,
 })
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const modalTitle = computed(() => (props.state.analysisMode === 'point' ? '点障碍物分析' : '多边形障碍物分析'))
+
+const modalObstacleTypeOptions = computed(() =>
+  props.state.analysisMode === 'point' ? pointObstacleTypeOptions : polygonObstacleTypeOptions,
+)
 
 const ruleResultGroups = computed(() => {
   const groupMap = new Map<string, {
@@ -55,7 +61,7 @@ const ruleResultGroups = computed(() => {
 // 将导入表单恢复到初始状态，并清空原生文件输入框。
 function resetFormValue() {
   formValue.projectName = ''
-  formValue.obstacleType = obstacleTypeOptions[0]
+  formValue.obstacleType = modalObstacleTypeOptions.value[0] ?? ''
   formValue.fileName = ''
   formValue.file = null
 
@@ -105,6 +111,15 @@ watch(
     }
   },
 )
+
+watch(
+  () => props.state.analysisMode,
+  () => {
+    if (props.state.isOpen && props.state.stage === 'import-form') {
+      resetFormValue()
+    }
+  },
+)
 </script>
 
 <template>
@@ -113,7 +128,7 @@ watch(
       <div class="analysis-modal__header">
         <div>
           <p class="analysis-modal__eyebrow">单入口业务流程</p>
-          <h2>多边形障碍物分析</h2>
+          <h2>{{ modalTitle }}</h2>
         </div>
         <button type="button" class="analysis-modal__close" @click="emit('close')">关闭</button>
       </div>
@@ -134,7 +149,7 @@ watch(
         <label class="analysis-modal__field">
           <span>障碍物类型</span>
           <select v-model="formValue.obstacleType" class="analysis-modal__obstacle-type-select">
-            <option v-for="option in obstacleTypeOptions" :key="option" :value="option">{{ option }}</option>
+            <option v-for="option in modalObstacleTypeOptions" :key="option" :value="option">{{ option }}</option>
           </select>
         </label>
 

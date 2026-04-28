@@ -4,7 +4,7 @@ import {
   getImportTaskStatus,
   importObstacles,
 } from '../services/obstacle'
-import type { RenderedObstacle, TargetOption } from '../types/tool'
+import type { ObstacleAnalysisMode, RenderedObstacle, TargetOption } from '../types/tool'
 
 export interface ImportWorkflowResult {
   importTaskId: string
@@ -25,9 +25,9 @@ function delay(ms: number) {
 }
 
 // 轮询导入任务，直到后端返回成功、失败或超时。
-async function waitForImportCompletion(taskId: string) {
+async function waitForImportCompletion(mode: ObstacleAnalysisMode, taskId: string) {
   for (let attempt = 0; attempt < 60; attempt += 1) {
-    const statusResult = await getImportTaskStatus(taskId)
+    const statusResult = await getImportTaskStatus(mode, taskId)
 
     if (statusResult.status === 'succeeded') {
       return statusResult
@@ -45,14 +45,15 @@ async function waitForImportCompletion(taskId: string) {
 
 // 串联导入创建、轮询、结果获取和候选对象查询。
 export async function runImportWorkflow(input: {
+  mode: ObstacleAnalysisMode
   projectName: string
   obstacleType: string
   fileName: string
   file: File
 }): Promise<ImportWorkflowResult> {
   const createResult = await importObstacles(input)
-  const statusResult = await waitForImportCompletion(createResult.taskId)
-  const importResult = await getImportTaskResult(createResult.taskId)
+  const statusResult = await waitForImportCompletion(input.mode, createResult.taskId)
+  const importResult = await getImportTaskResult(input.mode, createResult.taskId)
   const targetOptions = await getImportTargets(createResult.taskId)
   const obstacleMessage =
     importResult.obstacles.length > 0 ? '障碍物已准备渲染到地图图层。' : '未返回可渲染的障碍物。'

@@ -31,6 +31,7 @@ describe('importObstacles', () => {
     })
 
     const result = await importObstacles({
+      mode: 'polygon',
       projectName: '武汉净空项目',
       obstacleType: '铁塔',
       fileName: 'obstacles.xlsx',
@@ -61,6 +62,34 @@ describe('importObstacles', () => {
     })
   })
 
+  it('uploads excel using FormData field excelFile to the point obstacle import endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        taskId: 'point-import-batch-1',
+        status: 'running',
+        message: 'point import task created',
+        progressPercent: 0,
+        projectId: 9,
+        obstacleBatchId: 'point-import-batch-1',
+      }),
+    } as Response)
+
+    const file = new File(['demo'], 'point-obstacles.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
+    await importObstacles({
+      mode: 'point',
+      projectName: '点障碍物项目',
+      obstacleType: '树木/树林',
+      fileName: 'point-obstacles.xlsx',
+      file,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith('/point-obstacle/import', expect.objectContaining({ method: 'POST' }))
+  })
+
   it('requests import task status using the task id returned by import creation', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
@@ -72,7 +101,7 @@ describe('importObstacles', () => {
       }),
     } as Response)
 
-    const result = await getImportTaskStatus('import-batch-3')
+    const result = await getImportTaskStatus('polygon', 'import-batch-3')
 
     expect(fetchMock).toHaveBeenCalledWith('/polygon-obstacle/import/import-batch-3/status')
     expect(result).toEqual({
@@ -118,7 +147,7 @@ describe('importObstacles', () => {
       }),
     } as Response)
 
-    const result = await getImportTaskResult('import-batch-3')
+    const result = await getImportTaskResult('polygon', 'import-batch-3')
 
     expect(fetchMock).toHaveBeenCalledWith('/polygon-obstacle/import/import-batch-3/result')
     expect(result).toEqual({
@@ -150,6 +179,39 @@ describe('importObstacles', () => {
           },
         },
       ],
+    })
+  })
+
+  it('normalizes point obstacle geometry from point import result', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        taskId: 'point-import-batch-3',
+        projectId: 11,
+        obstacleBatchId: 'point-import-batch-3',
+        importedCount: 1,
+        failedCount: 0,
+        obstacles: [
+          {
+            id: 1,
+            name: '点障碍物1',
+            obstacleType: '树木/树林',
+            topElevation: 549.9,
+            geometry: {
+              type: 'Point',
+              coordinates: [103.9758638888889, 30.506880555555554],
+            },
+          },
+        ],
+      }),
+    } as Response)
+
+    const result = await getImportTaskResult('point', 'point-import-batch-3')
+
+    expect(fetchMock).toHaveBeenCalledWith('/point-obstacle/import/point-import-batch-3/result')
+    expect(result.obstacles[0]?.geometry).toEqual({
+      type: 'Point',
+      coordinates: [103.9758638888889, 30.506880555555554],
     })
   })
 

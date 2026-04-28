@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { toolbarItems } from '../../types/tool'
-import type { ToolbarItem } from '../../types/tool'
+import type { ObstacleAnalysisMode, ToolbarItem } from '../../types/tool'
 
 const emit = defineEmits<{
-  openAnalysis: []
+  openAnalysis: [mode: ObstacleAnalysisMode]
   reset: []
 }>()
 
 // 根据工具项类型派发打开分析或地图复位事件。
 function handleClick(item: ToolbarItem) {
-  if (item.opensModal) {
-    emit('openAnalysis')
+  if (item.opensModal && item.mode) {
+    emit('openAnalysis', item.mode)
     return
   }
 
@@ -23,6 +23,7 @@ function handleClick(item: ToolbarItem) {
     <button
       v-for="item in toolbarItems"
       :key="item.key"
+      :data-toolbar-key="item.key"
       type="button"
       class="toolbar-button"
       @click="handleClick(item)"

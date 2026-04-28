@@ -321,6 +321,53 @@ describe('getBootstrapData', () => {
     expect(result.historicalObstacles.map((item) => item.id)).toEqual(['17'])
   })
 
+  it('keeps mixed point and multipolygon historical obstacles', async () => {
+    stubFetchOnce({
+      ok: true,
+      json: async () => ({
+        airports: [],
+        historicalObstacles: [
+          {
+            id: 1,
+            name: '点障碍物1',
+            obstacleType: '树木/树林',
+            topElevation: 549.9,
+            geometry: {
+              type: 'Point',
+              coordinates: [103.9758638888889, 30.506880555555554],
+            },
+          },
+          {
+            id: 2,
+            name: '面障碍物1',
+            obstacleType: '建筑物/构建物',
+            topElevation: 600,
+            geometry: {
+              type: 'MultiPolygon',
+              coordinates: [
+                [
+                  [
+                    [103.9, 30.5],
+                    [104.0, 30.5],
+                    [104.0, 30.4],
+                    [103.9, 30.4],
+                    [103.9, 30.5],
+                  ],
+                ],
+              ],
+            },
+          },
+        ],
+      }),
+    })
+
+    const result = await getBootstrapData()
+
+    expect(result.historicalObstacles).toHaveLength(2)
+    expect(result.historicalObstacles[0].geometry.type).toBe('Point')
+    expect(result.historicalObstacles[1].geometry.type).toBe('MultiPolygon')
+  })
+
   it('drops historical obstacles with non-finite topElevation or malformed multipolygon coordinates', async () => {
     stubFetchOnce({
       ok: true,

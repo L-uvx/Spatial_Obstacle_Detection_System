@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import { describe, expect, it } from 'vitest'
 import AppShell from './AppShell.vue'
+import { toolbarItems } from '../../types/tool'
 import type { PolygonObstacleAnalysisState } from '../../types/tool'
 
 function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): PolygonObstacleAnalysisState {
@@ -18,6 +19,7 @@ function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): Pol
     airports: [],
     selectedAirportId: '',
     visibleStations: [],
+    analysisMode: 'polygon',
     projectName: '',
     obstacleType: '',
     fileName: '',
@@ -91,9 +93,32 @@ describe('AppShell', () => {
 
     await toolbarButtons[0].trigger('click')
     await toolbarButtons[1].trigger('click')
+    await toolbarButtons[2].trigger('click')
 
-    expect(wrapper.emitted('openAnalysis')).toEqual([[]])
+    expect(wrapper.emitted('openAnalysis')).toEqual([['polygon'], ['point']])
     expect(wrapper.emitted('reset')).toEqual([[]])
+  })
+
+  it('renders both polygon and point analysis toolbar actions', () => {
+    const labels = toolbarItems.map((item) => item.label)
+
+    expect(labels).toContain('多边形障碍物分析')
+    expect(labels).toContain('点障碍物分析')
+  })
+
+  it('emits point analysis mode when point entry is clicked', async () => {
+    const wrapper = mount(AppShell, {
+      props: {
+        analysisState: createState(),
+        resetTick: 0,
+        renderedObstacles: [],
+        initialCameraTarget: null,
+      },
+    })
+
+    await wrapper.get('[data-toolbar-key="point-obstacle-analysis"]').trigger('click')
+
+    expect(wrapper.emitted('openAnalysis')).toEqual([['point']])
   })
 
   it('emits closeProtectionZonePanel when the protection-zone panel toggle is pressed while open', async () => {

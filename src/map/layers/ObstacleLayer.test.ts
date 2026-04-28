@@ -26,6 +26,19 @@ function createObstacle(id: string, topElevation = 549.9): RenderedObstacle {
   }
 }
 
+function createPointObstacle(id: string, topElevation = 549.9): RenderedObstacle {
+  return {
+    id,
+    name: `点障碍物-${id}`,
+    obstacleType: '树木/树林',
+    topElevation,
+    geometry: {
+      type: 'Point',
+      coordinates: [103.9758638888889, 30.506880555555554],
+    },
+  }
+}
+
 describe('syncObstacleLayer', () => {
   it('adds only missing obstacle entities and returns a fly-to bounding sphere for new obstacles', () => {
     const existingEntityIds = new Set<string>(['polygon-obstacle-history-1-0'])
@@ -91,5 +104,68 @@ describe('syncObstacleLayer', () => {
     expect(result.addedEntityIds).toEqual([])
     expect(result.flyToBoundingSphere).toBeUndefined()
     expect(result.message).toContain('未新增')
+  })
+
+  it('renders point obstacles with a point graphic and name label', () => {
+    const add = vi.fn((entity: { id: string; point?: object; label?: { text: string } }) => entity)
+
+    const viewer = {
+      entities: {
+        getById: vi.fn(() => undefined),
+        add,
+      },
+    }
+
+    const result = syncObstacleLayer(viewer as never, [createPointObstacle('point-1')])
+
+    expect(add).toHaveBeenCalledTimes(2)
+    expect(add.mock.calls[0][0].id).toBe('obstacle-point-1-point')
+    expect(add.mock.calls[0][0].point).toBeTruthy()
+    expect(add.mock.calls[1][0].id).toBe('obstacle-point-1-label')
+    expect(add.mock.calls[1][0].label?.text).toBe('点障碍物-point-1')
+    expect(result.flyToBoundingSphere).toBeDefined()
+  })
+
+  it('renders multipolygon obstacles with a polygon and name label', () => {
+    const add = vi.fn((entity: { id: string; polygon?: object; label?: { text: string } }) => entity)
+
+    const viewer = {
+      entities: {
+        getById: vi.fn(() => undefined),
+        add,
+      },
+    }
+
+    syncObstacleLayer(viewer as never, [createObstacle('import-3')])
+
+    expect(add).toHaveBeenCalledTimes(1)
+    expect(add.mock.calls[0][0].polygon).toBeTruthy()
+    expect(add.mock.calls[0][0].label?.text).toBe('障碍物-import-3')
+  })
+
+  it('ignores unsupported obstacle geometry without throwing', () => {
+    const add = vi.fn()
+    const viewer = {
+      entities: {
+        getById: vi.fn(() => undefined),
+        add,
+      },
+    }
+
+    const result = syncObstacleLayer(viewer as never, [
+      {
+        id: 'bad-1',
+        name: '坏障碍物',
+        obstacleType: '未知',
+        topElevation: 0,
+        geometry: {
+          type: 'LineString',
+          coordinates: [],
+        } as never,
+      },
+    ])
+
+    expect(add).not.toHaveBeenCalled()
+    expect(result.addedEntityIds).toEqual([])
   })
 })

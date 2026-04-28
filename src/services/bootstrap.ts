@@ -1,7 +1,9 @@
 import { mapConfig } from '../config/map'
 import type {
+  ImportedObstacleGeometry,
   InitialCameraTarget,
   MultiPolygonCoordinates,
+  PositionCoordinate,
   RenderedAirport,
   RenderedObstacle,
   RenderedStation,
@@ -30,8 +32,8 @@ interface BootstrapObstacleResponseItem {
   obstacleType: string
   topElevation: number
   geometry?: {
-    type: 'MultiPolygon'
-    coordinates: MultiPolygonCoordinates
+    type: 'Point' | 'MultiPolygon'
+    coordinates: PositionCoordinate | MultiPolygonCoordinates
   } | null
 }
 
@@ -57,6 +59,30 @@ function isValidPositionCoordinate(value: unknown): value is [number, number] {
     && value.length === 2
     && isFiniteNumber(value[0] as number | null)
     && isFiniteNumber(value[1] as number | null)
+}
+
+// 将后端障碍物几何规范化为前端正式联合类型。
+function normalizeObstacleGeometry(geometry: BootstrapObstacleResponseItem['geometry']): ImportedObstacleGeometry | null {
+  if (!geometry) {
+    return null
+  }
+
+  if (geometry.type === 'Point' && isValidPositionCoordinate(geometry.coordinates)) {
+    return {
+      type: 'Point',
+      coordinates: geometry.coordinates,
+    }
+  }
+
+  if (geometry.type === 'MultiPolygon' && isValidMultiPolygonCoordinates(geometry.coordinates)) {
+    return {
+      type: 'MultiPolygon',
+      coordinates: geometry.coordinates,
+    }
+  }
+
+  console.warn('[bootstrap] Unsupported obstacle geometry.', geometry)
+  return null
 }
 
 // 校验单个线环坐标数组是否合法。
@@ -115,12 +141,9 @@ function normalizeAirport(airport: BootstrapAirportResponse): RenderedAirport | 
 
 // 将后端历史障碍物规范化为可直接上图的结构。
 function normalizeObstacle(item: BootstrapObstacleResponseItem): RenderedObstacle | null {
-  if (
-    !item.geometry
-    || item.geometry.type !== 'MultiPolygon'
-    || !isFiniteNumber(item.topElevation)
-    || !isValidMultiPolygonCoordinates(item.geometry.coordinates)
-  ) {
+  const geometry = normalizeObstacleGeometry(item.geometry)
+
+  if (!geometry || !isFiniteNumber(item.topElevation)) {
     return null
   }
 
@@ -129,10 +152,7 @@ function normalizeObstacle(item: BootstrapObstacleResponseItem): RenderedObstacl
     name: item.name,
     obstacleType: item.obstacleType,
     topElevation: item.topElevation,
-    geometry: {
-      type: 'MultiPolygon',
-      coordinates: item.geometry.coordinates,
-    },
+    geometry,
   }
 }
 

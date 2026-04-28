@@ -44,6 +44,7 @@ function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): Pol
     isOpen: false,
     protectionZonePanelOpen: false,
     stationPanelOpen: false,
+    analysisMode: 'polygon',
     stage: 'analysis-result',
     bootstrapStatus: 'idle',
     bootstrapMessage: '',

@@ -4,7 +4,7 @@ import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import PolygonObstacleAnalysisModal from './PolygonObstacleAnalysisModal.vue'
-import { obstacleTypeOptions } from '../../types/tool'
+import { pointObstacleTypeOptions, polygonObstacleTypeOptions } from '../../types/tool'
 import type { PolygonObstacleAnalysisState, ProtectionZoneAirportNode } from '../../types/tool'
 
 function createVisibleProtectionZoneRegion(): PolygonObstacleAnalysisState['visibleProtectionZones'][number] {
@@ -59,6 +59,7 @@ function createImportFormState(): PolygonObstacleAnalysisState {
     airports: [],
     selectedAirportId: '',
     visibleStations: [],
+    analysisMode: 'polygon',
     projectName: '',
     obstacleType: '',
     fileName: '',
@@ -74,7 +75,7 @@ function createImportFormState(): PolygonObstacleAnalysisState {
     analysisSelectedTargets: [],
     analysisObstacleCount: 0,
     analysisRuleResults: [],
-    statusMessage: '请填写项目名称、障碍物类型并上传 Excel。',
+    statusMessage: '请上传多边形障碍物 Excel。',
     exportTaskId: '',
     exportStatus: 'idle',
     exportProgressPercent: 0,
@@ -238,6 +239,23 @@ describe('PolygonObstacleAnalysisModal', () => {
     clickSpy.mockRestore()
   })
 
+  it('shows point analysis title and point obstacle options in point mode', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: {
+          ...createImportFormState(),
+          analysisMode: 'point',
+          statusMessage: '请上传点状障碍物 Excel。',
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('点障碍物分析')
+    expect(
+      wrapper.findAll('.analysis-modal__obstacle-type-select option').map((node) => node.text()),
+    ).toEqual(pointObstacleTypeOptions)
+  })
+
   it('submits selected excel file name through browser file picker flow', async () => {
     const wrapper = mount(PolygonObstacleAnalysisModal, {
       props: {
@@ -307,7 +325,9 @@ describe('PolygonObstacleAnalysisModal', () => {
     })
 
     expect((wrapper.get('.analysis-modal__project-input').element as HTMLInputElement).value).toBe('')
-    expect((wrapper.get('.analysis-modal__obstacle-type-select').element as HTMLSelectElement).value).toBe(obstacleTypeOptions[0])
+    expect((wrapper.get('.analysis-modal__obstacle-type-select').element as HTMLSelectElement).value).toBe(
+      polygonObstacleTypeOptions[0],
+    )
     expect(wrapper.find('.analysis-modal__file-name').exists()).toBe(false)
     expect(wrapper.get('.analysis-modal__primary').attributes('disabled')).toBeDefined()
   })
@@ -337,6 +357,41 @@ describe('PolygonObstacleAnalysisModal', () => {
     expect(wrapper.text()).not.toContain('保护区显示管理')
     expect(wrapper.text()).not.toContain('天河机场')
     expect(wrapper.text()).not.toContain('导航台A')
+  })
+
+  it('renders target category together with target name in the mixed selection table', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: {
+          ...createImportFormState(),
+          stage: 'target-selection',
+          projectName: '武汉净空项目',
+          obstacleType: '建筑物/构筑物',
+          fileName: 'targets.xlsx',
+          targetOptions: [
+            {
+              id: 'airport-1',
+              name: '天河机场',
+              category: '机场',
+              distance: '2.5km',
+            },
+            {
+              id: 'atmb-1',
+              name: '湖北空管局',
+              category: '空管局',
+              distance: '8.0km',
+            },
+          ],
+        },
+      },
+    })
+
+    const rows = wrapper.findAll('tbody tr')
+    const bodyText = wrapper.get('tbody').text()
+
+    expect(rows).toHaveLength(2)
+    expect(bodyText).toContain('机场 天河机场')
+    expect(bodyText).toContain('空管局 湖北空管局')
   })
 
   it('renders rule results grouped by station with gb and mh content', () => {

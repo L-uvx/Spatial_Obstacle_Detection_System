@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import AppShell from './components/layout/AppShell.vue'
 import { useWorkflowActions } from './composables/useWorkflowActions'
-import type { ImportFormValue, ProtectionZoneNode } from './types/tool'
+import type { ImportFormValue, ObstacleAnalysisMode, ProtectionZoneNode } from './types/tool'
 
 const resetTick = ref(0)
 const {
@@ -30,8 +30,8 @@ onMounted(() => {
 })
 
 // 打开单入口分析弹窗。
-function handleOpenAnalysis() {
-  openModal()
+function handleOpenAnalysis(mode: ObstacleAnalysisMode) {
+  openModal(mode)
 }
 
 // 递增复位计数，通知地图执行一次复位飞行。

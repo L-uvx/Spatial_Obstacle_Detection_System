@@ -4,6 +4,7 @@ import { computeMultiPolygonFlightTarget } from '../components/map/camera'
 import type {
   ImportFormValue,
   InitialCameraTarget,
+  ObstacleAnalysisMode,
   PolygonObstacleAnalysisState,
   ProtectionZoneNode,
   RenderedAirport,
@@ -91,6 +92,7 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
     isOpen: false,
     protectionZonePanelOpen: false,
     stationPanelOpen: false,
+    analysisMode: 'polygon',
     stage: 'idle',
     bootstrapStatus: 'idle',
     bootstrapMessage: '等待系统初始化。',
@@ -113,7 +115,7 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
     analysisSelectedTargets: [],
     analysisObstacleCount: 0,
     analysisRuleResults: [],
-    statusMessage: '等待打开多边形障碍物分析流程。',
+    statusMessage: '等待打开障碍物分析流程。',
     exportTaskId: '',
     exportStatus: 'idle',
     exportProgressPercent: 0,
@@ -161,10 +163,11 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
   }
 
   // 打开分析弹窗并切回导入起始步骤。
-  function openModal() {
+  function openModal(mode: ObstacleAnalysisMode) {
+    state.analysisMode = mode
     state.isOpen = true
     state.stage = 'import-form'
-    state.statusMessage = '请填写项目名称、障碍物类型并上传 Excel。'
+    state.statusMessage = mode === 'point' ? '请上传点状障碍物 Excel。' : '请上传多边形障碍物 Excel。'
   }
 
   // 关闭弹窗时重置会话状态，但保留地图长期状态。
@@ -228,6 +231,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
 
     try {
       const workflowResult = await runImportWorkflow({
+        mode: state.analysisMode,
         ...formValue,
         file: formValue.file,
       })

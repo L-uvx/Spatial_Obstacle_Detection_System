@@ -1,4 +1,11 @@
-import type { MultiPolygonCoordinates, RenderedObstacle, TargetOption } from '../types/tool'
+import type {
+  ImportedObstacleGeometry,
+  MultiPolygonCoordinates,
+  ObstacleAnalysisMode,
+  PositionCoordinate,
+  RenderedObstacle,
+  TargetOption,
+} from '../types/tool'
 
 export interface ImportObstacleResult {
   taskId: string
@@ -30,10 +37,7 @@ interface ImportObstacleResponseItem {
   name: string
   obstacleType: string
   topElevation: number
-  geometry: {
-    type: 'MultiPolygon'
-    coordinates: MultiPolygonCoordinates
-  }
+  geometry: unknown
 }
 
 interface ImportTaskResultResponse {
@@ -53,7 +57,60 @@ interface ImportTargetResponseItem {
   distanceUnit?: string
 }
 
+function getImportBasePath(mode: ObstacleAnalysisMode) {
+  return mode === 'point' ? '/point-obstacle/import' : '/polygon-obstacle/import'
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function isValidPositionCoordinate(value: unknown): value is PositionCoordinate {
+  return Array.isArray(value)
+    && value.length === 2
+    && isFiniteNumber(value[0])
+    && isFiniteNumber(value[1])
+}
+
+function isValidLinearRingCoordinates(value: unknown): boolean {
+  return Array.isArray(value) && value.every((coordinate) => isValidPositionCoordinate(coordinate))
+}
+
+function isValidPolygonCoordinates(value: unknown): boolean {
+  return Array.isArray(value) && value.every((ring) => isValidLinearRingCoordinates(ring))
+}
+
+function isValidMultiPolygonCoordinates(value: unknown): value is MultiPolygonCoordinates {
+  return Array.isArray(value) && value.every((polygon) => isValidPolygonCoordinates(polygon))
+}
+
+function normalizeObstacleGeometry(geometry: unknown): ImportedObstacleGeometry | null {
+  if (!geometry || typeof geometry !== 'object') {
+    return null
+  }
+
+  const candidate = geometry as { type?: unknown; coordinates?: unknown }
+
+  if (candidate.type === 'Point' && isValidPositionCoordinate(candidate.coordinates)) {
+    return {
+      type: 'Point',
+      coordinates: candidate.coordinates,
+    }
+  }
+
+  if (candidate.type === 'MultiPolygon' && isValidMultiPolygonCoordinates(candidate.coordinates)) {
+    return {
+      type: 'MultiPolygon',
+      coordinates: candidate.coordinates,
+    }
+  }
+
+  console.warn('[obstacle] Unsupported obstacle geometry.', geometry)
+  return null
+}
+
 export async function importObstacles(input: {
+  mode: ObstacleAnalysisMode
   projectName: string
   obstacleType: string
   fileName: string
@@ -64,7 +121,7 @@ export async function importObstacles(input: {
   formData.append('obstacleType', input.obstacleType)
   formData.append('excelFile', input.file)
 
-  const response = await fetch('/polygon-obstacle/import', {
+  const response = await fetch(getImportBasePath(input.mode), {
     method: 'POST',
     body: formData,
   })
@@ -85,8 +142,8 @@ export async function importObstacles(input: {
   }
 }
 
-export async function getImportTaskStatus(taskId: string): Promise<ImportTaskStatusResult> {
-  const response = await fetch(`/polygon-obstacle/import/${taskId}/status`)
+export async function getImportTaskStatus(mode: ObstacleAnalysisMode, taskId: string): Promise<ImportTaskStatusResult> {
+  const response = await fetch(`${getImportBasePath(mode)}/${taskId}/status`)
 
   if (!response.ok) {
     throw new Error(`导入状态查询失败：${response.status}`)
@@ -102,8 +159,8 @@ export async function getImportTaskStatus(taskId: string): Promise<ImportTaskSta
   }
 }
 
-export async function getImportTaskResult(taskId: string): Promise<ImportTaskResult> {
-  const response = await fetch(`/polygon-obstacle/import/${taskId}/result`)
+export async function getImportTaskResult(mode: ObstacleAnalysisMode, taskId: string): Promise<ImportTaskResult> {
+  const response = await fetch(`${getImportBasePath(mode)}/${taskId}/result`)
 
   if (!response.ok) {
     throw new Error(`导入结果查询失败：${response.status}`)
@@ -117,16 +174,23 @@ export async function getImportTaskResult(taskId: string): Promise<ImportTaskRes
     obstacleBatchId: result.obstacleBatchId,
     importedCount: result.importedCount,
     failedCount: result.failedCount,
-    obstacles: (result.obstacles ?? []).map((item) => ({
-      id: String(item.id),
-      name: item.name,
-      obstacleType: item.obstacleType,
-      topElevation: item.topElevation,
-      geometry: {
-        type: item.geometry.type,
-        coordinates: item.geometry.coordinates,
-      },
-    })),
+    obstacles: (result.obstacles ?? [])
+      .map((item) => {
+        const geometry = normalizeObstacleGeometry(item.geometry)
+
+        if (!geometry || !isFiniteNumber(item.topElevation)) {
+          return null
+        }
+
+        return {
+          id: String(item.id),
+          name: item.name,
+          obstacleType: item.obstacleType,
+          topElevation: item.topElevation,
+          geometry,
+        }
+      })
+      .filter((item): item is RenderedObstacle => item !== null),
   }
 }
 

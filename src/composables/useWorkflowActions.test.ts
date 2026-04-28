@@ -329,7 +329,7 @@ describe('useWorkflowActions', () => {
     const { state, bootstrap, openModal, closeModal } = useWorkflowActions()
 
     await bootstrap()
-    openModal()
+    openModal('polygon')
     closeModal()
 
     expect(state.isOpen).toBe(false)
@@ -667,7 +667,7 @@ describe('useWorkflowActions', () => {
     state.visibleStations = [...state.airports[0].stations]
     state.stationPanelOpen = true
 
-    openModal()
+    openModal('polygon')
     closeModal()
 
     expect(state.isOpen).toBe(false)
@@ -675,6 +675,27 @@ describe('useWorkflowActions', () => {
     expect(state.selectedAirportId).toBe('1')
     expect(state.visibleStations.map((item) => item.id)).toEqual(['4'])
     expect(state.stationPanelOpen).toBe(true)
+  })
+
+  it('opens workflow in point mode when requested', () => {
+    const { state, openModal } = useWorkflowActions()
+
+    openModal('point')
+
+    expect(state.analysisMode).toBe('point')
+    expect(state.stage).toBe('import-form')
+    expect(state.statusMessage).toBe('请上传点状障碍物 Excel。')
+  })
+
+  it('preserves shared workflow stages while switching import mode', () => {
+    const { state, openModal } = useWorkflowActions()
+
+    openModal('polygon')
+    state.projectName = '项目A'
+    openModal('point')
+
+    expect(state.analysisMode).toBe('point')
+    expect(state.stage).toBe('import-form')
   })
 
   it('drives the single polygon obstacle analysis wizard lifecycle', async () => {
@@ -731,7 +752,7 @@ describe('useWorkflowActions', () => {
     expect(visibleRegion.geometry.shapeType).toBe('multipolygon')
     expect(visibleRegion.vertical.mode).toBe('flat')
 
-    openModal()
+    openModal('polygon')
 
     expect(state.isOpen).toBe(true)
     expect(state.stage).toBe('import-form')
@@ -750,6 +771,7 @@ describe('useWorkflowActions', () => {
     await importPromise
 
     expect(runImportWorkflow).toHaveBeenCalledWith({
+      mode: 'polygon',
       projectName: '武汉净空项目',
       obstacleType: '铁塔',
       fileName: 'obstacles.xlsx',
@@ -936,7 +958,7 @@ describe('useWorkflowActions', () => {
 
     const { state, openModal, submitImport, toggleTarget, startAnalysis, exportReport } = useWorkflowActions()
 
-    openModal()
+    openModal('polygon')
     await submitImport({
       projectName: '武汉净空项目',
       obstacleType: '铁塔',
@@ -976,7 +998,7 @@ describe('useWorkflowActions', () => {
 
     const { state, openModal, submitImport } = useWorkflowActions()
 
-    openModal()
+    openModal('polygon')
 
     await expect(
       submitImport({
@@ -1003,7 +1025,7 @@ describe('useWorkflowActions', () => {
 
     const { state, openModal, submitImport, toggleTarget, startAnalysis } = useWorkflowActions()
 
-    openModal()
+    openModal('polygon')
     await submitImport({
       projectName: '武汉净空项目',
       obstacleType: '铁塔',
@@ -1084,7 +1106,7 @@ describe('useWorkflowActions', () => {
 
     const { state, openModal, submitImport, toggleTarget, startAnalysis, exportReport } = useWorkflowActions()
 
-    openModal()
+    openModal('polygon')
     await submitImport({
       projectName: '武汉净空项目',
       obstacleType: '铁塔',
@@ -1156,7 +1178,7 @@ describe('useWorkflowActions', () => {
 
     const { state, openModal, submitImport, toggleTarget, startAnalysis, exportReport } = useWorkflowActions()
 
-    openModal()
+    openModal('polygon')
     await submitImport({
       projectName: '武汉净空项目',
       obstacleType: '铁塔',
@@ -1206,7 +1228,7 @@ describe('useWorkflowActions', () => {
       },
     ])
 
-    openModal()
+    openModal('polygon')
     await submitImport({
       projectName: '武汉净空项目',
       obstacleType: '铁塔',
@@ -1245,7 +1267,7 @@ describe('useWorkflowActions', () => {
       },
     ])
 
-    openModal()
+    openModal('polygon')
     await submitImport({
       projectName: '武汉净空项目',
       obstacleType: '铁塔',

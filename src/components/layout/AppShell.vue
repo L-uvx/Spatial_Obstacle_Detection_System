@@ -6,6 +6,7 @@ import TopToolbar from '../toolbar/TopToolbar.vue'
 import type {
   ImportFormValue,
   InitialCameraTarget,
+  ObstacleAnalysisMode,
   PolygonObstacleAnalysisState,
   ProtectionZoneNode,
   RenderedObstacle,
@@ -19,7 +20,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  openAnalysis: []
+  openAnalysis: [mode: ObstacleAnalysisMode]
   reset: []
   closeAnalysis: []
   openStationPanel: []
@@ -100,7 +101,7 @@ function handleSelectAirport(event: Event) {
 
 <template>
   <div class="app-shell">
-    <TopToolbar @open-analysis="emit('openAnalysis')" @reset="emit('reset')" />
+    <TopToolbar @open-analysis="emit('openAnalysis', $event)" @reset="emit('reset')" />
     <div class="app-shell__top-right-controls">
       <div class="app-shell__station-selector">
         <button

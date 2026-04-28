@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { runImportWorkflow } from './importWorkflow'
+import { getImportTaskResult, getImportTaskStatus, importObstacles } from '../services/obstacle'
 
 vi.mock('../services/obstacle', () => ({
   importObstacles: vi.fn(async () => ({
@@ -65,6 +66,7 @@ describe('runImportWorkflow', () => {
     })
 
     const result = await runImportWorkflow({
+      mode: 'polygon',
       projectName: '武汉净空项目',
       obstacleType: '建筑物/构建物',
       fileName: 'obstacles.xlsx',
@@ -76,5 +78,24 @@ describe('runImportWorkflow', () => {
     expect(result.obstacles).toHaveLength(1)
     expect(result.obstacles[0].topElevation).toBe(549.9)
     expect(result.message).toContain('障碍物已准备渲染到地图图层')
+  })
+
+  it('passes point mode through the shared import workflow', async () => {
+    const file = new File(['demo'], 'point-obstacles.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
+    const result = await runImportWorkflow({
+      mode: 'point',
+      projectName: '点障碍物项目',
+      obstacleType: '树木/树林',
+      fileName: 'point-obstacles.xlsx',
+      file,
+    })
+
+    expect(result.importTaskId).toBe('import-batch-15')
+    expect(importObstacles).toHaveBeenCalledWith(expect.objectContaining({ mode: 'point' }))
+    expect(getImportTaskStatus).toHaveBeenCalledWith('point', 'import-batch-15')
+    expect(getImportTaskResult).toHaveBeenCalledWith('point', 'import-batch-15')
   })
 })
