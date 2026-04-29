@@ -20,6 +20,35 @@ body {
   overflow: hidden;
 }
 
+.shell-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.8) rgba(8, 17, 31, 0.45);
+}
+
+.shell-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.shell-scrollbar::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(8, 17, 31, 0.45);
+}
+
+.shell-scrollbar::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(8, 17, 31, 0.22);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(192, 197, 206, 0.9), rgba(120, 127, 140, 0.84));
+}
+
+.shell-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(219, 223, 229, 0.96), rgba(148, 154, 166, 0.9));
+}
+
+.shell-scrollbar::-webkit-scrollbar-corner {
+  background: rgba(8, 17, 31, 0.4);
+}
+
 .app-shell {
   position: relative;
   width: 100%;
@@ -229,6 +258,10 @@ body {
   padding: 0 28px 28px;
 }
 
+.analysis-modal__section--result {
+  padding-bottom: 40px;
+}
+
 .analysis-modal__field {
   display: grid;
   gap: 8px;
@@ -386,8 +419,24 @@ body {
 
 .analysis-modal__download {
   display: inline-flex;
-  margin-top: 12px;
+  margin-top: 0;
   color: #93c5fd;
+}
+
+.analysis-modal__footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 28px 24px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(8, 17, 31, 0.94);
+}
+
+.analysis-modal__footer--rounded {
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
 }
 
 @media (max-width: 768px) {
@@ -421,6 +470,25 @@ body {
   .analysis-modal__status {
     padding-left: 18px;
     padding-right: 18px;
+  }
+
+  .analysis-modal__section--result {
+    padding-bottom: 28px;
+  }
+
+  .analysis-modal__footer {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px 18px 18px;
+  }
+
+  .analysis-modal__footer--rounded {
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+  }
+
+  .analysis-modal__download {
+    width: 100%;
   }
 }
 

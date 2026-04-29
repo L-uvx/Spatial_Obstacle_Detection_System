@@ -84,7 +84,7 @@ watch(
       <h2>保护区显示管理</h2>
       <button type="button" class="side-panel__close" @click="emit('close')">关闭</button>
     </div>
-    <div class="side-panel__content">
+    <div class="side-panel__content shell-scrollbar">
       <p v-if="state.protectionZoneTree.length === 0" class="side-panel__status">分析成功后将在此显示保护区树。</p>
       <ul v-else class="side-panel__tree">
         <li v-for="airport in state.protectionZoneTree" :key="airport.airportId">

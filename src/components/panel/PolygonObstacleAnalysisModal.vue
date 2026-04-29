@@ -133,7 +133,7 @@ watch(
         <button type="button" class="analysis-modal__close" @click="emit('close')">关闭</button>
       </div>
 
-      <div class="analysis-modal__body">
+      <div class="analysis-modal__body shell-scrollbar">
         <p class="analysis-modal__status">{{ state.statusMessage }}</p>
 
         <div v-if="state.stage === 'import-form'" class="analysis-modal__section">
@@ -229,7 +229,7 @@ watch(
           <p>分析任务执行中，当前弹窗会在结果返回后原地切换为超高分析结论。</p>
         </div>
 
-        <div v-else-if="state.stage === 'analysis-result'" class="analysis-modal__section">
+        <div v-else-if="state.stage === 'analysis-result'" class="analysis-modal__section analysis-modal__section--result">
           <div class="analysis-modal__result-card">
             <h3>超高分析结论</h3>
             <p>分析任务：{{ state.analysisTaskId }}</p>
@@ -263,29 +263,31 @@ watch(
             </div>
           </div>
 
-          <button
-            type="button"
-            class="analysis-modal__primary"
-            :disabled="state.exportStatus === 'pending' || state.exportStatus === 'running' || !state.analysisTaskId"
-            @click="emit('exportReport')"
-          >
-            {{
-              state.exportStatus === 'succeeded'
-                ? '重新导出'
-                : state.exportStatus === 'pending' || state.exportStatus === 'running'
-                  ? '导出中...'
-                  : '导出结论'
-            }}
-          </button>
-
           <p class="analysis-modal__export-status" :data-status="state.exportStatus">{{ state.exportMessage }}</p>
           <p v-if="state.exportStatus === 'pending' || state.exportStatus === 'running'" class="analysis-modal__export-progress">
             当前进度：{{ state.exportProgressPercent }}%
           </p>
           <p v-if="state.exportFileName" class="analysis-modal__export-file">文件名：{{ state.exportFileName }}</p>
           <p v-if="state.exportErrorMessage" class="analysis-modal__export-error">{{ state.exportErrorMessage }}</p>
-          <a v-if="state.downloadUrl" class="analysis-modal__download" :href="state.downloadUrl" download>重新下载 Word 报告</a>
         </div>
+      </div>
+
+      <div v-if="state.stage === 'analysis-result'" class="analysis-modal__footer analysis-modal__footer--rounded">
+        <button
+          type="button"
+          class="analysis-modal__primary"
+          :disabled="state.exportStatus === 'pending' || state.exportStatus === 'running' || !state.analysisTaskId"
+          @click="emit('exportReport')"
+        >
+          {{
+            state.exportStatus === 'succeeded'
+              ? '重新导出'
+              : state.exportStatus === 'pending' || state.exportStatus === 'running'
+                ? '导出中...'
+                : '导出结论'
+          }}
+        </button>
+        <a v-if="state.downloadUrl" class="analysis-modal__download" :href="state.downloadUrl" download>重新下载 Word 报告</a>
       </div>
     </div>
   </section>

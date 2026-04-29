@@ -239,6 +239,16 @@ describe('PolygonObstacleAnalysisModal', () => {
     clickSpy.mockRestore()
   })
 
+  it('applies the shared shell scrollbar hook to the scrollable modal body', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: createImportFormState(),
+      },
+    })
+
+    expect(wrapper.get('.analysis-modal__body').classes()).toContain('shell-scrollbar')
+  })
+
   it('shows point analysis title and point obstacle options in point mode', () => {
     const wrapper = mount(PolygonObstacleAnalysisModal, {
       props: {
@@ -363,6 +373,107 @@ describe('PolygonObstacleAnalysisModal', () => {
     expect(wrapper.text()).not.toContain('保护区显示管理')
     expect(wrapper.text()).not.toContain('天河机场')
     expect(wrapper.text()).not.toContain('导航台A')
+  })
+
+  it('does not render the dedicated footer in import stage', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: createImportFormState(),
+      },
+    })
+
+    expect(wrapper.find('.analysis-modal__footer').exists()).toBe(false)
+  })
+
+  it('renders the dedicated footer in analysis-result stage', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: {
+          ...createImportFormState(),
+          stage: 'analysis-result',
+          analysisTaskId: 'analysis-task-1',
+          analysisSummary: '已生成分析结论。',
+        },
+      },
+    })
+
+    expect(wrapper.find('.analysis-modal__footer').exists()).toBe(true)
+  })
+
+  it('adds a dedicated result-stage section hook inside the modal body', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: {
+          ...createImportFormState(),
+          stage: 'analysis-result',
+          analysisTaskId: 'analysis-task-1',
+          analysisSummary: '已生成分析结论。',
+        },
+      },
+    })
+
+    const modalBody = wrapper.get('.analysis-modal__body')
+
+    expect(modalBody.find('.analysis-modal__section--result').exists()).toBe(true)
+  })
+
+  it('renders a dedicated footer hook for the card bottom corners in analysis-result stage', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: {
+          ...createImportFormState(),
+          stage: 'analysis-result',
+          analysisTaskId: 'analysis-task-1',
+          analysisSummary: '已生成分析结论。',
+        },
+      },
+    })
+
+    const footer = wrapper.get('.analysis-modal__footer')
+
+    expect(footer.classes()).toContain('analysis-modal__footer--rounded')
+  })
+
+  it('exposes the export action from the dedicated footer instead of the result card in analysis-result stage', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: {
+          ...createImportFormState(),
+          stage: 'analysis-result',
+          analysisTaskId: 'analysis-task-1',
+          analysisSummary: '已生成分析结论。',
+        },
+      },
+    })
+
+    const resultCard = wrapper.get('.analysis-modal__result-card')
+    const footer = wrapper.get('.analysis-modal__footer')
+
+    expect(footer.find('button.analysis-modal__primary').exists()).toBe(true)
+    expect(resultCard.find('button.analysis-modal__primary').exists()).toBe(false)
+  })
+
+  it('exposes the download action from the dedicated footer instead of the result card after export succeeds', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: {
+          ...createImportFormState(),
+          stage: 'analysis-result',
+          analysisTaskId: 'analysis-task-1',
+          analysisSummary: '已生成分析结论。',
+          exportStatus: 'succeeded',
+          exportMessage: '导出成功，可下载 Word 报告。',
+          exportFileName: 'analysis-result.docx',
+          downloadUrl: '/downloads/analysis-result.docx',
+        },
+      },
+    })
+
+    const resultCard = wrapper.get('.analysis-modal__result-card')
+    const footer = wrapper.get('.analysis-modal__footer')
+
+    expect(footer.find('a.analysis-modal__download').exists()).toBe(true)
+    expect(resultCard.find('a.analysis-modal__download').exists()).toBe(false)
   })
 
   it('renders only target name and distance in the mixed selection table', () => {

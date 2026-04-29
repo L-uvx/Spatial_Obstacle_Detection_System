@@ -114,6 +114,17 @@ describe('SidePanel', () => {
     expect(wrapper.text()).not.toContain('A区')
   })
 
+  it('applies the shared shell scrollbar hook to the side panel scroll container', () => {
+    const wrapper = mount(SidePanel, {
+      props: {
+        state: createState(),
+        isOpen: true,
+      },
+    })
+
+    expect(wrapper.get('.side-panel__content').classes()).toContain('shell-scrollbar')
+  })
+
   it('shows stations after expanding an airport node', async () => {
     const wrapper = mount(SidePanel, {
       props: {
