@@ -98,6 +98,81 @@ interface AnalysisTaskResultResponse {
   ruleResults?: AnalysisRuleResultResponse[]
 }
 
+function isFiniteNumberArray(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'number' && Number.isFinite(item))
+}
+
+function isValidAnalysisTaskStatusResult(value: unknown): value is AnalysisTaskStatusResult {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const candidate = value as Record<string, unknown>
+
+  return (
+    typeof candidate.analysisTaskId === 'string'
+    && typeof candidate.status === 'string'
+    && typeof candidate.message === 'string'
+    && typeof candidate.progressPercent === 'number'
+    && Number.isFinite(candidate.progressPercent)
+    && typeof candidate.importTaskId === 'string'
+    && isFiniteNumberArray(candidate.targetIds)
+  )
+}
+
+function isValidAnalysisSelectedTargetResponse(
+  value: unknown,
+): value is NonNullable<AnalysisTaskResultResponse['selectedTargets']>[number] {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const candidate = value as Record<string, unknown>
+
+  return (
+    (typeof candidate.id === 'string' || typeof candidate.id === 'number')
+    && typeof candidate.name === 'string'
+    && (candidate.category === '机场' || candidate.category === '空管局')
+  )
+}
+
+function normalizeAnalysisSelectedTargets(
+  selectedTargets: AnalysisTaskResultResponse['selectedTargets'] = [],
+): AnalysisSelectedTarget[] {
+  return selectedTargets.flatMap((item) => {
+    if (!isValidAnalysisSelectedTargetResponse(item)) {
+      return []
+    }
+
+    return [{
+      id: String(item.id),
+      name: item.name,
+      category: item.category,
+    }]
+  })
+}
+
+function isValidAnalysisTaskResultResponse(value: unknown): value is AnalysisTaskResultResponse {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const candidate = value as Record<string, unknown>
+
+  return (
+    typeof candidate.analysisTaskId === 'string'
+    && typeof candidate.status === 'string'
+    && typeof candidate.importTaskId === 'string'
+    && isFiniteNumberArray(candidate.targetIds)
+    && typeof candidate.obstacleCount === 'number'
+    && Number.isFinite(candidate.obstacleCount)
+    && typeof candidate.summary === 'string'
+    && (candidate.selectedTargets === undefined || Array.isArray(candidate.selectedTargets))
+    && (candidate.protectionZones === undefined || Array.isArray(candidate.protectionZones))
+    && (candidate.ruleResults === undefined || Array.isArray(candidate.ruleResults))
+  )
+}
+
 function normalizeAnalysisRuleStandard(
   standard: AnalysisRuleStandardResponse | undefined,
 ): AnalysisRuleStandardResult | null {
@@ -112,28 +187,60 @@ function normalizeAnalysisRuleStandard(
   }
 }
 
-function normalizeAnalysisRuleResults(results: AnalysisRuleResultResponse[] = []): AnalysisRuleResult[] {
-  return results.map((item) => ({
-    stationId: String(item.stationId),
-    stationName: item.stationName,
-    stationType: item.stationType,
-    obstacleId: String(item.obstacleId),
-    obstacleName: item.obstacleName,
-    rawObstacleType: item.rawObstacleType,
-    globalObstacleCategory: item.globalObstacleCategory,
-    ruleName: item.ruleName,
-    zoneCode: item.zoneCode,
-    zoneName: item.zoneName,
-    regionCode: item.regionCode,
-    regionName: item.regionName,
-    isApplicable: item.isApplicable,
-    isCompliant: item.isCompliant,
-    message: item.message,
-    standards: {
-      gb: normalizeAnalysisRuleStandard(item.standards?.gb),
-      mh: normalizeAnalysisRuleStandard(item.standards?.mh),
-    },
-  }))
+function isValidAnalysisRuleResultResponse(item: unknown): item is AnalysisRuleResultResponse {
+  if (!item || typeof item !== 'object') {
+    return false
+  }
+
+  const candidate = item as Record<string, unknown>
+
+  return (
+    (typeof candidate.stationId === 'string' || typeof candidate.stationId === 'number')
+    && typeof candidate.stationName === 'string'
+    && typeof candidate.stationType === 'string'
+    && (typeof candidate.obstacleId === 'string' || typeof candidate.obstacleId === 'number')
+    && typeof candidate.obstacleName === 'string'
+    && typeof candidate.rawObstacleType === 'string'
+    && typeof candidate.globalObstacleCategory === 'string'
+    && typeof candidate.ruleName === 'string'
+    && typeof candidate.zoneCode === 'string'
+    && typeof candidate.zoneName === 'string'
+    && typeof candidate.regionCode === 'string'
+    && typeof candidate.regionName === 'string'
+    && typeof candidate.isApplicable === 'boolean'
+    && typeof candidate.isCompliant === 'boolean'
+    && typeof candidate.message === 'string'
+  )
+}
+
+function normalizeAnalysisRuleResults(results: unknown[] = []): AnalysisRuleResult[] {
+  return results.flatMap((item) => {
+    if (!isValidAnalysisRuleResultResponse(item)) {
+      return []
+    }
+
+    return [{
+      stationId: String(item.stationId),
+      stationName: item.stationName,
+      stationType: item.stationType,
+      obstacleId: String(item.obstacleId),
+      obstacleName: item.obstacleName,
+      rawObstacleType: item.rawObstacleType,
+      globalObstacleCategory: item.globalObstacleCategory,
+      ruleName: item.ruleName,
+      zoneCode: item.zoneCode,
+      zoneName: item.zoneName,
+      regionCode: item.regionCode,
+      regionName: item.regionName,
+      isApplicable: item.isApplicable,
+      isCompliant: item.isCompliant,
+      message: item.message,
+      standards: {
+        gb: normalizeAnalysisRuleStandard(item.standards?.gb),
+        mh: normalizeAnalysisRuleStandard(item.standards?.mh),
+      },
+    }]
+  })
 }
 
 function isFiniteNumber(value: unknown): value is number {
@@ -148,6 +255,21 @@ function normalizeProtectionZoneStyle(style: ProtectionZoneResponse['style']): P
   return {
     fill: style.fill,
   }
+}
+
+function normalizeProtectionZoneProperties(properties: unknown): ProtectionZoneRegionProperties {
+  if (!properties || typeof properties !== 'object') {
+    return {}
+  }
+
+  const candidate = properties as Record<string, unknown>
+  const normalized: ProtectionZoneRegionProperties = {}
+
+  if (typeof candidate.label === 'string') {
+    normalized.label = candidate.label
+  }
+
+  return normalized
 }
 
 function normalizeProtectionZoneGeometry(
@@ -233,7 +355,7 @@ function normalizeProtectionZoneVertical(
     const surface = candidate.surface as Record<string, unknown> | undefined
 
     if (
-      candidate.baseReference !== 'station'
+      (candidate.baseReference !== 'station' && candidate.baseReference !== 'gp360_altitude')
       || !isFiniteNumber(candidate.baseHeightMeters)
       || !surface
     ) {
@@ -262,7 +384,7 @@ function normalizeProtectionZoneVertical(
 
       return {
         mode: 'analytic_surface',
-        baseReference: 'station',
+        baseReference: candidate.baseReference,
         baseHeightMeters: candidate.baseHeightMeters,
         surface: {
           type: 'loc_building_restriction_zone_region_3',
@@ -281,49 +403,94 @@ function normalizeProtectionZoneVertical(
     const distanceSource = surface?.distanceSource as Record<string, unknown> | undefined
     const clampRange = surface?.clampRange as Record<string, unknown> | undefined
     const heightModel = surface?.heightModel as Record<string, unknown> | undefined
-    const point = distanceSource?.point
-
     if (
       surface.type !== 'distance_parameterized'
       || !distanceSource
-      || distanceSource.kind !== 'point'
-      || !isValidPositionCoordinate(point)
-      || surface.distanceMetric !== 'radial'
       || !clampRange
       || !isFiniteNumber(clampRange.startMeters)
       || !isFiniteNumber(clampRange.endMeters)
       || !heightModel
       || heightModel.type !== 'angle_linear_rise'
       || !isFiniteNumber(heightModel.angleDegrees)
+      || !isFiniteNumber(heightModel.distanceOffsetMeters)
     ) {
       return null
     }
 
-    const normalizedPoint: PositionCoordinate = [point[0], point[1]]
-    const normalizedDistanceOffsetMeters = heightModel.distanceOffsetMeters as number
+    if (distanceSource.kind === 'point') {
+      const point = distanceSource.point
 
-    return {
-      mode: 'analytic_surface',
-      baseReference: 'station',
-      baseHeightMeters: candidate.baseHeightMeters,
-      surface: {
-        type: 'distance_parameterized',
-        distanceSource: {
-          kind: 'point',
-          point: normalizedPoint,
+      if (!isValidPositionCoordinate(point) || surface.distanceMetric !== 'radial') {
+        return null
+      }
+
+      const normalizedPoint: PositionCoordinate = [point[0], point[1]]
+
+      return {
+        mode: 'analytic_surface',
+        baseReference: candidate.baseReference,
+        baseHeightMeters: candidate.baseHeightMeters,
+        surface: {
+          type: 'distance_parameterized',
+          distanceSource: {
+            kind: 'point',
+            point: normalizedPoint,
+          },
+          distanceMetric: 'radial',
+          clampRange: {
+            startMeters: clampRange.startMeters,
+            endMeters: clampRange.endMeters,
+          },
+          heightModel: {
+            type: 'angle_linear_rise',
+            angleDegrees: heightModel.angleDegrees,
+            distanceOffsetMeters: heightModel.distanceOffsetMeters,
+          },
         },
-        distanceMetric: 'radial',
-        clampRange: {
-          startMeters: clampRange.startMeters,
-          endMeters: clampRange.endMeters,
-        },
-        heightModel: {
-          type: 'angle_linear_rise',
-          angleDegrees: heightModel.angleDegrees,
-          distanceOffsetMeters: normalizedDistanceOffsetMeters,
-        },
-      },
+      }
     }
+
+    if (distanceSource.kind === 'front_reference_line') {
+      const centerPoint = distanceSource.centerPoint
+      const leftPoint = distanceSource.leftPoint
+      const rightPoint = distanceSource.rightPoint
+
+      if (
+        !isValidPositionCoordinate(centerPoint)
+        || !isValidPositionCoordinate(leftPoint)
+        || !isValidPositionCoordinate(rightPoint)
+        || surface.distanceMetric !== 'axial_from_reference_line'
+      ) {
+        return null
+      }
+
+      return {
+        mode: 'analytic_surface',
+        baseReference: candidate.baseReference,
+        baseHeightMeters: candidate.baseHeightMeters,
+        surface: {
+          type: 'distance_parameterized',
+          distanceSource: {
+            kind: 'front_reference_line',
+            centerPoint: [centerPoint[0], centerPoint[1]],
+            leftPoint: [leftPoint[0], leftPoint[1]],
+            rightPoint: [rightPoint[0], rightPoint[1]],
+          },
+          distanceMetric: 'axial_from_reference_line',
+          clampRange: {
+            startMeters: clampRange.startMeters,
+            endMeters: clampRange.endMeters,
+          },
+          heightModel: {
+            type: 'angle_linear_rise',
+            angleDegrees: heightModel.angleDegrees,
+            distanceOffsetMeters: heightModel.distanceOffsetMeters,
+          },
+        },
+      }
+    }
+
+    return null
   }
 
   return null
@@ -369,7 +536,7 @@ function normalizeProtectionZone(zone: ProtectionZoneResponse): ProtectionZoneRe
     regionName: zone.regionName,
     geometry,
     vertical,
-    properties: zone.properties ?? {},
+    properties: normalizeProtectionZoneProperties(zone.properties),
     style: normalizeProtectionZoneStyle(zone.style),
   }
 }
@@ -428,7 +595,11 @@ export async function createAnalysisTask(input: {
     throw new Error(parseErrorDetail(payload?.detail, `分析任务创建失败：${response.status}`))
   }
 
-  const result = (await response.json()) as AnalysisTaskStatusResult
+  const result = await response.json()
+
+  if (!isValidAnalysisTaskStatusResult(result)) {
+    throw new Error('分析任务创建响应格式无效')
+  }
 
   return {
     analysisTaskId: result.analysisTaskId,
@@ -448,7 +619,11 @@ export async function getAnalysisTaskStatus(taskId: string): Promise<AnalysisTas
     throw new Error(parseErrorDetail(payload?.detail, `分析状态查询失败：${response.status}`))
   }
 
-  const result = (await response.json()) as AnalysisTaskStatusResult
+  const result = await response.json()
+
+  if (!isValidAnalysisTaskStatusResult(result)) {
+    throw new Error('分析状态响应格式无效')
+  }
 
   return {
     analysisTaskId: result.analysisTaskId,
@@ -468,18 +643,18 @@ export async function getAnalysisTaskResult(taskId: string): Promise<AnalysisTas
     throw new Error(parseErrorDetail(payload?.detail, `分析结果查询失败：${response.status}`))
   }
 
-  const result = (await response.json()) as AnalysisTaskResultResponse
+  const result = await response.json()
+
+  if (!isValidAnalysisTaskResultResponse(result)) {
+    throw new Error('分析结果响应格式无效')
+  }
 
   return {
     analysisTaskId: result.analysisTaskId,
     status: result.status,
     importTaskId: result.importTaskId,
     targetIds: result.targetIds,
-    selectedTargets: (result.selectedTargets ?? []).map((item) => ({
-      id: String(item.id),
-      name: item.name,
-      category: item.category,
-    })),
+    selectedTargets: normalizeAnalysisSelectedTargets(result.selectedTargets),
     obstacleCount: result.obstacleCount,
     summary: result.summary,
     protectionZones: normalizeProtectionZones(result.protectionZones ?? []),

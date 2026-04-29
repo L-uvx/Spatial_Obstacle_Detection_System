@@ -137,13 +137,20 @@ export interface ProtectionZoneFlatVertical {
   baseHeightMeters: number
 }
 
-export interface ProtectionZoneDistanceParameterizedSurface {
+export interface ProtectionZonePointDistanceSource {
+  kind: 'point'
+  point: [number, number]
+}
+
+export interface ProtectionZoneFrontReferenceLineDistanceSource {
+  kind: 'front_reference_line'
+  centerPoint: [number, number]
+  leftPoint: [number, number]
+  rightPoint: [number, number]
+}
+
+interface ProtectionZoneDistanceParameterizedSurfaceBase {
   type: 'distance_parameterized'
-  distanceSource: {
-    kind: 'point'
-    point: [number, number]
-  }
-  distanceMetric: 'radial'
   clampRange: {
     startMeters: number
     endMeters: number
@@ -154,6 +161,22 @@ export interface ProtectionZoneDistanceParameterizedSurface {
     distanceOffsetMeters: number
   }
 }
+
+export interface ProtectionZonePointDistanceParameterizedSurface
+  extends ProtectionZoneDistanceParameterizedSurfaceBase {
+  distanceSource: ProtectionZonePointDistanceSource
+  distanceMetric: 'radial'
+}
+
+export interface ProtectionZoneFrontReferenceLineDistanceParameterizedSurface
+  extends ProtectionZoneDistanceParameterizedSurfaceBase {
+  distanceSource: ProtectionZoneFrontReferenceLineDistanceSource
+  distanceMetric: 'axial_from_reference_line'
+}
+
+export type ProtectionZoneDistanceParameterizedSurface =
+  | ProtectionZonePointDistanceParameterizedSurface
+  | ProtectionZoneFrontReferenceLineDistanceParameterizedSurface
 
 export interface ProtectionZoneLocBuildingRestrictionZoneRegion3Surface {
   type: 'loc_building_restriction_zone_region_3'
@@ -169,7 +192,7 @@ export interface ProtectionZoneLocBuildingRestrictionZoneRegion3Surface {
 
 export interface ProtectionZoneAnalyticSurfaceVertical {
   mode: 'analytic_surface'
-  baseReference: 'station'
+  baseReference: 'station' | 'gp360_altitude'
   baseHeightMeters: number
   surface:
     | ProtectionZoneDistanceParameterizedSurface

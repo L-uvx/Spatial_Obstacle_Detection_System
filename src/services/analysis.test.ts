@@ -23,7 +23,7 @@ describe('analysis service', () => {
         importTaskId: 'import-batch-1',
         targetIds: [1, 2],
       }),
-    } as Response)
+    } as unknown as Response)
 
     const result = await createAnalysisTask({
       importTaskId: 'import-batch-1',
@@ -54,6 +54,25 @@ describe('analysis service', () => {
     })
   })
 
+  it('throws when createAnalysisTask receives a malformed success payload', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        message: 'analysis task created',
+        progressPercent: '100',
+        importTaskId: 'import-batch-1',
+        targetIds: [1, 2],
+      }),
+    } as unknown as Response)
+
+    await expect(createAnalysisTask({
+      importTaskId: 'import-batch-1',
+      targetIds: ['1', '2'],
+    })).rejects.toThrow('分析任务创建响应格式无效')
+  })
+
   it('accepts numeric target ids without throwing before the request', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
@@ -65,7 +84,7 @@ describe('analysis service', () => {
         importTaskId: 'import-batch-1',
         targetIds: [1, 2],
       }),
-    } as Response)
+    } as unknown as Response)
 
     const result = await createAnalysisTask({
       importTaskId: 'import-batch-1',
@@ -87,7 +106,7 @@ describe('analysis service', () => {
         importTaskId: 'import-batch-1',
         targetIds: [1],
       }),
-    } as Response)
+    } as unknown as Response)
 
     await expect(createAnalysisTask({
       importTaskId: 'import-batch-1',
@@ -108,7 +127,7 @@ describe('analysis service', () => {
         importTaskId: 'import-batch-1',
         targetIds: [1],
       }),
-    } as Response)
+    } as unknown as Response)
 
     await expect(createAnalysisTask({
       importTaskId: 'import-batch-1',
@@ -116,6 +135,36 @@ describe('analysis service', () => {
     })).rejects.toThrow('分析目标 id 无效')
 
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('surfaces backend string detail when createAnalysisTask receives a non-ok response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: async () => ({
+        detail: 'targetIds is required',
+      }),
+    } as unknown as Response)
+
+    await expect(createAnalysisTask({
+      importTaskId: 'import-batch-1',
+      targetIds: ['1'],
+    })).rejects.toThrow('targetIds is required')
+  })
+
+  it('falls back to the default createAnalysisTask error message when the error payload is unreadable', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => {
+        throw new Error('invalid json')
+      },
+    } as unknown as Response)
+
+    await expect(createAnalysisTask({
+      importTaskId: 'import-batch-1',
+      targetIds: ['1'],
+    })).rejects.toThrow('分析任务创建失败：500')
   })
 
   it('loads analysis task status by task id', async () => {
@@ -142,6 +191,46 @@ describe('analysis service', () => {
       importTaskId: 'import-batch-1',
       targetIds: [1, 2],
     })
+  })
+
+  it('throws when getAnalysisTaskStatus receives a malformed success payload', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        message: 'analysis task created',
+        progressPercent: 100,
+        importTaskId: 'import-batch-1',
+        targetIds: ['1', '2'],
+      }),
+    } as Response)
+
+    await expect(getAnalysisTaskStatus('analysis-task-1')).rejects.toThrow('分析状态响应格式无效')
+  })
+
+  it('surfaces backend validation detail when getAnalysisTaskStatus receives a non-ok response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({
+        detail: [{ msg: 'analysis task not found' }],
+      }),
+    } as Response)
+
+    await expect(getAnalysisTaskStatus('analysis-task-1')).rejects.toThrow('analysis task not found')
+  })
+
+  it('falls back to the default getAnalysisTaskStatus error message when detail is unusable', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({
+        detail: { message: 'unexpected shape' },
+      }),
+    } as Response)
+
+    await expect(getAnalysisTaskStatus('analysis-task-1')).rejects.toThrow('分析状态查询失败：503')
   })
 
   it('loads minimal analysis result after the task succeeds', async () => {
@@ -256,6 +345,84 @@ describe('analysis service', () => {
         },
       ],
     })
+  })
+
+  it('filters malformed selectedTargets items instead of blindly normalizing them', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-batch-1',
+        targetIds: [1, 2],
+        selectedTargets: [
+          {
+            id: 1,
+            name: 'Airport Near',
+            category: '机场',
+          },
+          {
+            id: 2,
+            category: '机场',
+          },
+        ],
+        obstacleCount: 2,
+        summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
+        protectionZones: [],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.selectedTargets).toEqual([
+      {
+        id: '1',
+        name: 'Airport Near',
+        category: '机场',
+      },
+    ])
+  })
+
+  it('throws when getAnalysisTaskResult receives a malformed success payload', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-batch-1',
+        targetIds: [1, 2],
+        selectedTargets: [],
+        obstacleCount: '2',
+        summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
+        protectionZones: [],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    await expect(getAnalysisTaskResult('analysis-task-1')).rejects.toThrow('分析结果响应格式无效')
+  })
+
+  it('surfaces backend validation detail when getAnalysisTaskResult receives a non-ok response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        detail: 'analysis result unavailable',
+      }),
+    } as Response)
+
+    await expect(getAnalysisTaskResult('analysis-task-1')).rejects.toThrow('analysis result unavailable')
+  })
+
+  it('falls back to the default getAnalysisTaskResult error message when detail is missing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => ({}),
+    } as Response)
+
+    await expect(getAnalysisTaskResult('analysis-task-1')).rejects.toThrow('分析结果查询失败：502')
   })
 
   it('normalizes multipolygon geometry and preserves the formal analytic surface structure', async () => {
@@ -381,6 +548,145 @@ describe('analysis service', () => {
     })
   })
 
+  it('filters malformed ruleResults items instead of blindly normalizing them', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-batch-1',
+        targetIds: [1],
+        selectedTargets: [
+          {
+            id: 1,
+            name: 'Airport Near',
+            category: '机场',
+          },
+        ],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [],
+        ruleResults: [
+          {
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            obstacleId: 67,
+            obstacleName: '障碍物2',
+            rawObstacleType: '建筑物/构建物',
+            globalObstacleCategory: 'building_general',
+            ruleName: 'ndb_minimum_distance_50m',
+            zoneCode: 'ndb_minimum_distance_50m',
+            zoneName: 'NDB 50m minimum distance zone',
+            regionCode: 'default',
+            regionName: 'default',
+            isApplicable: true,
+            isCompliant: true,
+            message: 'distance meets minimum threshold',
+          },
+          {
+            stationId: 5,
+            stationType: 'NDB',
+            obstacleId: 68,
+            obstacleName: '坏数据',
+            rawObstacleType: '建筑物/构建物',
+            globalObstacleCategory: 'building_general',
+            ruleName: 'ndb_minimum_distance_50m',
+            zoneCode: 'ndb_minimum_distance_50m',
+            zoneName: 'NDB 50m minimum distance zone',
+            regionCode: 'default',
+            regionName: 'default',
+            isApplicable: true,
+            isCompliant: true,
+            message: 'missing stationName',
+          },
+        ],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.ruleResults).toEqual([
+      {
+        stationId: '4',
+        stationName: '西南近无方向信标台',
+        stationType: 'NDB',
+        obstacleId: '67',
+        obstacleName: '障碍物2',
+        rawObstacleType: '建筑物/构建物',
+        globalObstacleCategory: 'building_general',
+        ruleName: 'ndb_minimum_distance_50m',
+        zoneCode: 'ndb_minimum_distance_50m',
+        zoneName: 'NDB 50m minimum distance zone',
+        regionCode: 'default',
+        regionName: 'default',
+        isApplicable: true,
+        isCompliant: true,
+        message: 'distance meets minimum threshold',
+        standards: {
+          gb: null,
+          mh: null,
+        },
+      },
+    ])
+  })
+
+  it('falls back to empty properties when a protection zone properties payload is invalid', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-invalid-properties',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            ruleCode: 'ndb_conical_clearance_3deg',
+            ruleName: 'ndb_conical_clearance_3deg',
+            zoneCode: 'ndb_conical_clearance_3deg',
+            zoneName: 'NDB 3 degree conical clearance zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'flat',
+              baseReference: 'station',
+              baseHeightMeters: 491.1,
+            },
+            properties: 'bad properties payload',
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones[0]?.properties).toEqual({})
+  })
+
   it('accepts formal analytic_surface payloads when coordinateSystem is omitted', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
@@ -474,6 +780,288 @@ describe('analysis service', () => {
         },
       },
     })
+  })
+
+  it('normalizes front_reference_line analytic surfaces and drops planarControl', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-front-reference-line',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            ruleCode: 'ndb_front_reference_line',
+            ruleName: 'ndb_front_reference_line',
+            zoneCode: 'ndb_front_reference_line',
+            zoneName: 'NDB front reference line zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'gp360_altitude',
+              baseHeightMeters: 493.8,
+              surface: {
+                type: 'distance_parameterized',
+                distanceSource: {
+                  kind: 'front_reference_line',
+                  centerPoint: [103.952962, 30.594308],
+                  leftPoint: [103.952492, 30.594308],
+                  rightPoint: [103.953432, 30.594308],
+                },
+                distanceMetric: 'axial_from_reference_line',
+                planarControl: {
+                  frontOffsetMeters: 360,
+                  halfAngleDegrees: 8,
+                  radiusMeters: 18520,
+                },
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 18160,
+                },
+                heightModel: {
+                  type: 'angle_linear_rise',
+                  angleDegrees: 1,
+                  distanceOffsetMeters: 0,
+                },
+              },
+            },
+            properties: { label: 'NDB front reference line zone' },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones[0]?.vertical).toEqual({
+      mode: 'analytic_surface',
+      baseReference: 'gp360_altitude',
+      baseHeightMeters: 493.8,
+      surface: {
+        type: 'distance_parameterized',
+        distanceSource: {
+          kind: 'front_reference_line',
+          centerPoint: [103.952962, 30.594308],
+          leftPoint: [103.952492, 30.594308],
+          rightPoint: [103.953432, 30.594308],
+        },
+        distanceMetric: 'axial_from_reference_line',
+        clampRange: {
+          startMeters: 0,
+          endMeters: 18160,
+        },
+        heightModel: {
+          type: 'angle_linear_rise',
+          angleDegrees: 1,
+          distanceOffsetMeters: 0,
+        },
+      },
+    })
+    expect(result.protectionZones[0]?.vertical).not.toEqual(
+      expect.objectContaining({
+        surface: expect.objectContaining({
+          planarControl: expect.anything(),
+        }),
+      }),
+    )
+  })
+
+  it('drops front_reference_line analytic surfaces when paired with radial distanceMetric', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-front-reference-line-invalid',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            ruleCode: 'ndb_front_reference_line',
+            ruleName: 'ndb_front_reference_line',
+            zoneCode: 'ndb_front_reference_line',
+            zoneName: 'NDB front reference line zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'gp360_altitude',
+              baseHeightMeters: 493.8,
+              surface: {
+                type: 'distance_parameterized',
+                distanceSource: {
+                  kind: 'front_reference_line',
+                  centerPoint: [103.952962, 30.594308],
+                  leftPoint: [103.952492, 30.594308],
+                  rightPoint: [103.953432, 30.594308],
+                },
+                distanceMetric: 'radial',
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 18160,
+                },
+                heightModel: {
+                  type: 'angle_linear_rise',
+                  angleDegrees: 1,
+                  distanceOffsetMeters: 0,
+                },
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+        airportId: '1',
+        stationId: '4',
+        zoneCode: 'ndb_front_reference_line',
+        regionCode: 'default',
+        reason: 'vertical is not a supported formal model',
+      }),
+    )
+  })
+
+  it('drops front_reference_line analytic surfaces when centerPoint is not a valid coordinate pair', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-front-reference-line-invalid-center',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            ruleCode: 'ndb_front_reference_line',
+            ruleName: 'ndb_front_reference_line',
+            zoneCode: 'ndb_front_reference_line',
+            zoneName: 'NDB front reference line zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'gp360_altitude',
+              baseHeightMeters: 493.8,
+              surface: {
+                type: 'distance_parameterized',
+                distanceSource: {
+                  kind: 'front_reference_line',
+                  centerPoint: [103.952962, Number.NaN],
+                  leftPoint: [103.952492, 30.594308],
+                  rightPoint: [103.953432, 30.594308],
+                },
+                distanceMetric: 'axial_from_reference_line',
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 18160,
+                },
+                heightModel: {
+                  type: 'angle_linear_rise',
+                  angleDegrees: 1,
+                  distanceOffsetMeters: 0,
+                },
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+        airportId: '1',
+        stationId: '4',
+        zoneCode: 'ndb_front_reference_line',
+        regionCode: 'default',
+        reason: 'vertical is not a supported formal model',
+      }),
+    )
   })
 
   it('normalizes loc_building_restriction_zone_region_3 analytic surfaces', async () => {

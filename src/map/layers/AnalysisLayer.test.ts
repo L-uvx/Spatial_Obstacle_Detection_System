@@ -56,11 +56,40 @@ function buildExpectedAnalyticHeights(
   const surface = vertical.surface
 
   return ring.map(([longitude, latitude]) => {
-    const [sourceLongitude, sourceLatitude] = surface.distanceSource.point
-    const averageLatitude = (sourceLatitude + latitude) / 2
-    const deltaLatitudeMeters = (latitude - sourceLatitude) * 111320
-    const deltaLongitudeMeters = (longitude - sourceLongitude) * 111320 * Math.cos((averageLatitude * Math.PI) / 180)
-    const radialDistanceMeters = Math.sqrt(deltaLatitudeMeters ** 2 + deltaLongitudeMeters ** 2)
+    let radialDistanceMeters = 0
+
+    if (surface.distanceSource.kind === 'point' && surface.distanceMetric === 'radial') {
+      const [sourceLongitude, sourceLatitude] = surface.distanceSource.point
+      const averageLatitude = (sourceLatitude + latitude) / 2
+      const deltaLatitudeMeters = (latitude - sourceLatitude) * 111320
+      const deltaLongitudeMeters = (longitude - sourceLongitude) * 111320 * Math.cos((averageLatitude * Math.PI) / 180)
+      radialDistanceMeters = Math.sqrt(deltaLatitudeMeters ** 2 + deltaLongitudeMeters ** 2)
+    } else if (
+      surface.distanceSource.kind === 'front_reference_line'
+      && surface.distanceMetric === 'axial_from_reference_line'
+    ) {
+      const [centerLongitude, centerLatitude] = surface.distanceSource.centerPoint
+      const [leftLongitude, leftLatitude] = surface.distanceSource.leftPoint
+      const [rightLongitude, rightLatitude] = surface.distanceSource.rightPoint
+      const lineAverageLatitude = (leftLatitude + rightLatitude) / 2
+      const metersPerDegreeLongitude = 111320 * Math.cos((lineAverageLatitude * Math.PI) / 180)
+      const lineDx = (rightLongitude - leftLongitude) * metersPerDegreeLongitude
+      const lineDy = (rightLatitude - leftLatitude) * 111320
+      const lineLength = Math.sqrt(lineDx ** 2 + lineDy ** 2)
+
+      if (lineLength > 0.01) {
+        const normalX = -lineDy / lineLength
+        const normalY = lineDx / lineLength
+        const pointDx = (longitude - centerLongitude) * metersPerDegreeLongitude
+        const pointDy = (latitude - centerLatitude) * 111320
+        radialDistanceMeters = Math.abs((pointDx * normalX) + (pointDy * normalY))
+      }
+    } else {
+      throw new Error(
+        `Unsupported analytic surface distance model: ${surface.distanceSource.kind}/${surface.distanceMetric}`,
+      )
+    }
+
     const boundedDistance = Math.min(
       Math.max(radialDistanceMeters, surface.clampRange.startMeters),
       surface.clampRange.endMeters,
@@ -341,6 +370,58 @@ describe('syncAnalysisLayer', () => {
     expectHierarchyToMatchRing(hierarchy, holeGeometry.coordinates[0][0], buildExpectedAnalyticHeights(holeGeometry.coordinates[0][0], vertical))
     expectHierarchyToMatchRing(hierarchy.holes[0], holeGeometry.coordinates[0][1], buildExpectedAnalyticHeights(holeGeometry.coordinates[0][1], vertical))
     expect(holeHeights.some((height) => Math.abs(height - vertical.baseHeightMeters) > 0.01)).toBe(true)
+  })
+
+  it('renders front_reference_line analytic_surface regions through the per-position-height path', () => {
+    const { viewer, add } = createViewer()
+    const vertical = {
+      mode: 'analytic_surface' as const,
+      baseReference: 'gp360_altitude' as const,
+      baseHeightMeters: 493.8,
+      surface: {
+        type: 'distance_parameterized' as const,
+        distanceSource: {
+          kind: 'front_reference_line' as const,
+          centerPoint: [103.952962, 30.594308] as [number, number],
+          leftPoint: [103.952492, 30.594308] as [number, number],
+          rightPoint: [103.953432, 30.594308] as [number, number],
+        },
+        distanceMetric: 'axial_from_reference_line' as const,
+        clampRange: {
+          startMeters: 0,
+          endMeters: 18160,
+        },
+        heightModel: {
+          type: 'angle_linear_rise' as const,
+          angleDegrees: 1,
+          distanceOffsetMeters: 0,
+        },
+      },
+    }
+    const ring = createRing([
+      [103.95282, 30.594308],
+      [103.95282, 30.595308],
+      [103.953104, 30.595308],
+      [103.953104, 30.594308],
+      [103.95282, 30.594308],
+    ])
+
+    syncAnalysisLayer(viewer as never, [
+      createVisibleRegion({
+        geometry: {
+          shapeType: 'multipolygon',
+          coordinates: [[ring]],
+        },
+        vertical,
+      }),
+    ])
+
+    const polygon = add.mock.calls[0][0].polygon
+
+    expect(add).toHaveBeenCalledTimes(1)
+    expect(polygon?.perPositionHeight).toBe(true)
+    expect(polygon?.height).toBeUndefined()
+    expectHierarchyToMatchRing(polygon?.hierarchy, ring, buildExpectedAnalyticHeights(ring, vertical))
   })
 
   it('renders loc_building_restriction_zone_region_3 as fan triangles plus side closing triangles', () => {

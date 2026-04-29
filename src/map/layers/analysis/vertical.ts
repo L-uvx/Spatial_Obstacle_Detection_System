@@ -25,6 +25,10 @@ export interface AnalyticVerticalProfile {
 
 type VerticalProfile = FlatVerticalProfile | AnalyticVerticalProfile
 
+const METERS_PER_DEGREE_LATITUDE = 111320
+const MIN_REFERENCE_LINE_LENGTH_METERS = 0.01
+const MIN_SAFE_COSINE = 1e-6
+
 function toRadians(value: number) {
   return (value * Math.PI) / 180
 }
@@ -39,11 +43,35 @@ function computeRadialDistanceMeters(
 ) {
   // Use a small-area lon/lat approximation around the average latitude of the segment.
   const averageLatitude = (from.latitude + to.latitude) / 2
-  const deltaLatitudeMeters = (to.latitude - from.latitude) * 111320
+  const deltaLatitudeMeters = (to.latitude - from.latitude) * METERS_PER_DEGREE_LATITUDE
   const metersPerDegreeLongitude = resolveMetersPerDegreeLongitude(averageLatitude)
   const deltaLongitudeMeters = (to.longitude - from.longitude) * metersPerDegreeLongitude
 
   return Math.sqrt(deltaLatitudeMeters ** 2 + deltaLongitudeMeters ** 2)
+}
+
+function computeProjectedNormalDistanceMeters(
+  origin: { longitude: number; latitude: number },
+  lineStart: { longitude: number; latitude: number },
+  lineEnd: { longitude: number; latitude: number },
+  target: { longitude: number; latitude: number },
+) {
+  const lineAverageLatitude = (lineStart.latitude + lineEnd.latitude) / 2
+  const metersPerDegreeLongitude = resolveMetersPerDegreeLongitude(lineAverageLatitude)
+  const lineDx = (lineEnd.longitude - lineStart.longitude) * metersPerDegreeLongitude
+  const lineDy = (lineEnd.latitude - lineStart.latitude) * METERS_PER_DEGREE_LATITUDE
+  const lineLength = Math.sqrt(lineDx ** 2 + lineDy ** 2)
+
+  if (lineLength < MIN_REFERENCE_LINE_LENGTH_METERS) {
+    return 0
+  }
+
+  const normalX = -lineDy / lineLength
+  const normalY = lineDx / lineLength
+  const pointDx = (target.longitude - origin.longitude) * metersPerDegreeLongitude
+  const pointDy = (target.latitude - origin.latitude) * METERS_PER_DEGREE_LATITUDE
+
+  return Math.abs((pointDx * normalX) + (pointDy * normalY))
 }
 
 function clampRadialDistance(radialDistanceMeters: number, startDistanceMeters: number, endDistanceMeters: number) {
@@ -58,11 +86,36 @@ function buildAnalyticSurfaceDistance(
     throw new Error(`Unsupported analytic surface type: ${vertical.surface.type}`)
   }
 
-  const [sourceLongitude, sourceLatitude] = vertical.surface.distanceSource.point
+  if (
+    vertical.surface.distanceSource.kind === 'point'
+    && vertical.surface.distanceMetric === 'radial'
+  ) {
+    const [sourceLongitude, sourceLatitude] = vertical.surface.distanceSource.point
 
-  return computeRadialDistanceMeters(
-    { longitude: sourceLongitude, latitude: sourceLatitude },
-    point,
+    return computeRadialDistanceMeters(
+      { longitude: sourceLongitude, latitude: sourceLatitude },
+      point,
+    )
+  }
+
+  if (
+    vertical.surface.distanceSource.kind === 'front_reference_line'
+    && vertical.surface.distanceMetric === 'axial_from_reference_line'
+  ) {
+    const [centerLongitude, centerLatitude] = vertical.surface.distanceSource.centerPoint
+    const [leftLongitude, leftLatitude] = vertical.surface.distanceSource.leftPoint
+    const [rightLongitude, rightLatitude] = vertical.surface.distanceSource.rightPoint
+
+    return computeProjectedNormalDistanceMeters(
+      { longitude: centerLongitude, latitude: centerLatitude },
+      { longitude: leftLongitude, latitude: leftLatitude },
+      { longitude: rightLongitude, latitude: rightLatitude },
+      point,
+    )
+  }
+
+  throw new Error(
+    `Unsupported analytic surface distance model: ${vertical.surface.distanceSource.kind}/${vertical.surface.distanceMetric}`,
   )
 }
 
@@ -75,7 +128,7 @@ function buildSafeAnalyticHeight(vertical: ProtectionZoneAnalyticSurfaceVertical
   const cosine = Math.cos(angleRadians)
   const tangent = Math.tan(angleRadians)
 
-  if (Math.abs(cosine) < Number.EPSILON || !Number.isFinite(tangent)) {
+  if (Math.abs(cosine) < MIN_SAFE_COSINE || !Number.isFinite(tangent)) {
     return vertical.baseHeightMeters
   }
 
