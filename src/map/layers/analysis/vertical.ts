@@ -50,28 +50,34 @@ function computeRadialDistanceMeters(
   return Math.sqrt(deltaLatitudeMeters ** 2 + deltaLongitudeMeters ** 2)
 }
 
-function computeProjectedNormalDistanceMeters(
+function toLocalMeters(
   origin: { longitude: number; latitude: number },
-  lineStart: { longitude: number; latitude: number },
-  lineEnd: { longitude: number; latitude: number },
   target: { longitude: number; latitude: number },
 ) {
-  const lineAverageLatitude = (lineStart.latitude + lineEnd.latitude) / 2
-  const metersPerDegreeLongitude = resolveMetersPerDegreeLongitude(lineAverageLatitude)
-  const lineDx = (lineEnd.longitude - lineStart.longitude) * metersPerDegreeLongitude
-  const lineDy = (lineEnd.latitude - lineStart.latitude) * METERS_PER_DEGREE_LATITUDE
-  const lineLength = Math.sqrt(lineDx ** 2 + lineDy ** 2)
+  const averageLatitude = (origin.latitude + target.latitude) / 2
+  const metersPerDegreeLongitude = resolveMetersPerDegreeLongitude(averageLatitude)
 
-  if (lineLength < MIN_REFERENCE_LINE_LENGTH_METERS) {
-    return 0
+  return {
+    x: (target.longitude - origin.longitude) * metersPerDegreeLongitude,
+    y: (target.latitude - origin.latitude) * METERS_PER_DEGREE_LATITUDE,
+  }
+}
+
+function computeFrontReferenceAxis(
+  station: { longitude: number; latitude: number },
+  origin: { longitude: number; latitude: number },
+) {
+  const axis = toLocalMeters(station, origin)
+  const axisLength = Math.sqrt(axis.x ** 2 + axis.y ** 2)
+
+  if (axisLength < MIN_REFERENCE_LINE_LENGTH_METERS) {
+    return null
   }
 
-  const normalX = -lineDy / lineLength
-  const normalY = lineDx / lineLength
-  const pointDx = (target.longitude - origin.longitude) * metersPerDegreeLongitude
-  const pointDy = (target.latitude - origin.latitude) * METERS_PER_DEGREE_LATITUDE
-
-  return Math.abs((pointDx * normalX) + (pointDy * normalY))
+  return {
+    unitX: axis.x / axisLength,
+    unitY: axis.y / axisLength,
+  }
 }
 
 function clampRadialDistance(radialDistanceMeters: number, startDistanceMeters: number, endDistanceMeters: number) {
@@ -102,14 +108,10 @@ function buildAnalyticSurfaceDistance(
     vertical.surface.distanceSource.kind === 'front_reference_line'
     && vertical.surface.distanceMetric === 'axial_from_reference_line'
   ) {
-    const [centerLongitude, centerLatitude] = vertical.surface.distanceSource.centerPoint
-    const [leftLongitude, leftLatitude] = vertical.surface.distanceSource.leftPoint
-    const [rightLongitude, rightLatitude] = vertical.surface.distanceSource.rightPoint
+    const [stationLongitude, stationLatitude] = vertical.surface.distanceSource.stationPoint
 
-    return computeProjectedNormalDistanceMeters(
-      { longitude: centerLongitude, latitude: centerLatitude },
-      { longitude: leftLongitude, latitude: leftLatitude },
-      { longitude: rightLongitude, latitude: rightLatitude },
+    return computeRadialDistanceMeters(
+      { longitude: stationLongitude, latitude: stationLatitude },
       point,
     )
   }
@@ -119,7 +121,11 @@ function buildAnalyticSurfaceDistance(
   )
 }
 
-function buildSafeAnalyticHeight(vertical: ProtectionZoneAnalyticSurfaceVertical, radialDistanceMeters: number) {
+function buildSafeAnalyticHeight(
+  vertical: ProtectionZoneAnalyticSurfaceVertical,
+  radialDistanceMeters: number,
+  point?: Pick<SampledFootprintPoint, 'longitude' | 'latitude'>,
+) {
   if (vertical.surface.type !== 'distance_parameterized') {
     throw new Error(`Unsupported analytic surface type: ${vertical.surface.type}`)
   }
@@ -130,6 +136,55 @@ function buildSafeAnalyticHeight(vertical: ProtectionZoneAnalyticSurfaceVertical
 
   if (Math.abs(cosine) < MIN_SAFE_COSINE || !Number.isFinite(tangent)) {
     return vertical.baseHeightMeters
+  }
+
+  if (
+    vertical.surface.distanceSource.kind === 'front_reference_line'
+    && vertical.surface.distanceMetric === 'axial_from_reference_line'
+  ) {
+    if (!point) {
+      return vertical.baseHeightMeters
+    }
+
+    const [stationLongitude, stationLatitude] = vertical.surface.distanceSource.stationPoint
+    const [centerLongitude, centerLatitude] = vertical.surface.distanceSource.centerPoint
+    const axis = computeFrontReferenceAxis(
+      { longitude: stationLongitude, latitude: stationLatitude },
+      { longitude: centerLongitude, latitude: centerLatitude },
+    )
+
+    if (!axis) {
+      return vertical.baseHeightMeters
+    }
+
+    const targetVector = toLocalMeters(
+      { longitude: stationLongitude, latitude: stationLatitude },
+      point,
+    )
+    const targetDistance = Math.sqrt((targetVector.x ** 2) + (targetVector.y ** 2))
+
+    if (targetDistance < MIN_REFERENCE_LINE_LENGTH_METERS) {
+      return vertical.baseHeightMeters
+    }
+
+    const targetUnitX = targetVector.x / targetDistance
+    const targetUnitY = targetVector.y / targetDistance
+    const angleCosine = (axis.unitX * targetUnitX) + (axis.unitY * targetUnitY)
+
+    if (angleCosine <= MIN_SAFE_COSINE) {
+      return vertical.baseHeightMeters
+    }
+
+    const boundedDistance = clampRadialDistance(
+      radialDistanceMeters,
+      vertical.surface.clampRange.startMeters,
+      vertical.surface.clampRange.endMeters,
+    )
+    const runwayProjection = vertical.surface.planarControl.frontOffsetMeters / angleCosine
+    const effectiveDistance = Math.max(0, boundedDistance - runwayProjection)
+    const heightMeters = vertical.baseHeightMeters + (effectiveDistance * tangent)
+
+    return Number.isFinite(heightMeters) ? heightMeters : vertical.baseHeightMeters
   }
 
   const boundedDistance = clampRadialDistance(
@@ -163,11 +218,12 @@ export function buildVerticalProfile(
       mode: 'analytic_surface',
       points: footprint.map((point) => {
         const radialDistanceMeters = buildAnalyticSurfaceDistance(vertical, point)
+        const heightMeters = buildSafeAnalyticHeight(vertical, radialDistanceMeters, point)
 
         return {
           ...point,
           radialDistanceMeters,
-          heightMeters: buildSafeAnalyticHeight(vertical, radialDistanceMeters),
+          heightMeters,
         }
       }),
     }

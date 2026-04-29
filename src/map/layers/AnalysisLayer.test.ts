@@ -68,22 +68,39 @@ function buildExpectedAnalyticHeights(
       surface.distanceSource.kind === 'front_reference_line'
       && surface.distanceMetric === 'axial_from_reference_line'
     ) {
+      const [stationLongitude, stationLatitude] = surface.distanceSource.stationPoint
       const [centerLongitude, centerLatitude] = surface.distanceSource.centerPoint
-      const [leftLongitude, leftLatitude] = surface.distanceSource.leftPoint
-      const [rightLongitude, rightLatitude] = surface.distanceSource.rightPoint
-      const lineAverageLatitude = (leftLatitude + rightLatitude) / 2
-      const metersPerDegreeLongitude = 111320 * Math.cos((lineAverageLatitude * Math.PI) / 180)
-      const lineDx = (rightLongitude - leftLongitude) * metersPerDegreeLongitude
-      const lineDy = (rightLatitude - leftLatitude) * 111320
-      const lineLength = Math.sqrt(lineDx ** 2 + lineDy ** 2)
+      const axisAverageLatitude = (stationLatitude + centerLatitude) / 2
+      const metersPerDegreeLongitude = 111320 * Math.cos((axisAverageLatitude * Math.PI) / 180)
+      const axisDx = (centerLongitude - stationLongitude) * metersPerDegreeLongitude
+      const axisDy = (centerLatitude - stationLatitude) * 111320
+      const axisLength = Math.sqrt(axisDx ** 2 + axisDy ** 2)
 
-      if (lineLength > 0.01) {
-        const normalX = -lineDy / lineLength
-        const normalY = lineDx / lineLength
-        const pointDx = (longitude - centerLongitude) * metersPerDegreeLongitude
-        const pointDy = (latitude - centerLatitude) * 111320
-        radialDistanceMeters = Math.abs((pointDx * normalX) + (pointDy * normalY))
+      if (axisLength > 0.01) {
+        const pointAverageLatitude = (stationLatitude + latitude) / 2
+        const pointMetersPerDegreeLongitude = 111320 * Math.cos((pointAverageLatitude * Math.PI) / 180)
+        const pointDx = (longitude - stationLongitude) * pointMetersPerDegreeLongitude
+        const pointDy = (latitude - stationLatitude) * 111320
+        radialDistanceMeters = Math.sqrt(pointDx ** 2 + pointDy ** 2)
+
+        const pointLength = Math.sqrt(pointDx ** 2 + pointDy ** 2)
+
+        if (pointLength > 0.01) {
+          const angleCosine = ((axisDx / axisLength) * (pointDx / pointLength)) + ((axisDy / axisLength) * (pointDy / pointLength))
+          const boundedDistance = Math.min(
+            Math.max(radialDistanceMeters, surface.clampRange.startMeters),
+            surface.clampRange.endMeters,
+          )
+          const runwayProjection = surface.planarControl.frontOffsetMeters / angleCosine
+          const effectiveDistance = Math.max(0, boundedDistance - runwayProjection)
+
+          return vertical.baseHeightMeters + Math.tan((surface.heightModel.angleDegrees * Math.PI) / 180) * effectiveDistance
+        }
+
+        return vertical.baseHeightMeters
       }
+
+      return vertical.baseHeightMeters
     } else {
       throw new Error(
         `Unsupported analytic surface distance model: ${surface.distanceSource.kind}/${surface.distanceMetric}`,
@@ -382,11 +399,17 @@ describe('syncAnalysisLayer', () => {
         type: 'distance_parameterized' as const,
         distanceSource: {
           kind: 'front_reference_line' as const,
+          stationPoint: [103.942962, 30.594308] as [number, number],
           centerPoint: [103.952962, 30.594308] as [number, number],
           leftPoint: [103.952492, 30.594308] as [number, number],
           rightPoint: [103.953432, 30.594308] as [number, number],
         },
         distanceMetric: 'axial_from_reference_line' as const,
+        planarControl: {
+          frontOffsetMeters: 350,
+          halfAngleDegrees: 15,
+          radiusMeters: 18160,
+        },
         clampRange: {
           startMeters: 0,
           endMeters: 18160,
@@ -394,7 +417,7 @@ describe('syncAnalysisLayer', () => {
         heightModel: {
           type: 'angle_linear_rise' as const,
           angleDegrees: 1,
-          distanceOffsetMeters: 0,
+          distanceOffsetMeters: 120,
         },
       },
     }

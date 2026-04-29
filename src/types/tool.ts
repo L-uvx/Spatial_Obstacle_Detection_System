@@ -144,9 +144,16 @@ export interface ProtectionZonePointDistanceSource {
 
 export interface ProtectionZoneFrontReferenceLineDistanceSource {
   kind: 'front_reference_line'
+  stationPoint: [number, number]
   centerPoint: [number, number]
   leftPoint: [number, number]
   rightPoint: [number, number]
+}
+
+export interface ProtectionZoneFrontReferenceLinePlanarControl {
+  frontOffsetMeters: number
+  halfAngleDegrees: number
+  radiusMeters: number
 }
 
 interface ProtectionZoneDistanceParameterizedSurfaceBase {
@@ -172,6 +179,7 @@ export interface ProtectionZoneFrontReferenceLineDistanceParameterizedSurface
   extends ProtectionZoneDistanceParameterizedSurfaceBase {
   distanceSource: ProtectionZoneFrontReferenceLineDistanceSource
   distanceMetric: 'axial_from_reference_line'
+  planarControl: ProtectionZoneFrontReferenceLinePlanarControl
 }
 
 export type ProtectionZoneDistanceParameterizedSurface =

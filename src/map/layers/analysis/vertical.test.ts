@@ -19,24 +19,28 @@ function toRadians(value: number) {
   return (value * Math.PI) / 180
 }
 
-function computeExpectedNormalDistanceMeters(
-  origin: { longitude: number; latitude: number },
-  leftPoint: { longitude: number; latitude: number },
-  rightPoint: { longitude: number; latitude: number },
-  target: { longitude: number; latitude: number },
-) {
-  const metersPerDegreeLatitude = 111320
-  const averageLatitude = (origin.latitude + target.latitude) / 2
-  const metersPerDegreeLongitude = 111320 * Math.cos(toRadians(averageLatitude))
-  const lineDx = (rightPoint.longitude - leftPoint.longitude) * metersPerDegreeLongitude
-  const lineDy = (rightPoint.latitude - leftPoint.latitude) * metersPerDegreeLatitude
-  const lineLength = Math.sqrt(lineDx ** 2 + lineDy ** 2)
-  const normalX = -lineDy / lineLength
-  const normalY = lineDx / lineLength
-  const pointDx = (target.longitude - origin.longitude) * metersPerDegreeLongitude
-  const pointDy = (target.latitude - origin.latitude) * metersPerDegreeLatitude
+function metersToLatitude(meters: number) {
+  return meters / 111320
+}
 
-  return Math.abs((pointDx * normalX) + (pointDy * normalY))
+function metersToLongitude(meters: number, latitude: number) {
+  return meters / (111320 * Math.cos(toRadians(latitude)))
+}
+
+function buildPointFromPolarDistance(
+  origin: { longitude: number; latitude: number },
+  radialDistanceMeters: number,
+  angleDegreesFromNorth: number,
+) {
+  const angleRadians = toRadians(angleDegreesFromNorth)
+  const northMeters = radialDistanceMeters * Math.cos(angleRadians)
+  const eastMeters = radialDistanceMeters * Math.sin(angleRadians)
+
+  return {
+    longitude: origin.longitude + metersToLongitude(eastMeters, origin.latitude),
+    latitude: origin.latitude + metersToLatitude(northMeters),
+    radialDistanceMeters: 999999,
+  }
 }
 
 function buildFrontReferenceVertical(
@@ -60,6 +64,7 @@ const frontReferenceBaseSurface = {
   type: 'distance_parameterized' as const,
   distanceSource: {
     kind: 'front_reference_line' as const,
+    stationPoint: [0, 0] as [number, number],
     centerPoint: [103.952962, 30.594308] as [number, number],
     leftPoint: [103.952492, 30.594308] as [number, number],
     rightPoint: [103.953432, 30.594308] as [number, number],
@@ -68,6 +73,11 @@ const frontReferenceBaseSurface = {
   clampRange: {
     startMeters: 0,
     endMeters: 100,
+  },
+  planarControl: {
+    frontOffsetMeters: 0,
+    halfAngleDegrees: 30,
+    radiusMeters: 1000,
   },
   heightModel: {
     type: 'angle_linear_rise' as const,
@@ -78,7 +88,6 @@ const frontReferenceBaseSurface = {
 
 describe('vertical helpers', () => {
   const metersPerDegreeLatitude = 111320
-  const frontReferenceBaseVertical = buildFrontReferenceVertical()
   const analyticVerticalBase: ProtectionZoneAnalyticSurfaceVertical = {
     mode: 'analytic_surface',
     baseReference: 'station',
@@ -263,155 +272,186 @@ describe('vertical helpers', () => {
     })
   })
 
-  it('returns the base height for a point on the front reference line', () => {
-    const profile = buildVerticalProfile(frontReferenceBaseVertical, [
-      {
-        longitude: 103.952962,
-        latitude: 30.594308,
-        radialDistanceMeters: 999999,
-      },
-    ])
-
-    expect(profile).toEqual({
-      mode: 'analytic_surface',
-      points: [
-        {
-          longitude: 103.952962,
-          latitude: 30.594308,
-          radialDistanceMeters: 0,
-          heightMeters: 493.8,
-        },
-      ],
-    })
-  })
-
-  it('produces the same height for equal offsets on both sides of the front reference line', () => {
-    const latitudeOffset = 40 / metersPerDegreeLatitude
-    const profile = buildVerticalProfile(frontReferenceBaseVertical, [
-      {
-        longitude: 103.952962,
-        latitude: 30.594308 + latitudeOffset,
-        radialDistanceMeters: 999999,
-      },
-      {
-        longitude: 103.952962,
-        latitude: 30.594308 - latitudeOffset,
-        radialDistanceMeters: 999999,
-      },
-    ])
-
-    expect(profile.mode).toBe('analytic_surface')
-    expect(profile.points).toHaveLength(2)
-    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(40, 6)
-    expect(profile.points[1]?.radialDistanceMeters).toBeCloseTo(40, 6)
-    expect(profile.points[0]?.heightMeters).toBeCloseTo(profile.points[1]?.heightMeters ?? 0, 6)
-  })
-
-  it('caps front reference line height growth at clampRange.endMeters', () => {
-    const latitudeOffset = 180 / metersPerDegreeLatitude
-    const profile = buildVerticalProfile(frontReferenceBaseVertical, [
-      {
-        longitude: 103.952962,
-        latitude: 30.594308 + latitudeOffset,
-        radialDistanceMeters: 999999,
-      },
-    ])
-
-    expect(profile.mode).toBe('analytic_surface')
-    expect(profile.points).toHaveLength(1)
-    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(180, 6)
-    expect(profile.points[0]?.heightMeters).toBeCloseTo(493.8 + Math.tan(Math.PI / 180) * 100, 6)
-  })
-
-  it('delays front reference line height growth until distanceOffsetMeters is exceeded', () => {
-    const baseSurface = expectDistanceParameterizedSurface(frontReferenceBaseVertical)
-    const vertical: ProtectionZoneAnalyticSurfaceVertical = {
-      ...frontReferenceBaseVertical,
+  it('keeps the base height on the forward axis when radial distance is shorter than runway projection', () => {
+    const vertical = buildFrontReferenceVertical({
       surface: {
-        ...baseSurface,
+        ...frontReferenceBaseSurface,
+        planarControl: {
+          ...frontReferenceBaseSurface.planarControl,
+          frontOffsetMeters: 50,
+        },
         heightModel: {
-          ...baseSurface.heightModel,
+          ...frontReferenceBaseSurface.heightModel,
+          angleDegrees: 10,
           distanceOffsetMeters: 50,
-        },
-      },
-    }
-    const latitudeOffset = 40 / metersPerDegreeLatitude
-
-    const profile = buildVerticalProfile(vertical, [
-      {
-        longitude: 103.952962,
-        latitude: 30.594308 + latitudeOffset,
-        radialDistanceMeters: 999999,
-      },
-    ])
-
-    expect(profile.mode).toBe('analytic_surface')
-    expect(profile.points).toHaveLength(1)
-    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(40, 6)
-    expect(profile.points[0]?.heightMeters).toBeCloseTo(493.8, 6)
-  })
-
-  it('uses leftPoint to rightPoint as the formal front reference line direction', () => {
-    const vertical = buildFrontReferenceVertical({
-      surface: {
-        ...frontReferenceBaseSurface,
-        distanceSource: {
-          kind: 'front_reference_line',
-          centerPoint: [0, 0],
-          leftPoint: [-1, 0],
-          rightPoint: [0, 1],
-        },
-      },
-    })
-    const footprint = [
-      {
-        longitude: 0,
-        latitude: 1,
-        radialDistanceMeters: 999999,
-      },
-    ]
-    const expectedDistanceMeters = computeExpectedNormalDistanceMeters(
-      { longitude: 0, latitude: 0 },
-      { longitude: -1, latitude: 0 },
-      { longitude: 0, latitude: 1 },
-      { longitude: 0, latitude: 1 },
-    )
-    const profile = buildVerticalProfile(vertical, footprint)
-
-    expect(profile.mode).toBe('analytic_surface')
-    expect(profile.points).toHaveLength(1)
-    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(expectedDistanceMeters, 6)
-    expect(profile.points[0]?.radialDistanceMeters).not.toBeCloseTo(0, 6)
-  })
-
-  it('keeps front reference line distance stable for equal longitude offsets along a north-south line', () => {
-    const longitudeOffset = 0.001
-    const vertical = buildFrontReferenceVertical({
-      surface: {
-        ...frontReferenceBaseSurface,
-        distanceSource: {
-          kind: 'front_reference_line',
-          centerPoint: [0, 60],
-          leftPoint: [0, 59.5],
-          rightPoint: [0, 60.5],
         },
         clampRange: {
           startMeters: 0,
           endMeters: 1000,
         },
+        distanceSource: {
+          kind: 'front_reference_line',
+          stationPoint: [0, 0],
+          centerPoint: [0, metersToLatitude(100)],
+          leftPoint: [metersToLongitude(-40, metersToLatitude(100)), metersToLatitude(100)],
+          rightPoint: [metersToLongitude(40, metersToLatitude(100)), metersToLatitude(100)],
+        },
+      },
+    })
+
+    const profile = buildVerticalProfile(vertical, [buildPointFromPolarDistance({ longitude: 0, latitude: 0 }, 30, 0)])
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]?.longitude).toBe(0)
+    expect(profile.points[0]?.latitude).toBeCloseTo(metersToLatitude(30), 12)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(30, 6)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(493.8, 6)
+  })
+
+  it('rises on the forward axis by r minus runway projection once the target is beyond the front offset', () => {
+    const vertical = buildFrontReferenceVertical({
+      surface: {
+        ...frontReferenceBaseSurface,
+        planarControl: {
+          ...frontReferenceBaseSurface.planarControl,
+          frontOffsetMeters: 50,
+        },
+        heightModel: {
+          ...frontReferenceBaseSurface.heightModel,
+          angleDegrees: 10,
+          distanceOffsetMeters: 10,
+        },
+        clampRange: {
+          startMeters: 0,
+          endMeters: 1000,
+        },
+        distanceSource: {
+          kind: 'front_reference_line',
+          stationPoint: [0, 0],
+          centerPoint: [0, metersToLatitude(100)],
+          leftPoint: [metersToLongitude(-40, metersToLatitude(100)), metersToLatitude(100)],
+          rightPoint: [metersToLongitude(40, metersToLatitude(100)), metersToLatitude(100)],
+        },
+      },
+    })
+
+    const profile = buildVerticalProfile(vertical, [buildPointFromPolarDistance({ longitude: 0, latitude: 0 }, 80, 0)])
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(80, 6)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(493.8 + Math.tan(toRadians(10)) * 30, 6)
+  })
+
+  it('produces different heights for the same radial distance at different forward angles', () => {
+    const vertical = buildFrontReferenceVertical({
+      surface: {
+        ...frontReferenceBaseSurface,
+        planarControl: {
+          ...frontReferenceBaseSurface.planarControl,
+          frontOffsetMeters: 50,
+        },
+        heightModel: {
+          ...frontReferenceBaseSurface.heightModel,
+          angleDegrees: 10,
+          distanceOffsetMeters: 50,
+        },
+        clampRange: {
+          startMeters: 0,
+          endMeters: 1000,
+        },
+        distanceSource: {
+          kind: 'front_reference_line',
+          stationPoint: [0, 0],
+          centerPoint: [0, metersToLatitude(100)],
+          leftPoint: [metersToLongitude(-40, metersToLatitude(100)), metersToLatitude(100)],
+          rightPoint: [metersToLongitude(40, metersToLatitude(100)), metersToLatitude(100)],
+        },
       },
     })
 
     const profile = buildVerticalProfile(vertical, [
-      { longitude: longitudeOffset, latitude: 60, radialDistanceMeters: 999999 },
-      { longitude: longitudeOffset, latitude: 60.4, radialDistanceMeters: 999999 },
+      buildPointFromPolarDistance({ longitude: 0, latitude: 0 }, 80, 0),
+      buildPointFromPolarDistance({ longitude: 0, latitude: 0 }, 80, 60),
     ])
-    const expectedDistanceMeters = longitudeOffset * 111320 * Math.cos(toRadians(60))
 
     expect(profile.mode).toBe('analytic_surface')
     expect(profile.points).toHaveLength(2)
-    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(expectedDistanceMeters, 6)
-    expect(profile.points[1]?.radialDistanceMeters).toBeCloseTo(expectedDistanceMeters, 6)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(80, 6)
+    expect(profile.points[1]?.radialDistanceMeters).toBeCloseTo(80, 6)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(493.8 + Math.tan(toRadians(10)) * 30, 6)
+    expect(profile.points[1]?.heightMeters).toBeCloseTo(493.8, 6)
+  })
+
+  it('keeps a rear-hemisphere target at base height instead of gaining extra height', () => {
+    const vertical = buildFrontReferenceVertical({
+      surface: {
+        ...frontReferenceBaseSurface,
+        planarControl: {
+          ...frontReferenceBaseSurface.planarControl,
+          frontOffsetMeters: 50,
+        },
+        heightModel: {
+          ...frontReferenceBaseSurface.heightModel,
+          angleDegrees: 10,
+          distanceOffsetMeters: 10,
+        },
+        clampRange: {
+          startMeters: 0,
+          endMeters: 1000,
+        },
+        distanceSource: {
+          kind: 'front_reference_line',
+          stationPoint: [0, 0],
+          centerPoint: [0, metersToLatitude(100)],
+          leftPoint: [metersToLongitude(-40, metersToLatitude(100)), metersToLatitude(100)],
+          rightPoint: [metersToLongitude(40, metersToLatitude(100)), metersToLatitude(100)],
+        },
+      },
+    })
+
+    const profile = buildVerticalProfile(vertical, [buildPointFromPolarDistance({ longitude: 0, latitude: 0 }, 80, 180)])
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(80, 6)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(493.8, 6)
+  })
+
+  it('caps far forward targets at clampRange.endMeters for the effective distance path', () => {
+    const vertical = buildFrontReferenceVertical({
+      surface: {
+        ...frontReferenceBaseSurface,
+        planarControl: {
+          ...frontReferenceBaseSurface.planarControl,
+          frontOffsetMeters: 50,
+        },
+        heightModel: {
+          ...frontReferenceBaseSurface.heightModel,
+          angleDegrees: 10,
+          distanceOffsetMeters: 10,
+        },
+        clampRange: {
+          startMeters: 0,
+          endMeters: 120,
+        },
+        distanceSource: {
+          kind: 'front_reference_line',
+          stationPoint: [0, 0],
+          centerPoint: [0, metersToLatitude(100)],
+          leftPoint: [metersToLongitude(-40, metersToLatitude(100)), metersToLatitude(100)],
+          rightPoint: [metersToLongitude(40, metersToLatitude(100)), metersToLatitude(100)],
+        },
+      },
+    })
+
+    const profile = buildVerticalProfile(vertical, [buildPointFromPolarDistance({ longitude: 0, latitude: 0 }, 300, 0)])
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(300, 6)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(493.8 + Math.tan(toRadians(10)) * 70, 6)
   })
 
   it('falls back to base height for angles extremely close to 90 degrees', () => {
@@ -440,28 +480,63 @@ describe('vertical helpers', () => {
     })
   })
 
-  it('treats a near-degenerate front reference line as zero distance', () => {
+  it('keeps near-sideways targets at a safe base height instead of blowing up runway projection', () => {
     const vertical = buildFrontReferenceVertical({
       surface: {
         ...frontReferenceBaseSurface,
+        heightModel: {
+          ...frontReferenceBaseSurface.heightModel,
+          angleDegrees: 10,
+          distanceOffsetMeters: 50,
+        },
+        clampRange: {
+          startMeters: 0,
+          endMeters: 1000,
+        },
         distanceSource: {
           kind: 'front_reference_line',
-          centerPoint: [0, 0],
-          leftPoint: [0, 0],
-          rightPoint: [0.000000000001, 0.000000000001],
+          stationPoint: [0, 0],
+          centerPoint: [0, metersToLatitude(100)],
+          leftPoint: [metersToLongitude(-40, metersToLatitude(100)), metersToLatitude(100)],
+          rightPoint: [metersToLongitude(40, metersToLatitude(100)), metersToLatitude(100)],
         },
       },
     })
 
     const profile = buildVerticalProfile(vertical, [
-      { longitude: 0.001, latitude: 0.001, radialDistanceMeters: 999999 },
+      buildPointFromPolarDistance({ longitude: 0, latitude: 0 }, 80, 89.99999),
     ])
 
-    expect(profile).toEqual({
-      mode: 'analytic_surface',
-      points: [
-        { longitude: 0.001, latitude: 0.001, radialDistanceMeters: 0, heightMeters: 493.8 },
-      ],
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(80, 4)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(493.8, 6)
+    expect(Number.isFinite(profile.points[0]?.heightMeters ?? Number.NaN)).toBe(true)
+  })
+
+  it('treats a near-degenerate station to center axis as a safe base-height fallback', () => {
+    const vertical = buildFrontReferenceVertical({
+      surface: {
+        ...frontReferenceBaseSurface,
+        distanceSource: {
+          kind: 'front_reference_line',
+          stationPoint: [0, 0],
+          centerPoint: [0, 0],
+          leftPoint: [metersToLongitude(-40, metersToLatitude(100)), metersToLatitude(100)],
+          rightPoint: [metersToLongitude(40, metersToLatitude(100)), metersToLatitude(100)],
+        },
+      },
     })
+
+    const profile = buildVerticalProfile(vertical, [
+      buildPointFromPolarDistance({ longitude: 0, latitude: 0 }, 80, 0),
+    ])
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]?.longitude).toBe(0)
+    expect(profile.points[0]?.latitude).toBeCloseTo(metersToLatitude(80), 12)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(80, 6)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(493.8, 6)
   })
 })

@@ -782,7 +782,7 @@ describe('analysis service', () => {
     })
   })
 
-  it('normalizes front_reference_line analytic surfaces and drops planarControl', async () => {
+  it('normalizes front_reference_line analytic surfaces and preserves stationPoint and planarControl', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -829,6 +829,7 @@ describe('analysis service', () => {
                 type: 'distance_parameterized',
                 distanceSource: {
                   kind: 'front_reference_line',
+                  stationPoint: [103.938972, 30.561306],
                   centerPoint: [103.952962, 30.594308],
                   leftPoint: [103.952492, 30.594308],
                   rightPoint: [103.953432, 30.594308],
@@ -867,11 +868,17 @@ describe('analysis service', () => {
         type: 'distance_parameterized',
         distanceSource: {
           kind: 'front_reference_line',
+          stationPoint: [103.938972, 30.561306],
           centerPoint: [103.952962, 30.594308],
           leftPoint: [103.952492, 30.594308],
           rightPoint: [103.953432, 30.594308],
         },
         distanceMetric: 'axial_from_reference_line',
+        planarControl: {
+          frontOffsetMeters: 360,
+          halfAngleDegrees: 8,
+          radiusMeters: 18520,
+        },
         clampRange: {
           startMeters: 0,
           endMeters: 18160,
@@ -883,13 +890,6 @@ describe('analysis service', () => {
         },
       },
     })
-    expect(result.protectionZones[0]?.vertical).not.toEqual(
-      expect.objectContaining({
-        surface: expect.objectContaining({
-          planarControl: expect.anything(),
-        }),
-      }),
-    )
   })
 
   it('drops front_reference_line analytic surfaces when paired with radial distanceMetric', async () => {
@@ -1059,6 +1059,247 @@ describe('analysis service', () => {
         stationId: '4',
         zoneCode: 'ndb_front_reference_line',
         regionCode: 'default',
+        reason: 'vertical is not a supported formal model',
+      }),
+    )
+  })
+
+  it('drops front_reference_line analytic surfaces when stationPoint is not a valid coordinate pair', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-front-reference-line-invalid-station',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            ruleCode: 'ndb_front_reference_line',
+            ruleName: 'ndb_front_reference_line',
+            zoneCode: 'ndb_front_reference_line',
+            zoneName: 'NDB front reference line zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'gp360_altitude',
+              baseHeightMeters: 493.8,
+              surface: {
+                type: 'distance_parameterized',
+                distanceSource: {
+                  kind: 'front_reference_line',
+                  stationPoint: [103.938972],
+                  centerPoint: [103.952962, 30.594308],
+                  leftPoint: [103.952492, 30.594308],
+                  rightPoint: [103.953432, 30.594308],
+                },
+                distanceMetric: 'axial_from_reference_line',
+                planarControl: {
+                  frontOffsetMeters: 360,
+                  halfAngleDegrees: 8,
+                  radiusMeters: 18520,
+                },
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 18160,
+                },
+                heightModel: {
+                  type: 'angle_linear_rise',
+                  angleDegrees: 1,
+                  distanceOffsetMeters: 0,
+                },
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+        airportId: '1',
+        stationId: '4',
+        zoneCode: 'ndb_front_reference_line',
+        regionCode: 'default',
+        reason: 'vertical is not a supported formal model',
+      }),
+    )
+  })
+
+  it('drops front_reference_line analytic surfaces when planarControl.frontOffsetMeters is missing or invalid', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 2,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-front-reference-line-missing-front-offset',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            ruleCode: 'ndb_front_reference_line',
+            ruleName: 'ndb_front_reference_line',
+            zoneCode: 'ndb_front_reference_line',
+            zoneName: 'NDB front reference line zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'gp360_altitude',
+              baseHeightMeters: 493.8,
+              surface: {
+                type: 'distance_parameterized',
+                distanceSource: {
+                  kind: 'front_reference_line',
+                  stationPoint: [103.938972, 30.561306],
+                  centerPoint: [103.952962, 30.594308],
+                  leftPoint: [103.952492, 30.594308],
+                  rightPoint: [103.953432, 30.594308],
+                },
+                distanceMetric: 'axial_from_reference_line',
+                planarControl: {
+                  halfAngleDegrees: 8,
+                  radiusMeters: 18520,
+                },
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 18160,
+                },
+                heightModel: {
+                  type: 'angle_linear_rise',
+                  angleDegrees: 1,
+                  distanceOffsetMeters: 0,
+                },
+              },
+            },
+          },
+          {
+            id: 'zone-front-reference-line-invalid-front-offset',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            ruleCode: 'ndb_front_reference_line',
+            ruleName: 'ndb_front_reference_line',
+            zoneCode: 'ndb_front_reference_line',
+            zoneName: 'NDB front reference line zone',
+            regionCode: 'secondary',
+            regionName: 'secondary',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'gp360_altitude',
+              baseHeightMeters: 493.8,
+              surface: {
+                type: 'distance_parameterized',
+                distanceSource: {
+                  kind: 'front_reference_line',
+                  stationPoint: [103.938972, 30.561306],
+                  centerPoint: [103.952962, 30.594308],
+                  leftPoint: [103.952492, 30.594308],
+                  rightPoint: [103.953432, 30.594308],
+                },
+                distanceMetric: 'axial_from_reference_line',
+                planarControl: {
+                  frontOffsetMeters: '360',
+                  halfAngleDegrees: 8,
+                  radiusMeters: 18520,
+                },
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 18160,
+                },
+                heightModel: {
+                  type: 'angle_linear_rise',
+                  angleDegrees: 1,
+                  distanceOffsetMeters: 0,
+                },
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledTimes(2)
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+        airportId: '1',
+        stationId: '4',
+        zoneCode: 'ndb_front_reference_line',
         reason: 'vertical is not a supported formal model',
       }),
     )

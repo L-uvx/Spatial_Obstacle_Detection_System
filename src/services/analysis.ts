@@ -451,14 +451,21 @@ function normalizeProtectionZoneVertical(
     }
 
     if (distanceSource.kind === 'front_reference_line') {
+      const stationPoint = distanceSource.stationPoint
       const centerPoint = distanceSource.centerPoint
       const leftPoint = distanceSource.leftPoint
       const rightPoint = distanceSource.rightPoint
+      const planarControl = surface.planarControl as Record<string, unknown> | undefined
 
       if (
-        !isValidPositionCoordinate(centerPoint)
+        !isValidPositionCoordinate(stationPoint)
+        || !isValidPositionCoordinate(centerPoint)
         || !isValidPositionCoordinate(leftPoint)
         || !isValidPositionCoordinate(rightPoint)
+        || !planarControl
+        || !isFiniteNumber(planarControl.frontOffsetMeters)
+        || !isFiniteNumber(planarControl.halfAngleDegrees)
+        || !isFiniteNumber(planarControl.radiusMeters)
         || surface.distanceMetric !== 'axial_from_reference_line'
       ) {
         return null
@@ -472,11 +479,17 @@ function normalizeProtectionZoneVertical(
           type: 'distance_parameterized',
           distanceSource: {
             kind: 'front_reference_line',
+            stationPoint: [stationPoint[0], stationPoint[1]],
             centerPoint: [centerPoint[0], centerPoint[1]],
             leftPoint: [leftPoint[0], leftPoint[1]],
             rightPoint: [rightPoint[0], rightPoint[1]],
           },
           distanceMetric: 'axial_from_reference_line',
+          planarControl: {
+            frontOffsetMeters: planarControl.frontOffsetMeters,
+            halfAngleDegrees: planarControl.halfAngleDegrees,
+            radiusMeters: planarControl.radiusMeters,
+          },
           clampRange: {
             startMeters: clampRange.startMeters,
             endMeters: clampRange.endMeters,
