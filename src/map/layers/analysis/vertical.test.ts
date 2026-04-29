@@ -244,6 +244,21 @@ describe('vertical helpers', () => {
     expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(80, 6)
   })
 
+  it('keeps point plus radial semantics unchanged for radial distance and height pairing', () => {
+    const profile = buildVerticalProfile(analyticVerticalBase, [
+      {
+        longitude: 0,
+        latitude: 80 / metersPerDegreeLatitude,
+        radialDistanceMeters: 999999,
+      },
+    ])
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(80, 6)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(180, 6)
+  })
+
   it('falls back to base height when the elevation angle produces a non-finite tangent', () => {
     const baseSurface = expectDistanceParameterizedSurface(analyticVerticalBase)
     const vertical: ProtectionZoneAnalyticSurfaceVertical = {
@@ -342,6 +357,46 @@ describe('vertical helpers', () => {
     expect(profile.points).toHaveLength(1)
     expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(80, 6)
     expect(profile.points[0]?.heightMeters).toBeCloseTo(493.8 + Math.tan(toRadians(10)) * 30, 6)
+  })
+
+  it('returns radial distance and height together from the same front_reference_line evaluation path', () => {
+    const vertical = buildFrontReferenceVertical({
+      surface: {
+        ...frontReferenceBaseSurface,
+        planarControl: {
+          ...frontReferenceBaseSurface.planarControl,
+          frontOffsetMeters: 50,
+        },
+        heightModel: {
+          ...frontReferenceBaseSurface.heightModel,
+          angleDegrees: 10,
+          distanceOffsetMeters: 10,
+        },
+        clampRange: {
+          startMeters: 0,
+          endMeters: 1000,
+        },
+        distanceSource: {
+          kind: 'front_reference_line',
+          stationPoint: [0, 0],
+          centerPoint: [0, metersToLatitude(100)],
+          leftPoint: [metersToLongitude(-40, metersToLatitude(100)), metersToLatitude(100)],
+          rightPoint: [metersToLongitude(40, metersToLatitude(100)), metersToLatitude(100)],
+        },
+      },
+    })
+
+    const point = buildPointFromPolarDistance({ longitude: 0, latitude: 0 }, 120, 0)
+    const profile = buildVerticalProfile(vertical, [point])
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]).toMatchObject({
+      radialDistanceMeters: expect.any(Number),
+      heightMeters: expect.any(Number),
+    })
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(120, 6)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(493.8 + Math.tan(toRadians(10)) * 70, 6)
   })
 
   it('produces different heights for the same radial distance at different forward angles', () => {
@@ -538,5 +593,25 @@ describe('vertical helpers', () => {
     expect(profile.points[0]?.latitude).toBeCloseTo(metersToLatitude(80), 12)
     expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(80, 6)
     expect(profile.points[0]?.heightMeters).toBeCloseTo(493.8, 6)
+  })
+
+  it('reports the true station radial distance for front_reference_line points even when height falls back', () => {
+    const vertical = buildFrontReferenceVertical({
+      surface: {
+        ...frontReferenceBaseSurface,
+        distanceSource: {
+          ...frontReferenceBaseSurface.distanceSource,
+          centerPoint: [0, 0],
+        },
+      },
+    })
+
+    const point = buildPointFromPolarDistance({ longitude: 0, latitude: 0 }, 80, 0)
+    const profile = buildVerticalProfile(vertical, [point])
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(80, 6)
+    expect(profile.points[0]?.heightMeters).toBe(vertical.baseHeightMeters)
   })
 })
