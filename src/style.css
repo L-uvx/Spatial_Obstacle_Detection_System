@@ -269,8 +269,7 @@ body {
   color: #cbd5e1;
 }
 
-.analysis-modal__field input,
-.analysis-modal__field select {
+.analysis-modal__field input {
   width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 12px;

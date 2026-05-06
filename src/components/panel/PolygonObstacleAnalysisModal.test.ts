@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
 import { mount } from '@vue/test-utils'
-import { defineComponent } from 'vue'
+import { defineComponent, nextTick } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import PolygonObstacleAnalysisModal from './PolygonObstacleAnalysisModal.vue'
+import ObstacleTypeSelect from '../common/ObstacleTypeSelect.vue'
 import { pointObstacleTypeOptions, polygonObstacleTypeOptions } from '../../types/tool'
 import type { PolygonObstacleAnalysisState, ProtectionZoneAirportNode } from '../../types/tool'
 
@@ -261,9 +262,8 @@ describe('PolygonObstacleAnalysisModal', () => {
     })
 
     expect(wrapper.text()).toContain('点障碍物分析')
-    expect(
-      wrapper.findAll('.analysis-modal__obstacle-type-select option').map((node) => node.text()),
-    ).toEqual(pointObstacleTypeOptions)
+    const select = wrapper.findComponent(ObstacleTypeSelect)
+    expect(select.props('options')).toEqual(pointObstacleTypeOptions)
   })
 
   it('submits selected excel file name through browser file picker flow in point mode', async () => {
@@ -278,7 +278,11 @@ describe('PolygonObstacleAnalysisModal', () => {
     })
 
     await wrapper.get('.analysis-modal__project-input').setValue('武汉净空项目')
-    await wrapper.get('.analysis-modal__obstacle-type-select').setValue('铁塔/高塔')
+    await wrapper.get('.obstacle-type-select__trigger').trigger('click')
+    await nextTick()
+    const optionTarget1 = Array.from(document.querySelectorAll('.obstacle-type-select__option')).find(el => el.textContent === '铁塔/高塔') as HTMLElement
+    optionTarget1?.click()
+    await nextTick()
 
     expect(wrapper.get('button.analysis-modal__primary').attributes('disabled')).toBeDefined()
 
@@ -315,7 +319,11 @@ describe('PolygonObstacleAnalysisModal', () => {
     })
 
     await wrapper.get('.analysis-modal__project-input').setValue('武汉净空项目')
-    await wrapper.get('.analysis-modal__obstacle-type-select').setValue('铁塔/高塔')
+    await wrapper.get('.obstacle-type-select__trigger').trigger('click')
+    await nextTick()
+    const optionTarget2 = Array.from(document.querySelectorAll('.obstacle-type-select__option')).find(el => el.textContent === '铁塔/高塔') as HTMLElement
+    optionTarget2?.click()
+    await nextTick()
 
     const file = new File(['demo'], 'obstacles.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -341,7 +349,8 @@ describe('PolygonObstacleAnalysisModal', () => {
     })
 
     expect((wrapper.get('.analysis-modal__project-input').element as HTMLInputElement).value).toBe('')
-    expect((wrapper.get('.analysis-modal__obstacle-type-select').element as HTMLSelectElement).value).toBe(
+    const resetSelect = wrapper.findComponent(ObstacleTypeSelect)
+    expect(resetSelect.props('modelValue')).toBe(
       polygonObstacleTypeOptions[0],
     )
     expect(wrapper.find('.analysis-modal__file-name').exists()).toBe(false)

@@ -347,7 +347,12 @@ export const polygonObstacleTypeOptions = [
 ]
 
 export const pointObstacleTypeOptions = [
-  "高压架空输电线路",
+  "高压架空输电线路（35kV以下）",
+  "高压架空输电线路（35kV）",
+  "高压架空输电线路（110kV）",
+  "高压架空输电线路（220kV）",
+  "高压架空输电线路（330kV）",
+  "高压架空输电线路（500kV及以上）",
   "风力涡轮发电机等大型旋转反射物体",
   "铁塔/高塔",
   "树木/树林",

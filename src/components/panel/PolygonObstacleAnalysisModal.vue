@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { pointObstacleTypeOptions, polygonObstacleTypeOptions } from '../../types/tool'
 import type { ImportFormValue, PolygonObstacleAnalysisState } from '../../types/tool'
+import ObstacleTypeSelect from '../common/ObstacleTypeSelect.vue'
 
 const props = defineProps<{
   state: PolygonObstacleAnalysisState
@@ -149,9 +150,7 @@ watch(
 
           <label class="analysis-modal__field">
             <span>障碍物类型</span>
-            <select v-model="formValue.obstacleType" class="analysis-modal__obstacle-type-select">
-              <option v-for="option in modalObstacleTypeOptions" :key="option" :value="option">{{ option }}</option>
-            </select>
+            <ObstacleTypeSelect v-model="formValue.obstacleType" :options="modalObstacleTypeOptions" />
           </label>
 
           <label class="analysis-modal__field">
