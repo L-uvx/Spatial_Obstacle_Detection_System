@@ -23,6 +23,7 @@ body {
 .shell-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(156, 163, 175, 0.8) rgba(8, 17, 31, 0.45);
+  padding-top: 20px
 }
 
 .shell-scrollbar::-webkit-scrollbar {
