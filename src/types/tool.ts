@@ -183,8 +183,8 @@ export interface ProtectionZonePointDistanceParameterizedSurface
   distanceSource: ProtectionZonePointDistanceSource
   distanceMetric: 'radial'
   heightModel:
-    | ProtectionZoneAngleLinearRiseHeightModel
-    | ProtectionZoneRadarSiteProtectionMaskAngleHeightModel
+  | ProtectionZoneAngleLinearRiseHeightModel
+  | ProtectionZoneRadarSiteProtectionMaskAngleHeightModel
 }
 
 export interface ProtectionZoneFrontReferenceLineDistanceParameterizedSurface
@@ -375,8 +375,18 @@ export const pointObstacleTypeOptions = [
   "电力线缆和通信线缆",
   "车辆/航空器/机械",
   "架空低压电力线",
-  "中波和长波发射台",
-  "短波发射台",
+  "中波和长波发射台（小于50kW）",
+  "中波和长波发射台（100-150kW）",
+  "中波和长波发射台（大于200kW）",
+  "短波发射台（通信方向1/4功率角 0.5-5kW）",
+  "短波发射台（通信方向1/4功率角 5-25kW）",
+  "短波发射台（通信方向1/4功率角 25-120kW）",
+  "短波发射台（通信方向1/4功率角 >120kW）",
+  "短波发射台（通信方向1/4功率角外 0.5-5kW）",
+  "短波发射台（通信方向1/4功率角外 5-25kW）",
+  "短波发射台（通信方向1/4功率角外 25-120kW）",
+  "短波发射台（通信方向1/4功率角外 >120kW）",
+  "短波发射台（其他）",
   "工、科、医射频设备",
   "调频广播",
   "高频热合机",
