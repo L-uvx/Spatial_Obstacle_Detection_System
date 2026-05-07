@@ -15,6 +15,16 @@ function expectDistanceParameterizedSurface(vertical: ProtectionZoneAnalyticSurf
   return vertical.surface
 }
 
+function expectAngleLinearRiseHeightModel(vertical: ProtectionZoneAnalyticSurfaceVertical) {
+  const surface = expectDistanceParameterizedSurface(vertical)
+
+  if (surface.heightModel.type !== 'angle_linear_rise') {
+    throw new Error(`Expected angle_linear_rise height model but received ${surface.heightModel.type}`)
+  }
+
+  return surface.heightModel
+}
+
 function toRadians(value: number) {
   return (value * Math.PI) / 180
 }
@@ -58,6 +68,33 @@ function buildFrontReferenceVertical(
       ...(overrideSurface ?? {}),
     },
   }
+}
+
+function buildRadarMaskAngleVertical(): ProtectionZoneAnalyticSurfaceVertical {
+  return {
+    mode: 'analytic_surface',
+    baseReference: 'station',
+    baseHeightMeters: 525,
+    surface: {
+      type: 'distance_parameterized',
+      distanceSource: {
+        kind: 'point',
+        point: [103.935511, 30.542172],
+      },
+      distanceMetric: 'radial',
+      clampRange: {
+        startMeters: 0,
+        endMeters: 30000,
+      },
+      heightModel: {
+        type: 'radar_site_protection_mask_angle',
+        angleDegrees: null,
+        distanceOffsetMeters: 0,
+        maskAngleDegrees: 0.25,
+        distanceKilometersCorrectionDivisor: 16970,
+      },
+    },
+  } as unknown as ProtectionZoneAnalyticSurfaceVertical
 }
 
 const frontReferenceBaseSurface = {
@@ -175,6 +212,7 @@ describe('vertical helpers', () => {
 
   it('caps analytic_surface height growth at endMeters when geographic distance is beyond the clamp', () => {
     const baseSurface = expectDistanceParameterizedSurface(analyticVerticalBase)
+    const heightModel = expectAngleLinearRiseHeightModel(analyticVerticalBase)
     const vertical: ProtectionZoneAnalyticSurfaceVertical = {
       ...analyticVerticalBase,
       surface: {
@@ -184,7 +222,7 @@ describe('vertical helpers', () => {
           endMeters: 20,
         },
         heightModel: {
-          ...baseSurface.heightModel,
+          ...heightModel,
           distanceOffsetMeters: 10,
         },
       },
@@ -210,6 +248,7 @@ describe('vertical helpers', () => {
 
   it('uses distanceOffsetMeters to shift height growth for non-zero geographic distances inside clamp range', () => {
     const baseSurface = expectDistanceParameterizedSurface(analyticVerticalBase)
+    const heightModel = expectAngleLinearRiseHeightModel(analyticVerticalBase)
     const vertical: ProtectionZoneAnalyticSurfaceVertical = {
       ...analyticVerticalBase,
       surface: {
@@ -219,7 +258,7 @@ describe('vertical helpers', () => {
           endMeters: 1000,
         },
         heightModel: {
-          ...baseSurface.heightModel,
+          ...heightModel,
           distanceOffsetMeters: 50,
         },
       },
@@ -259,15 +298,79 @@ describe('vertical helpers', () => {
     expect(profile.points[0]?.heightMeters).toBeCloseTo(180, 6)
   })
 
+  it('keeps the base height at the radar mask source point', () => {
+    const vertical = buildRadarMaskAngleVertical()
+    const profile = buildVerticalProfile(vertical, [
+      {
+        longitude: 103.935511,
+        latitude: 30.542172,
+        radialDistanceMeters: 999999,
+      },
+    ])
+
+    expect(profile).toEqual({
+      mode: 'analytic_surface',
+      points: [
+        {
+          longitude: 103.935511,
+          latitude: 30.542172,
+          radialDistanceMeters: 0,
+          heightMeters: 525,
+        },
+      ],
+    })
+  })
+
+  it('uses the radar mask angle formula for non-zero radial distances', () => {
+    const vertical = buildRadarMaskAngleVertical()
+    const point = buildPointFromPolarDistance(
+      { longitude: 103.935511, latitude: 30.542172 },
+      1000,
+      0,
+    )
+
+    const profile = buildVerticalProfile(vertical, [point])
+    const maskAngleRadians = toRadians(0.25)
+    const correction = 1 / 16970
+    const expectedHeight = (Math.tan(maskAngleRadians + correction) * 1000) + 525
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(1000, 6)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(expectedHeight, 6)
+  })
+
+  it('caps radar mask angle growth at clampRange.endMeters', () => {
+    const vertical = buildRadarMaskAngleVertical()
+    const point = buildPointFromPolarDistance(
+      { longitude: 103.935511, latitude: 30.542172 },
+      50000,
+      0,
+    )
+
+    const profile = buildVerticalProfile(vertical, [point])
+    const clampedDistance = 30000
+    const dKm = clampedDistance / 1000
+    const maskAngleRadians = toRadians(0.25)
+    const correction = dKm / 16970
+    const expectedHeight = (Math.tan(maskAngleRadians + correction) * clampedDistance) + 525
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(50000, 3)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(expectedHeight, 6)
+  })
+
   it('falls back to base height when the elevation angle produces a non-finite tangent', () => {
     const baseSurface = expectDistanceParameterizedSurface(analyticVerticalBase)
+    const heightModel = expectAngleLinearRiseHeightModel(analyticVerticalBase)
     const vertical: ProtectionZoneAnalyticSurfaceVertical = {
       ...analyticVerticalBase,
       baseHeightMeters: 250,
       surface: {
         ...baseSurface,
         heightModel: {
-          ...baseSurface.heightModel,
+          ...heightModel,
           angleDegrees: 90,
         },
       },
@@ -511,13 +614,14 @@ describe('vertical helpers', () => {
 
   it('falls back to base height for angles extremely close to 90 degrees', () => {
     const baseSurface = expectDistanceParameterizedSurface(analyticVerticalBase)
+    const heightModel = expectAngleLinearRiseHeightModel(analyticVerticalBase)
     const vertical: ProtectionZoneAnalyticSurfaceVertical = {
       ...analyticVerticalBase,
       baseHeightMeters: 250,
       surface: {
         ...baseSurface,
         heightModel: {
-          ...baseSurface.heightModel,
+          ...heightModel,
           angleDegrees: 89.999999,
         },
       },

@@ -156,16 +156,25 @@ export interface ProtectionZoneFrontReferenceLinePlanarControl {
   radiusMeters: number
 }
 
+export interface ProtectionZoneAngleLinearRiseHeightModel {
+  type: 'angle_linear_rise'
+  angleDegrees: number
+  distanceOffsetMeters: number
+}
+
+export interface ProtectionZoneRadarSiteProtectionMaskAngleHeightModel {
+  type: 'radar_site_protection_mask_angle'
+  angleDegrees: null
+  distanceOffsetMeters: number
+  maskAngleDegrees: number
+  distanceKilometersCorrectionDivisor: number
+}
+
 interface ProtectionZoneDistanceParameterizedSurfaceBase {
   type: 'distance_parameterized'
   clampRange: {
     startMeters: number
     endMeters: number
-  }
-  heightModel: {
-    type: 'angle_linear_rise'
-    angleDegrees: number
-    distanceOffsetMeters: number
   }
 }
 
@@ -173,6 +182,9 @@ export interface ProtectionZonePointDistanceParameterizedSurface
   extends ProtectionZoneDistanceParameterizedSurfaceBase {
   distanceSource: ProtectionZonePointDistanceSource
   distanceMetric: 'radial'
+  heightModel:
+    | ProtectionZoneAngleLinearRiseHeightModel
+    | ProtectionZoneRadarSiteProtectionMaskAngleHeightModel
 }
 
 export interface ProtectionZoneFrontReferenceLineDistanceParameterizedSurface
@@ -180,6 +192,7 @@ export interface ProtectionZoneFrontReferenceLineDistanceParameterizedSurface
   distanceSource: ProtectionZoneFrontReferenceLineDistanceSource
   distanceMetric: 'axial_from_reference_line'
   planarControl: ProtectionZoneFrontReferenceLinePlanarControl
+  heightModel: ProtectionZoneAngleLinearRiseHeightModel
 }
 
 export type ProtectionZoneDistanceParameterizedSurface =

@@ -40,6 +40,14 @@ interface EvaluatedAnalyticPoint {
   heightMeters: number
 }
 
+interface RadarSiteProtectionMaskAngleHeightModel {
+  type: 'radar_site_protection_mask_angle'
+  angleDegrees: null
+  distanceOffsetMeters: number
+  maskAngleDegrees: number
+  distanceKilometersCorrectionDivisor: number
+}
+
 const METERS_PER_DEGREE_LATITUDE = 111320
 const MIN_REFERENCE_LINE_LENGTH_METERS = 0.01
 const MIN_SAFE_COSINE = 1e-6
@@ -103,6 +111,27 @@ function buildPointRadialHeight(
   vertical: DistanceParameterizedVertical,
   radialDistanceMeters: number,
 ) {
+  if (vertical.surface.heightModel.type === 'radar_site_protection_mask_angle') {
+    const boundedDistance = clampRadialDistance(
+      radialDistanceMeters,
+      vertical.surface.clampRange.startMeters,
+      vertical.surface.clampRange.endMeters,
+    )
+    const radarHeightModel = vertical.surface.heightModel as unknown as RadarSiteProtectionMaskAngleHeightModel
+    const dKm = boundedDistance / 1000
+    const maskAngleRadians = toRadians(radarHeightModel.maskAngleDegrees)
+    const correction = dKm / radarHeightModel.distanceKilometersCorrectionDivisor
+    const tangent = Math.tan(maskAngleRadians + correction)
+
+    if (!Number.isFinite(tangent)) {
+      return vertical.baseHeightMeters
+    }
+
+    const heightMeters = (tangent * boundedDistance) + vertical.baseHeightMeters
+
+    return Number.isFinite(heightMeters) ? heightMeters : vertical.baseHeightMeters
+  }
+
   const angleRadians = (vertical.surface.heightModel.angleDegrees * Math.PI) / 180
   const cosine = Math.cos(angleRadians)
   const tangent = Math.tan(angleRadians)

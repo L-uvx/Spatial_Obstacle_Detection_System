@@ -111,9 +111,65 @@ function buildExpectedAnalyticHeights(
       Math.max(radialDistanceMeters, surface.clampRange.startMeters),
       surface.clampRange.endMeters,
     )
+
+    if (surface.heightModel.type === 'radar_site_protection_mask_angle') {
+      const distanceKilometers = boundedDistance / 1000
+      const correction = distanceKilometers / surface.heightModel.distanceKilometersCorrectionDivisor
+      const tangent = Math.tan((surface.heightModel.maskAngleDegrees * Math.PI) / 180 + correction)
+
+      return Number.isFinite(tangent)
+        ? vertical.baseHeightMeters + tangent * boundedDistance
+        : vertical.baseHeightMeters
+    }
+
     const relativeDistance = Math.max(boundedDistance - surface.heightModel.distanceOffsetMeters, 0)
 
     return vertical.baseHeightMeters + Math.tan((surface.heightModel.angleDegrees * Math.PI) / 180) * relativeDistance
+  })
+}
+
+function buildExpectedRadarMaskAngleHeights(
+  ring: PositionCoordinate[],
+  vertical: Extract<PolygonObstacleAnalysisState['visibleProtectionZones'][number]['vertical'], { mode: 'analytic_surface' }>,
+) {
+  expect(vertical.surface.type).toBe('distance_parameterized')
+
+  if (vertical.surface.type !== 'distance_parameterized') {
+    throw new Error(`Expected distance_parameterized surface but received ${vertical.surface.type}`)
+  }
+
+  const surface = vertical.surface
+
+  if (surface.distanceSource.kind !== 'point' || surface.distanceMetric !== 'radial') {
+    throw new Error(
+      `Expected point/radial surface but received ${surface.distanceSource.kind}/${surface.distanceMetric}`,
+    )
+  }
+
+  if (surface.heightModel.type !== 'radar_site_protection_mask_angle') {
+    throw new Error(`Expected radar_site_protection_mask_angle but received ${surface.heightModel.type}`)
+  }
+
+  const heightModel = surface.heightModel
+
+  const [sourceLongitude, sourceLatitude] = surface.distanceSource.point
+
+  return ring.map(([longitude, latitude]) => {
+    const averageLatitude = (sourceLatitude + latitude) / 2
+    const deltaLatitudeMeters = (latitude - sourceLatitude) * 111320
+    const deltaLongitudeMeters = (longitude - sourceLongitude) * 111320 * Math.cos((averageLatitude * Math.PI) / 180)
+    const radialDistanceMeters = Math.sqrt(deltaLatitudeMeters ** 2 + deltaLongitudeMeters ** 2)
+    const boundedDistance = Math.min(
+      Math.max(radialDistanceMeters, surface.clampRange.startMeters),
+      surface.clampRange.endMeters,
+    )
+    const distanceKilometers = boundedDistance / 1000
+    const correction = distanceKilometers / heightModel.distanceKilometersCorrectionDivisor
+    const tangent = Math.tan((heightModel.maskAngleDegrees * Math.PI) / 180 + correction)
+
+    return Number.isFinite(tangent)
+      ? vertical.baseHeightMeters + tangent * boundedDistance
+      : vertical.baseHeightMeters
   })
 }
 
@@ -389,6 +445,51 @@ describe('syncAnalysisLayer', () => {
     expect(holeHeights.some((height) => Math.abs(height - vertical.baseHeightMeters) > 0.01)).toBe(true)
   })
 
+  it('renders radar_site_protection_mask_angle analytic_surface regions through the per-position-height path', () => {
+    const { viewer, add } = createViewer()
+    const vertical = {
+      mode: 'analytic_surface' as const,
+      baseReference: 'station' as const,
+      baseHeightMeters: 525,
+      surface: {
+        type: 'distance_parameterized' as const,
+        distanceSource: {
+          kind: 'point' as const,
+          point: [103.935511, 30.542172] as [number, number],
+        },
+        distanceMetric: 'radial' as const,
+        clampRange: {
+          startMeters: 0,
+          endMeters: 30000,
+        },
+        heightModel: {
+          type: 'radar_site_protection_mask_angle' as const,
+          angleDegrees: null,
+          distanceOffsetMeters: 0,
+          maskAngleDegrees: 0.25,
+          distanceKilometersCorrectionDivisor: 16970,
+        },
+      },
+    }
+    const ring = holeGeometry.coordinates[0][0]
+
+    syncAnalysisLayer(viewer as never, [
+      createVisibleRegion({
+        geometry: holeGeometry,
+        vertical,
+      }),
+    ])
+
+    const hierarchy = add.mock.calls[0][0].polygon?.hierarchy as Cesium.PolygonHierarchy
+    const expectedHeights = buildExpectedRadarMaskAngleHeights(ring, vertical)
+
+    expect(add).toHaveBeenCalledTimes(1)
+    expect(add.mock.calls[0][0].polygon?.perPositionHeight).toBe(true)
+    expect(add.mock.calls[0][0].polygon?.height).toBeUndefined()
+    expectHierarchyToMatchRing(hierarchy, ring, expectedHeights)
+    expect(toHierarchyPoints(hierarchy).some((point, index) => Math.abs(point.height - expectedHeights[index]) > 0.01)).toBe(false)
+  })
+
   it('renders front_reference_line analytic_surface regions through the per-position-height path', () => {
     const { viewer, add } = createViewer()
     const vertical = {
@@ -462,6 +563,7 @@ describe('syncAnalysisLayer', () => {
     expect(add.mock.calls.every((call) => call[0].polygon?.outline === false)).toBe(true)
 
     const firstHierarchy = add.mock.calls[0][0].polygon?.hierarchy
+    const secondHierarchy = add.mock.calls[1][0].polygon?.hierarchy
     const leftClosingHierarchy = add.mock.calls[2][0].polygon?.hierarchy
     const rightClosingHierarchy = add.mock.calls[3][0].polygon?.hierarchy
 
@@ -474,6 +576,17 @@ describe('syncAnalysisLayer', () => {
         [103.95397513931144, 30.593665083709087],
         [103.95117724149101, 30.649664183802024],
         [103.95562327488403, 30.64911929778665],
+        [103.95397513931144, 30.593665083709087],
+      ],
+      [492, 562, 562, 492],
+    )
+
+    expectHierarchyToMatchRing(
+      secondHierarchy,
+      [
+        [103.95397513931144, 30.593665083709087],
+        [103.95562327488403, 30.64911929778665],
+        [103.96003752578038, 30.64840710649382],
         [103.95397513931144, 30.593665083709087],
       ],
       [492, 562, 562, 492],

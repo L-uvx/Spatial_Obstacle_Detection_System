@@ -410,9 +410,6 @@ function normalizeProtectionZoneVertical(
       || !isFiniteNumber(clampRange.startMeters)
       || !isFiniteNumber(clampRange.endMeters)
       || !heightModel
-      || heightModel.type !== 'angle_linear_rise'
-      || !isFiniteNumber(heightModel.angleDegrees)
-      || !isFiniteNumber(heightModel.distanceOffsetMeters)
     ) {
       return null
     }
@@ -426,28 +423,70 @@ function normalizeProtectionZoneVertical(
 
       const normalizedPoint: PositionCoordinate = [point[0], point[1]]
 
-      return {
-        mode: 'analytic_surface',
-        baseReference: candidate.baseReference,
-        baseHeightMeters: candidate.baseHeightMeters,
-        surface: {
-          type: 'distance_parameterized',
-          distanceSource: {
-            kind: 'point',
-            point: normalizedPoint,
+      if (
+        heightModel.type === 'angle_linear_rise'
+        && isFiniteNumber(heightModel.angleDegrees)
+        && isFiniteNumber(heightModel.distanceOffsetMeters)
+      ) {
+        return {
+          mode: 'analytic_surface',
+          baseReference: candidate.baseReference,
+          baseHeightMeters: candidate.baseHeightMeters,
+          surface: {
+            type: 'distance_parameterized',
+            distanceSource: {
+              kind: 'point',
+              point: normalizedPoint,
+            },
+            distanceMetric: 'radial',
+            clampRange: {
+              startMeters: clampRange.startMeters,
+              endMeters: clampRange.endMeters,
+            },
+            heightModel: {
+              type: 'angle_linear_rise',
+              angleDegrees: heightModel.angleDegrees,
+              distanceOffsetMeters: heightModel.distanceOffsetMeters,
+            },
           },
-          distanceMetric: 'radial',
-          clampRange: {
-            startMeters: clampRange.startMeters,
-            endMeters: clampRange.endMeters,
-          },
-          heightModel: {
-            type: 'angle_linear_rise',
-            angleDegrees: heightModel.angleDegrees,
-            distanceOffsetMeters: heightModel.distanceOffsetMeters,
-          },
-        },
+        }
       }
+
+      if (
+        heightModel.type === 'radar_site_protection_mask_angle'
+        && heightModel.angleDegrees === null
+        && isFiniteNumber(heightModel.distanceOffsetMeters)
+        && isFiniteNumber(heightModel.maskAngleDegrees)
+        && isFiniteNumber(heightModel.distanceKilometersCorrectionDivisor)
+        && heightModel.distanceKilometersCorrectionDivisor > 0
+      ) {
+        return {
+          mode: 'analytic_surface',
+          baseReference: candidate.baseReference,
+          baseHeightMeters: candidate.baseHeightMeters,
+          surface: {
+            type: 'distance_parameterized',
+            distanceSource: {
+              kind: 'point',
+              point: normalizedPoint,
+            },
+            distanceMetric: 'radial',
+            clampRange: {
+              startMeters: clampRange.startMeters,
+              endMeters: clampRange.endMeters,
+            },
+            heightModel: {
+              type: 'radar_site_protection_mask_angle',
+              angleDegrees: null,
+              distanceOffsetMeters: heightModel.distanceOffsetMeters,
+              maskAngleDegrees: heightModel.maskAngleDegrees,
+              distanceKilometersCorrectionDivisor: heightModel.distanceKilometersCorrectionDivisor,
+            },
+          },
+        }
+      }
+
+      return null
     }
 
     if (distanceSource.kind === 'front_reference_line') {
@@ -467,6 +506,9 @@ function normalizeProtectionZoneVertical(
         || !isFiniteNumber(planarControl.halfAngleDegrees)
         || !isFiniteNumber(planarControl.radiusMeters)
         || surface.distanceMetric !== 'axial_from_reference_line'
+        || heightModel.type !== 'angle_linear_rise'
+        || !isFiniteNumber(heightModel.angleDegrees)
+        || !isFiniteNumber(heightModel.distanceOffsetMeters)
       ) {
         return null
       }
@@ -556,6 +598,10 @@ function normalizeProtectionZone(zone: ProtectionZoneResponse): ProtectionZoneRe
 
 function normalizeProtectionZones(zones: ProtectionZoneResponse[]): ProtectionZoneRegion[] {
   return zones.flatMap((zone) => {
+    if (!zone || typeof zone !== 'object') {
+      return []
+    }
+
     const normalizedZone = normalizeProtectionZone(zone)
 
     return normalizedZone ? [normalizedZone] : []

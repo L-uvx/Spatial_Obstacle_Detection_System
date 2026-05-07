@@ -1672,6 +1672,62 @@ describe('analysis service', () => {
     )
   })
 
+  it('ignores malformed top-level protectionZones entries without throwing and still warns for valid objects with invalid nested geometry', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          null,
+          {
+            id: 'legacy-zone',
+            airportId: 1,
+            airportName: 'Airport A',
+            stationId: 101,
+            stationName: 'Station A',
+            stationType: 'NDB',
+            ruleCode: 'legacy',
+            ruleName: 'legacy',
+            zoneCode: 'legacy-zone',
+            zoneName: 'Legacy Zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'circle',
+              center: { longitude: 104.1, latitude: 30.1 },
+              radiusMeters: 50,
+            },
+            vertical: { mode: 'flat', baseReference: 'station', baseHeightMeters: 500 },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as unknown as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+         airportId: '1',
+         stationId: '101',
+         zoneCode: 'legacy-zone',
+         regionCode: 'default',
+         reason: 'geometry is not a valid multipolygon',
+      }),
+    )
+  })
+
   it('keeps a multipolygon ring hole structure intact during normalization', async () => {
     const coordinates = [
       [
@@ -1861,6 +1917,276 @@ describe('analysis service', () => {
         ruleResults: [],
       }),
     } as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+        airportId: '1',
+        stationId: '101',
+        zoneCode: 'ring-zone',
+        regionCode: 'default',
+        reason: 'vertical is not a supported formal model',
+      }),
+    )
+  })
+
+  it('normalizes radar_site_protection_mask_angle analytic surfaces for point radial regions', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-radar-mask-angle',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            ruleCode: 'radar-mask-angle',
+            ruleName: 'radar-mask-angle',
+            zoneCode: 'radar-mask-angle',
+            zoneName: 'Radar Mask Angle Zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 525,
+              surface: {
+                type: 'distance_parameterized',
+                distanceSource: {
+                  kind: 'point',
+                  point: [103.935511, 30.542172],
+                },
+                distanceMetric: 'radial',
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 30000,
+                },
+                heightModel: {
+                  type: 'radar_site_protection_mask_angle',
+                  angleDegrees: null,
+                  distanceOffsetMeters: 0,
+                  maskAngleDegrees: 0.25,
+                  distanceKilometersCorrectionDivisor: 16970,
+                },
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as unknown as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toHaveLength(1)
+    expect(result.protectionZones[0]?.vertical).toEqual({
+      mode: 'analytic_surface',
+      baseReference: 'station',
+      baseHeightMeters: 525,
+      surface: {
+        type: 'distance_parameterized',
+        distanceSource: {
+          kind: 'point',
+          point: [103.935511, 30.542172],
+        },
+        distanceMetric: 'radial',
+        clampRange: {
+          startMeters: 0,
+          endMeters: 30000,
+        },
+        heightModel: {
+          type: 'radar_site_protection_mask_angle',
+          angleDegrees: null,
+          distanceOffsetMeters: 0,
+          maskAngleDegrees: 0.25,
+          distanceKilometersCorrectionDivisor: 16970,
+        },
+      },
+    })
+  })
+
+  it('drops radar_site_protection_mask_angle analytic surfaces when distanceKilometersCorrectionDivisor is not greater than zero', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-radar-mask-angle-invalid-divisor',
+            airportId: 1,
+            airportName: 'Airport A',
+            stationId: 101,
+            stationName: 'Station A',
+            stationType: 'NDB',
+            ruleCode: 'ring',
+            ruleName: 'ring',
+            zoneCode: 'ring-zone',
+            zoneName: 'Ring Zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 525,
+              surface: {
+                type: 'distance_parameterized',
+                distanceSource: {
+                  kind: 'point',
+                  point: [103.935511, 30.542172],
+                },
+                distanceMetric: 'radial',
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 30000,
+                },
+                heightModel: {
+                  type: 'radar_site_protection_mask_angle',
+                  angleDegrees: null,
+                  distanceOffsetMeters: 0,
+                  maskAngleDegrees: 0.25,
+                  distanceKilometersCorrectionDivisor: 0,
+                },
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as unknown as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+        airportId: '1',
+        stationId: '101',
+        zoneCode: 'ring-zone',
+        regionCode: 'default',
+        reason: 'vertical is not a supported formal model',
+      }),
+    )
+  })
+
+  it('drops radar_site_protection_mask_angle analytic surfaces when angleDegrees is not null', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-radar-mask-angle-invalid-angle',
+            airportId: 1,
+            airportName: 'Airport A',
+            stationId: 101,
+            stationName: 'Station A',
+            stationType: 'NDB',
+            ruleCode: 'ring',
+            ruleName: 'ring',
+            zoneCode: 'ring-zone',
+            zoneName: 'Ring Zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 525,
+              surface: {
+                type: 'distance_parameterized',
+                distanceSource: {
+                  kind: 'point',
+                  point: [103.935511, 30.542172],
+                },
+                distanceMetric: 'radial',
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 30000,
+                },
+                heightModel: {
+                  type: 'radar_site_protection_mask_angle',
+                  angleDegrees: 1,
+                  distanceOffsetMeters: 0,
+                  maskAngleDegrees: 0.25,
+                  distanceKilometersCorrectionDivisor: 16970,
+                },
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as unknown as Response)
 
     const result = await getAnalysisTaskResult('analysis-task-1')
 
