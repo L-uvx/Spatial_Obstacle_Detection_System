@@ -203,8 +203,8 @@ export interface ProtectionZoneAnalyticSurfaceVertical {
   baseReference: 'station' | 'gp360_altitude'
   baseHeightMeters: number
   surface:
-    | ProtectionZoneDistanceParameterizedSurface
-    | ProtectionZoneLocBuildingRestrictionZoneRegion3Surface
+  | ProtectionZoneDistanceParameterizedSurface
+  | ProtectionZoneLocBuildingRestrictionZoneRegion3Surface
 }
 
 export interface ProtectionZoneRegion {
@@ -342,7 +342,10 @@ export const polygonObstacleTypeOptions = [
   "堤坝",
   "金属围栏/金属栅栏",
   "机场专用环场路",
-  "高压变电站",
+  "高压变电站（110kV）",
+  "高压变电站（220-330kV）",
+  "高压变电站（500kV及以上）",
+  "高压变电站（其他）",
   "气象雷达站"
 ]
 
@@ -364,9 +367,13 @@ export const pointObstacleTypeOptions = [
   "工、科、医射频设备",
   "调频广播",
   "高频热合机",
-  "高频炉",
-  "工业电焊",
-  "超高频理疗机",
-  "农用电力设备",
+  "高频炉（100kW及以下）",
+  "高频炉（100kW以上）",
+  "工业电焊（10kW及以下）",
+  "工业电焊（10kW以上）",
+  "超高频理疗机（1kW及以下）",
+  "超高频理疗机（1kW以上）",
+  "农用电力设备（1kW及以下）",
+  "农用电力设备（1kW以上）",
   "有无线电辐射的工业设施"
 ]
