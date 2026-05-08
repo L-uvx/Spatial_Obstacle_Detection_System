@@ -2031,6 +2031,288 @@ describe('analysis service', () => {
     })
   })
 
+  it('normalizes radial_cone_surface analytic surfaces with angle_linear_rise', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-radial-cone-angle',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            ruleCode: 'ndb_radial_cone',
+            ruleName: 'ndb_radial_cone',
+            zoneCode: 'ndb_radial_cone',
+            zoneName: 'NDB radial cone zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 530,
+              surface: {
+                type: 'radial_cone_surface',
+                distanceSource: {
+                  kind: 'point',
+                  point: [103.991621, 30.587841],
+                },
+                distanceMetric: 'radial',
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 29999,
+                },
+                heightModel: {
+                  type: 'angle_linear_rise',
+                  angleDegrees: 15,
+                  distanceOffsetMeters: 0,
+                },
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as unknown as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toHaveLength(1)
+    expect(result.protectionZones[0]?.vertical).toEqual({
+      mode: 'analytic_surface',
+      baseReference: 'station',
+      baseHeightMeters: 530,
+      surface: {
+        type: 'radial_cone_surface',
+        distanceSource: {
+          kind: 'point',
+          point: [103.991621, 30.587841],
+        },
+        distanceMetric: 'radial',
+        clampRange: {
+          startMeters: 0,
+          endMeters: 29999,
+        },
+        heightModel: {
+          type: 'angle_linear_rise',
+          angleDegrees: 15,
+          distanceOffsetMeters: 0,
+        },
+      },
+    })
+  })
+
+  it('normalizes radial_cone_surface analytic surfaces with radar_site_protection_mask_angle', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-radial-cone-radar',
+            airportId: 1,
+            airportName: '双流机场',
+            stationId: 4,
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            ruleCode: 'radar-mask-angle-radial-cone',
+            ruleName: 'radar-mask-angle-radial-cone',
+            zoneCode: 'radar-mask-angle-radial-cone',
+            zoneName: 'Radar Mask Angle Radial Cone Zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 530,
+              surface: {
+                type: 'radial_cone_surface',
+                distanceSource: {
+                  kind: 'point',
+                  point: [103.991621, 30.587841],
+                },
+                distanceMetric: 'radial',
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 29999,
+                },
+                heightModel: {
+                  type: 'radar_site_protection_mask_angle',
+                  angleDegrees: null,
+                  distanceOffsetMeters: 0,
+                  maskAngleDegrees: 0.25,
+                  distanceKilometersCorrectionDivisor: 16970,
+                },
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as unknown as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toHaveLength(1)
+    expect(result.protectionZones[0]?.vertical).toEqual({
+      mode: 'analytic_surface',
+      baseReference: 'station',
+      baseHeightMeters: 530,
+      surface: {
+        type: 'radial_cone_surface',
+        distanceSource: {
+          kind: 'point',
+          point: [103.991621, 30.587841],
+        },
+        distanceMetric: 'radial',
+        clampRange: {
+          startMeters: 0,
+          endMeters: 29999,
+        },
+        heightModel: {
+          type: 'radar_site_protection_mask_angle',
+          angleDegrees: null,
+          distanceOffsetMeters: 0,
+          maskAngleDegrees: 0.25,
+          distanceKilometersCorrectionDivisor: 16970,
+        },
+      },
+    })
+  })
+
+  it('drops radial_cone_surface analytic surfaces when geometry contains holes', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-radial-cone-hole',
+            airportId: 1,
+            airportName: 'Airport A',
+            stationId: 101,
+            stationName: 'Station A',
+            stationType: 'NDB',
+            ruleCode: 'ring',
+            ruleName: 'ring',
+            zoneCode: 'ring-zone',
+            zoneName: 'Ring Zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                  [
+                    [103.944, 30.557],
+                    [103.946, 30.557],
+                    [103.946, 30.553],
+                    [103.944, 30.553],
+                    [103.944, 30.557],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'station',
+              baseHeightMeters: 530,
+              surface: {
+                type: 'radial_cone_surface',
+                distanceSource: {
+                  kind: 'point',
+                  point: [103.991621, 30.587841],
+                },
+                distanceMetric: 'radial',
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 29999,
+                },
+                heightModel: {
+                  type: 'angle_linear_rise',
+                  angleDegrees: 15,
+                  distanceOffsetMeters: 0,
+                },
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as unknown as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+        airportId: '1',
+        stationId: '101',
+        zoneCode: 'ring-zone',
+        regionCode: 'default',
+      }),
+    )
+  })
+
   it('drops radar_site_protection_mask_angle analytic surfaces when distanceKilometersCorrectionDivisor is not greater than zero', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
@@ -2111,6 +2393,98 @@ describe('analysis service', () => {
         airportId: '1',
         stationId: '101',
         zoneCode: 'ring-zone',
+        regionCode: 'default',
+        reason: 'vertical is not a supported formal model',
+      }),
+    )
+  })
+
+  it('drops radial_cone_surface analytic surfaces when distanceSource.kind is front_reference_line', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        analysisTaskId: 'analysis-task-1',
+        status: 'succeeded',
+        importTaskId: 'import-task-1',
+        targetIds: [1],
+        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
+        obstacleCount: 1,
+        summary: 'summary',
+        protectionZones: [
+          {
+            id: 'zone-invalid-radial-cone-front-reference-line',
+            airportId: 1,
+            airportName: 'Airport A',
+            stationId: 101,
+            stationName: 'Station A',
+            stationType: 'ILS',
+            ruleCode: 'cone',
+            ruleName: 'cone',
+            zoneCode: 'cone-zone',
+            zoneName: 'Cone Zone',
+            regionCode: 'default',
+            regionName: 'default',
+            geometry: {
+              shapeType: 'multipolygon',
+              coordinates: [
+                [
+                  [
+                    [103.94, 30.56],
+                    [103.95, 30.56],
+                    [103.95, 30.55],
+                    [103.94, 30.55],
+                    [103.94, 30.56],
+                  ],
+                ],
+              ],
+            },
+            vertical: {
+              mode: 'analytic_surface',
+              baseReference: 'gp360_altitude',
+              baseHeightMeters: 493.8,
+              surface: {
+                type: 'radial_cone_surface',
+                distanceSource: {
+                  kind: 'front_reference_line',
+                  stationPoint: [103.942962, 30.594308],
+                  centerPoint: [103.952962, 30.594308],
+                  leftPoint: [103.952492, 30.594308],
+                  rightPoint: [103.953432, 30.594308],
+                },
+                distanceMetric: 'axial_from_reference_line',
+                planarControl: {
+                  frontOffsetMeters: 350,
+                  halfAngleDegrees: 15,
+                  radiusMeters: 18160,
+                },
+                clampRange: {
+                  startMeters: 0,
+                  endMeters: 18160,
+                },
+                heightModel: {
+                  type: 'angle_linear_rise',
+                  angleDegrees: 1,
+                  distanceOffsetMeters: 120,
+                },
+              },
+            },
+          },
+        ],
+        ruleResults: [],
+      }),
+    } as unknown as Response)
+
+    const result = await getAnalysisTaskResult('analysis-task-1')
+
+    expect(result.protectionZones).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[analysis] Ignored invalid protection zone region.',
+      expect.objectContaining({
+        airportId: '1',
+        stationId: '101',
+        zoneCode: 'cone-zone',
         regionCode: 'default',
         reason: 'vertical is not a supported formal model',
       }),

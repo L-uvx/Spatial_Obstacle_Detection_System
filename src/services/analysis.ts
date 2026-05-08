@@ -403,8 +403,10 @@ function normalizeProtectionZoneVertical(
     const distanceSource = surface?.distanceSource as Record<string, unknown> | undefined
     const clampRange = surface?.clampRange as Record<string, unknown> | undefined
     const heightModel = surface?.heightModel as Record<string, unknown> | undefined
+    const isPointRadialSurface = surface.type === 'distance_parameterized' || surface.type === 'radial_cone_surface'
+
     if (
-      surface.type !== 'distance_parameterized'
+      !isPointRadialSurface && surface.type !== 'distance_parameterized'
       || !distanceSource
       || !clampRange
       || !isFiniteNumber(clampRange.startMeters)
@@ -428,12 +430,16 @@ function normalizeProtectionZoneVertical(
         && isFiniteNumber(heightModel.angleDegrees)
         && isFiniteNumber(heightModel.distanceOffsetMeters)
       ) {
+        const normalizedSurfaceType = surface.type === 'radial_cone_surface'
+          ? 'radial_cone_surface'
+          : 'distance_parameterized'
+
         return {
           mode: 'analytic_surface',
           baseReference: candidate.baseReference,
           baseHeightMeters: candidate.baseHeightMeters,
           surface: {
-            type: 'distance_parameterized',
+            type: normalizedSurfaceType,
             distanceSource: {
               kind: 'point',
               point: normalizedPoint,
@@ -460,12 +466,16 @@ function normalizeProtectionZoneVertical(
         && isFiniteNumber(heightModel.distanceKilometersCorrectionDivisor)
         && heightModel.distanceKilometersCorrectionDivisor > 0
       ) {
+        const normalizedSurfaceType = surface.type === 'radial_cone_surface'
+          ? 'radial_cone_surface'
+          : 'distance_parameterized'
+
         return {
           mode: 'analytic_surface',
           baseReference: candidate.baseReference,
           baseHeightMeters: candidate.baseHeightMeters,
           surface: {
-            type: 'distance_parameterized',
+            type: normalizedSurfaceType,
             distanceSource: {
               kind: 'point',
               point: normalizedPoint,
@@ -486,6 +496,10 @@ function normalizeProtectionZoneVertical(
         }
       }
 
+      return null
+    }
+
+    if (surface.type === 'radial_cone_surface') {
       return null
     }
 
@@ -573,6 +587,15 @@ function normalizeProtectionZone(zone: ProtectionZoneResponse): ProtectionZoneRe
 
   if (!vertical) {
     warnInvalidProtectionZone(zone, 'vertical is not a supported formal model')
+    return null
+  }
+
+  if (
+    vertical.mode === 'analytic_surface'
+    && vertical.surface.type === 'radial_cone_surface'
+    && (geometry.coordinates.length !== 1 || geometry.coordinates[0]?.length !== 1)
+  ) {
+    warnInvalidProtectionZone(zone, 'radial_cone_surface requires exactly one polygon outer ring')
     return null
   }
 

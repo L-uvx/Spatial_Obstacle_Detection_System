@@ -97,6 +97,58 @@ function buildRadarMaskAngleVertical(): ProtectionZoneAnalyticSurfaceVertical {
   } as unknown as ProtectionZoneAnalyticSurfaceVertical
 }
 
+function buildRadialConeAngleLinearRiseVertical(): ProtectionZoneAnalyticSurfaceVertical {
+  return {
+    mode: 'analytic_surface',
+    baseReference: 'station',
+    baseHeightMeters: 530,
+    surface: {
+      type: 'radial_cone_surface',
+      distanceSource: {
+        kind: 'point',
+        point: [103.991621, 30.587841],
+      },
+      distanceMetric: 'radial',
+      clampRange: {
+        startMeters: 0,
+        endMeters: 29999,
+      },
+      heightModel: {
+        type: 'angle_linear_rise',
+        angleDegrees: 15,
+        distanceOffsetMeters: 0,
+      },
+    },
+  } as unknown as ProtectionZoneAnalyticSurfaceVertical
+}
+
+function buildRadialConeRadarMaskAngleVertical(): ProtectionZoneAnalyticSurfaceVertical {
+  return {
+    mode: 'analytic_surface',
+    baseReference: 'station',
+    baseHeightMeters: 530,
+    surface: {
+      type: 'radial_cone_surface',
+      distanceSource: {
+        kind: 'point',
+        point: [103.991621, 30.587841],
+      },
+      distanceMetric: 'radial',
+      clampRange: {
+        startMeters: 0,
+        endMeters: 29999,
+      },
+      heightModel: {
+        type: 'radar_site_protection_mask_angle',
+        angleDegrees: null,
+        distanceOffsetMeters: 0,
+        maskAngleDegrees: 0.25,
+        distanceKilometersCorrectionDivisor: 16970,
+      },
+    },
+  } as unknown as ProtectionZoneAnalyticSurfaceVertical
+}
+
 const frontReferenceBaseSurface = {
   type: 'distance_parameterized' as const,
   distanceSource: {
@@ -338,6 +390,68 @@ describe('vertical helpers', () => {
     expect(profile.points).toHaveLength(1)
     expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(1000, 6)
     expect(profile.points[0]?.heightMeters).toBeCloseTo(expectedHeight, 6)
+  })
+
+  it('keeps the radial_cone_surface center point at base height for angle_linear_rise', () => {
+    const vertical = buildRadialConeAngleLinearRiseVertical()
+
+    const profile = buildVerticalProfile(vertical, [
+      {
+        longitude: 103.991621,
+        latitude: 30.587841,
+        radialDistanceMeters: 999999,
+      },
+    ])
+
+    expect(profile).toEqual({
+      mode: 'analytic_surface',
+      points: [
+        {
+          longitude: 103.991621,
+          latitude: 30.587841,
+          radialDistanceMeters: 0,
+          heightMeters: 530,
+        },
+      ],
+    })
+  })
+
+  it('uses the existing radial height formula for radial_cone_surface angle_linear_rise outer points', () => {
+    const vertical = buildRadialConeAngleLinearRiseVertical()
+    const point = buildPointFromPolarDistance(
+      { longitude: 103.991621, latitude: 30.587841 },
+      1000,
+      0,
+    )
+
+    const profile = buildVerticalProfile(vertical, [point])
+    const expectedHeight = 530 + Math.tan(toRadians(15)) * 1000
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(1000, 6)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(expectedHeight, 6)
+    expect(profile.points[0]?.heightMeters).toBeGreaterThan(530)
+  })
+
+  it('uses the existing radar mask angle formula for radial_cone_surface outer points', () => {
+    const vertical = buildRadialConeRadarMaskAngleVertical()
+    const point = buildPointFromPolarDistance(
+      { longitude: 103.991621, latitude: 30.587841 },
+      1000,
+      0,
+    )
+
+    const profile = buildVerticalProfile(vertical, [point])
+    const maskAngleRadians = toRadians(0.25)
+    const correction = 1 / 16970
+    const expectedHeight = (Math.tan(maskAngleRadians + correction) * 1000) + 530
+
+    expect(profile.mode).toBe('analytic_surface')
+    expect(profile.points).toHaveLength(1)
+    expect(profile.points[0]?.radialDistanceMeters).toBeCloseTo(1000, 6)
+    expect(profile.points[0]?.heightMeters).toBeCloseTo(expectedHeight, 6)
+    expect(profile.points[0]?.heightMeters).toBeGreaterThan(530)
   })
 
   it('caps radar mask angle growth at clampRange.endMeters', () => {

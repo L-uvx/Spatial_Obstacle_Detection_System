@@ -4,6 +4,7 @@ import type {
   ProtectionZoneFrontReferenceLineDistanceParameterizedSurface,
   ProtectionZoneFlatVertical,
   ProtectionZonePointDistanceParameterizedSurface,
+  ProtectionZoneRadialConeSurface,
 } from '../../../types/tool'
 
 export interface SampledFootprintPoint {
@@ -32,7 +33,10 @@ type DistanceParameterizedVertical<TSurface extends ProtectionZoneDistanceParame
     surface: TSurface
   }
 
-type PointRadialVertical = DistanceParameterizedVertical<ProtectionZonePointDistanceParameterizedSurface>
+type PointRadialSurface = ProtectionZonePointDistanceParameterizedSurface | ProtectionZoneRadialConeSurface
+type PointRadialVertical = ProtectionZoneAnalyticSurfaceVertical & {
+  surface: PointRadialSurface
+}
 type FrontReferenceLineVertical = DistanceParameterizedVertical<ProtectionZoneFrontReferenceLineDistanceParameterizedSurface>
 
 interface EvaluatedAnalyticPoint {
@@ -108,7 +112,7 @@ function clampRadialDistance(radialDistanceMeters: number, startDistanceMeters: 
 }
 
 function buildPointRadialHeight(
-  vertical: DistanceParameterizedVertical,
+  vertical: PointRadialVertical,
   radialDistanceMeters: number,
 ) {
   if (vertical.surface.heightModel.type === 'radar_site_protection_mask_angle') {
@@ -278,6 +282,23 @@ export function buildVerticalProfile(
   }
 
   if (vertical.mode === 'analytic_surface') {
+    if (vertical.surface.type === 'radial_cone_surface') {
+      const radialConeVertical = vertical as PointRadialVertical
+
+      return {
+        mode: 'analytic_surface',
+        points: footprint.map((point) => {
+          const evaluatedPoint = evaluatePointRadialSurface(radialConeVertical, point)
+
+          return {
+            ...point,
+            radialDistanceMeters: evaluatedPoint.radialDistanceMeters,
+            heightMeters: evaluatedPoint.heightMeters,
+          }
+        }),
+      }
+    }
+
     if (vertical.surface.type !== 'distance_parameterized') {
       throw new Error(`Unsupported analytic surface type: ${vertical.surface.type}`)
     }

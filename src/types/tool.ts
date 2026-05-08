@@ -199,6 +199,19 @@ export type ProtectionZoneDistanceParameterizedSurface =
   | ProtectionZonePointDistanceParameterizedSurface
   | ProtectionZoneFrontReferenceLineDistanceParameterizedSurface
 
+export interface ProtectionZoneRadialConeSurface {
+  type: 'radial_cone_surface'
+  distanceSource: ProtectionZonePointDistanceSource
+  distanceMetric: 'radial'
+  clampRange: {
+    startMeters: number
+    endMeters: number
+  }
+  heightModel:
+  | ProtectionZoneAngleLinearRiseHeightModel
+  | ProtectionZoneRadarSiteProtectionMaskAngleHeightModel
+}
+
 export interface ProtectionZoneLocBuildingRestrictionZoneRegion3Surface {
   type: 'loc_building_restriction_zone_region_3'
   stationPoint: [number, number]
@@ -217,6 +230,7 @@ export interface ProtectionZoneAnalyticSurfaceVertical {
   baseHeightMeters: number
   surface:
   | ProtectionZoneDistanceParameterizedSurface
+  | ProtectionZoneRadialConeSurface
   | ProtectionZoneLocBuildingRestrictionZoneRegion3Surface
 }
 

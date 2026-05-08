@@ -144,6 +144,50 @@ function createClosedTriangleHierarchy(points: RegionTriangleDefinition) {
   )
 }
 
+// 为 radial_cone_surface 解析面生成以中心点为公共顶点的扇形三角片。
+function createRadialConeTriangleDefinitions(
+  region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
+) {
+  if (region.vertical.mode !== 'analytic_surface' || region.vertical.surface.type !== 'radial_cone_surface') {
+    return []
+  }
+
+  const polygon = region.geometry.coordinates[0]
+  const outerRing = polygon?.[0]
+
+  if (!outerRing) {
+    throw new Error('Unsupported radial_cone_surface multipolygon: missing outer ring')
+  }
+
+  const [centerLongitude, centerLatitude] = region.vertical.surface.distanceSource.point
+  const centerHeightMeters = region.vertical.baseHeightMeters
+  const profile = buildVerticalProfile(
+    region.vertical,
+    outerRing.map(([longitude, latitude]) => ({
+      longitude,
+      latitude,
+      radialDistanceMeters: 0,
+    })),
+  )
+
+  if (profile.mode !== 'analytic_surface') {
+    throw new Error(`Expected analytic_surface profile but received ${profile.mode}`)
+  }
+
+  const triangles: RegionTriangleDefinition[] = []
+
+  for (let index = 0; index < outerRing.length - 1; index += 1) {
+    triangles.push([
+      [centerLongitude, centerLatitude, centerHeightMeters],
+      [outerRing[index][0], outerRing[index][1], profile.points[index].heightMeters],
+      [outerRing[index + 1][0], outerRing[index + 1][1], profile.points[index + 1].heightMeters],
+      [centerLongitude, centerLatitude, centerHeightMeters],
+    ])
+  }
+
+  return triangles
+}
+
 // 为 LOC region 3 解析面生成扇形三角片与左右封口三角片。
 function createLocRegion3TriangleDefinitions(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
@@ -231,6 +275,18 @@ function createEntities(
     case 'analytic_surface':
       if (region.vertical.surface.type === 'loc_building_restriction_zone_region_3') {
         return createLocRegion3TriangleDefinitions(region).map((triangle, polygonIndex) =>
+          createEntity(
+            region,
+            createClosedTriangleHierarchy(triangle),
+            polygonIndex,
+            true,
+            undefined,
+          ),
+        )
+      }
+
+      if (region.vertical.surface.type === 'radial_cone_surface') {
+        return createRadialConeTriangleDefinitions(region).map((triangle, polygonIndex) =>
           createEntity(
             region,
             createClosedTriangleHierarchy(triangle),

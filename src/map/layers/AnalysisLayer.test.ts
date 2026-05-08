@@ -173,6 +173,45 @@ function buildExpectedRadarMaskAngleHeights(
   })
 }
 
+function buildExpectedRadialConeHeights(
+  ring: PositionCoordinate[],
+  vertical: Extract<PolygonObstacleAnalysisState['visibleProtectionZones'][number]['vertical'], { mode: 'analytic_surface' }>,
+) {
+  expect(vertical.surface.type).toBe('radial_cone_surface')
+
+  if (vertical.surface.type !== 'radial_cone_surface') {
+    throw new Error(`Expected radial_cone_surface but received ${vertical.surface.type}`)
+  }
+
+  const surface = vertical.surface
+  const [sourceLongitude, sourceLatitude] = surface.distanceSource.point
+
+  return ring.map(([longitude, latitude]) => {
+    const averageLatitude = (sourceLatitude + latitude) / 2
+    const deltaLatitudeMeters = (latitude - sourceLatitude) * 111320
+    const deltaLongitudeMeters = (longitude - sourceLongitude) * 111320 * Math.cos((averageLatitude * Math.PI) / 180)
+    const radialDistanceMeters = Math.sqrt(deltaLatitudeMeters ** 2 + deltaLongitudeMeters ** 2)
+    const boundedDistance = Math.min(
+      Math.max(radialDistanceMeters, surface.clampRange.startMeters),
+      surface.clampRange.endMeters,
+    )
+
+    if (surface.heightModel.type === 'radar_site_protection_mask_angle') {
+      const distanceKilometers = boundedDistance / 1000
+      const correction = distanceKilometers / surface.heightModel.distanceKilometersCorrectionDivisor
+      const tangent = Math.tan((surface.heightModel.maskAngleDegrees * Math.PI) / 180 + correction)
+
+      return Number.isFinite(tangent)
+        ? vertical.baseHeightMeters + tangent * boundedDistance
+        : vertical.baseHeightMeters
+    }
+
+    const relativeDistance = Math.max(boundedDistance - surface.heightModel.distanceOffsetMeters, 0)
+
+    return vertical.baseHeightMeters + Math.tan((surface.heightModel.angleDegrees * Math.PI) / 180) * relativeDistance
+  })
+}
+
 function createVisibleRegion(
   overrides: Partial<PolygonObstacleAnalysisState['visibleProtectionZones'][number]> = {},
 ): PolygonObstacleAnalysisState['visibleProtectionZones'][number] {
@@ -238,6 +277,50 @@ function createLocRegion3VisibleRegion(
         ],
         arcHeightMeters: 562,
         alphaDegrees: 15.04,
+      },
+    },
+    ...overrides,
+  })
+}
+
+function createRadialConeVisibleRegion(
+  overrides: Partial<PolygonObstacleAnalysisState['visibleProtectionZones'][number]> = {},
+): PolygonObstacleAnalysisState['visibleProtectionZones'][number] {
+  return createVisibleRegion({
+    geometry: {
+      shapeType: 'multipolygon',
+      coordinates: [
+        [
+          [
+            [103.991621, 30.614791],
+            [104.011621, 30.587841],
+            [103.991621, 30.560891],
+            [103.971621, 30.587841],
+            [103.991621, 30.614791],
+          ],
+        ],
+      ],
+    },
+    vertical: {
+      mode: 'analytic_surface',
+      baseReference: 'station',
+      baseHeightMeters: 530,
+      surface: {
+        type: 'radial_cone_surface',
+        distanceSource: {
+          kind: 'point',
+          point: [103.991621, 30.587841],
+        },
+        distanceMetric: 'radial',
+        clampRange: {
+          startMeters: 0,
+          endMeters: 29999,
+        },
+        heightModel: {
+          type: 'angle_linear_rise',
+          angleDegrees: 15,
+          distanceOffsetMeters: 0,
+        },
       },
     },
     ...overrides,
@@ -613,6 +696,106 @@ describe('syncAnalysisLayer', () => {
       ],
       [492, 492, 562, 492],
     )
+  })
+
+  it('renders radial_cone_surface as one triangle entity per outer ring segment', () => {
+    const { viewer, add } = createViewer()
+    const region = createRadialConeVisibleRegion()
+    const ring = region.geometry.coordinates[0][0]
+
+    syncAnalysisLayer(viewer as never, [region])
+
+    expect(add).toHaveBeenCalledTimes(ring.length - 1)
+    expect(add.mock.calls.every((call) => call[0].polygon?.perPositionHeight === true)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].polygon?.height === undefined)).toBe(true)
+  })
+
+  it('builds each radial_cone_surface triangle as center, current ring point, next ring point, center', () => {
+    const { viewer, add } = createViewer()
+    const region = createRadialConeVisibleRegion()
+    const ring = region.geometry.coordinates[0][0]
+    const center = region.vertical.mode === 'analytic_surface'
+      && region.vertical.surface.type === 'radial_cone_surface'
+      ? region.vertical.surface.distanceSource.point
+      : null
+    const expectedHeights = buildExpectedRadialConeHeights(ring, region.vertical as Extract<PolygonObstacleAnalysisState['visibleProtectionZones'][number]['vertical'], { mode: 'analytic_surface' }>)
+
+    syncAnalysisLayer(viewer as never, [region])
+
+    expect(center).not.toBeNull()
+
+    for (let index = 0; index < ring.length - 1; index += 1) {
+      expectHierarchyToMatchRing(
+        add.mock.calls[index][0].polygon?.hierarchy,
+        [center as [number, number], ring[index], ring[index + 1], center as [number, number]],
+        [region.vertical.baseHeightMeters, expectedHeights[index], expectedHeights[index + 1], region.vertical.baseHeightMeters],
+      )
+    }
+  })
+
+  it('keeps the first and last point of every radial_cone_surface triangle at the center base height', () => {
+    const { viewer, add } = createViewer()
+    const region = createRadialConeVisibleRegion()
+    const center = region.vertical.mode === 'analytic_surface'
+      && region.vertical.surface.type === 'radial_cone_surface'
+      ? region.vertical.surface.distanceSource.point
+      : null
+
+    syncAnalysisLayer(viewer as never, [region])
+
+    expect(center).not.toBeNull()
+
+    for (const call of add.mock.calls) {
+      const positions = toHierarchyPoints(call[0].polygon?.hierarchy)
+
+      expect(positions[0]?.longitude).toBeCloseTo((center as [number, number])[0], 10)
+      expect(positions[0]?.latitude).toBeCloseTo((center as [number, number])[1], 10)
+      expect(positions[0]?.height).toBeCloseTo(region.vertical.baseHeightMeters, 6)
+      expect(positions[positions.length - 1]?.longitude).toBeCloseTo((center as [number, number])[0], 10)
+      expect(positions[positions.length - 1]?.latitude).toBeCloseTo((center as [number, number])[1], 10)
+      expect(positions[positions.length - 1]?.height).toBeCloseTo(region.vertical.baseHeightMeters, 6)
+    }
+  })
+
+  it('uses radar_site_protection_mask_angle heights for radial_cone_surface outer vertices', () => {
+    const { viewer, add } = createViewer()
+    const region = createRadialConeVisibleRegion({
+      vertical: {
+        mode: 'analytic_surface',
+        baseReference: 'station',
+        baseHeightMeters: 530,
+        surface: {
+          type: 'radial_cone_surface',
+          distanceSource: {
+            kind: 'point',
+            point: [103.991621, 30.587841],
+          },
+          distanceMetric: 'radial',
+          clampRange: {
+            startMeters: 0,
+            endMeters: 29999,
+          },
+          heightModel: {
+            type: 'radar_site_protection_mask_angle',
+            angleDegrees: null,
+            distanceOffsetMeters: 0,
+            maskAngleDegrees: 0.25,
+            distanceKilometersCorrectionDivisor: 16970,
+          },
+        },
+      },
+    })
+    const ring = region.geometry.coordinates[0][0]
+    const expectedHeights = buildExpectedRadialConeHeights(ring, region.vertical as Extract<PolygonObstacleAnalysisState['visibleProtectionZones'][number]['vertical'], { mode: 'analytic_surface' }>)
+
+    syncAnalysisLayer(viewer as never, [region])
+
+    for (let index = 0; index < ring.length - 1; index += 1) {
+      const positions = toHierarchyPoints(add.mock.calls[index][0].polygon?.hierarchy)
+
+      expect(positions[1]?.height).toBeCloseTo(expectedHeights[index] ?? Number.NaN, 6)
+      expect(positions[2]?.height).toBeCloseTo(expectedHeights[index + 1] ?? Number.NaN, 6)
+    }
   })
 
   it('uses region style fill as polygon material when provided', () => {
