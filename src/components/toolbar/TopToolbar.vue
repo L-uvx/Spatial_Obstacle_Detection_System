@@ -4,13 +4,19 @@ import type { ObstacleAnalysisMode, ToolbarItem } from '../../types/tool'
 
 const emit = defineEmits<{
   openAnalysis: [mode: ObstacleAnalysisMode]
+  openDataManagement: []
   reset: []
 }>()
 
 // 根据工具项类型派发打开分析或地图复位事件。
 function handleClick(item: ToolbarItem) {
-  if (item.opensModal && item.mode) {
+  if (item.action === 'open-analysis' && item.mode) {
     emit('openAnalysis', item.mode)
+    return
+  }
+
+  if (item.action === 'open-data-management') {
+    emit('openDataManagement')
     return
   }
 

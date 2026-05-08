@@ -4,8 +4,119 @@ import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import { describe, expect, it } from 'vitest'
 import AppShell from './AppShell.vue'
+import type { DataManagementState } from '../../composables/useDataManagement'
 import { toolbarItems } from '../../types/tool'
 import type { PolygonObstacleAnalysisState } from '../../types/tool'
+
+function createDataManagementState(overrides: Partial<DataManagementState> = {}): DataManagementState {
+  return {
+    isOpen: false,
+    activeTab: 'airports',
+    airportOptions: [],
+    stationTypeOptions: [],
+    airports: {
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      filters: {
+        keyword: '',
+        hasCoordinates: false,
+      },
+      loading: false,
+      errorMessage: '',
+      warnings: [],
+      formOpen: false,
+      draft: {
+        name: '',
+        longitude: null,
+        latitude: null,
+        altitude: null,
+      },
+      deleteTarget: null,
+    },
+    runways: {
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      filters: {
+        airportId: '',
+        keyword: '',
+        runNumber: '',
+      },
+      loading: false,
+      errorMessage: '',
+      warnings: [],
+      formOpen: false,
+      draft: {
+        airportId: '',
+        name: '',
+        runNumber: '',
+        longitude: null,
+        latitude: null,
+        headingDegrees: null,
+        lengthMeters: null,
+        width: null,
+        altitude: null,
+        enterHeight: null,
+        maximumAirworthiness: null,
+        stationSubType: '',
+        runwayCodeA: '',
+        runwayType: '',
+        runwayCodeB: '',
+      },
+      deleteTarget: null,
+    },
+    stations: {
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      filters: {
+        airportId: '',
+        stationType: '',
+        keyword: '',
+        runwayNo: '',
+      },
+      loading: false,
+      errorMessage: '',
+      warnings: [],
+      formOpen: false,
+      draft: {
+        airportId: '',
+        name: '',
+        stationType: '',
+        stationGroup: null,
+        frequency: null,
+        runwayNo: '',
+        longitude: null,
+        latitude: null,
+        altitude: null,
+        coverageRadius: null,
+        flyHeight: null,
+        antennaHag: null,
+        reflectionNetHag: null,
+        centerAntennaH: null,
+        bAntennaH: null,
+        bToCenterDistance: null,
+        reflectionDiameter: null,
+        downwardAngle: null,
+        antennaTag: null,
+        distanceToRunway: null,
+        distanceVToRunway: null,
+        distanceEndoRunway: null,
+        unitNumber: null,
+        aircraft: '',
+        antennaHeight: null,
+        stationSubType: null,
+        combineId: null,
+      },
+      deleteTarget: null,
+    },
+    ...overrides,
+  }
+}
 
 function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): PolygonObstacleAnalysisState {
   return {
@@ -64,6 +175,7 @@ describe('AppShell', () => {
     const wrapper = mount(AppShell, {
       props: {
         analysisState: createState({ protectionZonePanelOpen: false, protectionZoneTree: [] }),
+        dataManagementState: createDataManagementState(),
         resetTick: 0,
         renderedObstacles: [],
         initialCameraTarget: null,
@@ -83,6 +195,7 @@ describe('AppShell', () => {
     const wrapper = mount(AppShell, {
       props: {
         analysisState: createState({ protectionZoneTree: [] }),
+        dataManagementState: createDataManagementState(),
         resetTick: 0,
         renderedObstacles: [],
         initialCameraTarget: null,
@@ -94,8 +207,10 @@ describe('AppShell', () => {
     await toolbarButtons[0].trigger('click')
     await toolbarButtons[1].trigger('click')
     await toolbarButtons[2].trigger('click')
+    await toolbarButtons[3].trigger('click')
 
     expect(wrapper.emitted('openAnalysis')).toEqual([['polygon'], ['point']])
+    expect(wrapper.emitted('openDataManagement')).toEqual([[]])
     expect(wrapper.emitted('reset')).toEqual([[]])
   })
 
@@ -104,12 +219,14 @@ describe('AppShell', () => {
 
     expect(labels).toContain('多边形障碍物分析')
     expect(labels).toContain('点障碍物分析')
+    expect(labels).toContain('数据管理')
   })
 
   it('emits point analysis mode when point entry is clicked', async () => {
     const wrapper = mount(AppShell, {
       props: {
         analysisState: createState(),
+        dataManagementState: createDataManagementState(),
         resetTick: 0,
         renderedObstacles: [],
         initialCameraTarget: null,
@@ -125,6 +242,7 @@ describe('AppShell', () => {
     const wrapper = mount(AppShell, {
       props: {
         analysisState: createState({ protectionZonePanelOpen: true, protectionZoneTree: [] }),
+        dataManagementState: createDataManagementState(),
         resetTick: 0,
         renderedObstacles: [],
         initialCameraTarget: null,
@@ -151,6 +269,7 @@ describe('AppShell', () => {
             },
           ],
         }),
+        dataManagementState: createDataManagementState(),
         resetTick: 0,
         renderedObstacles: [],
         initialCameraTarget: null,
@@ -164,6 +283,7 @@ describe('AppShell', () => {
     const wrapper = mount(AppShell, {
       props: {
         analysisState: createState({ stationPanelOpen: false, airports: [], protectionZoneTree: [] }),
+        dataManagementState: createDataManagementState(),
         resetTick: 0,
         renderedObstacles: [],
         initialCameraTarget: null,
@@ -208,6 +328,7 @@ describe('AppShell', () => {
             },
           ],
         }),
+        dataManagementState: createDataManagementState(),
         resetTick: 0,
         renderedObstacles: [],
         initialCameraTarget: null,
@@ -230,6 +351,7 @@ describe('AppShell', () => {
           protectionZonePanelOpen: true,
           protectionZoneTree: [],
         }),
+        dataManagementState: createDataManagementState(),
         resetTick: 0,
         renderedObstacles: [],
         initialCameraTarget: null,
@@ -254,6 +376,7 @@ describe('AppShell', () => {
           protectionZonePanelOpen: false,
           protectionZoneTree: [],
         }),
+        dataManagementState: createDataManagementState(),
         resetTick: 0,
         renderedObstacles: [],
         initialCameraTarget: null,
@@ -334,6 +457,7 @@ describe('AppShell', () => {
     mount(AppShell, {
       props: {
         analysisState,
+        dataManagementState: createDataManagementState(),
         resetTick: 0,
         renderedObstacles: [],
         initialCameraTarget: null,

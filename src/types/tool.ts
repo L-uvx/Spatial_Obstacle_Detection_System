@@ -1,4 +1,4 @@
-export type ToolbarToolKey = 'polygon-obstacle-analysis' | 'point-obstacle-analysis' | 'reset'
+export type ToolbarToolKey = 'polygon-obstacle-analysis' | 'point-obstacle-analysis' | 'data-management' | 'reset'
 
 export type ObstacleAnalysisMode = 'polygon' | 'point'
 
@@ -18,7 +18,7 @@ export type BootstrapStatus = 'idle' | 'loading' | 'success' | 'error'
 export interface ToolbarItem {
   key: ToolbarToolKey
   label: string
-  opensModal: boolean
+  action: 'open-analysis' | 'open-data-management' | 'reset'
   mode?: ObstacleAnalysisMode
 }
 
@@ -353,9 +353,10 @@ export interface PolygonObstacleAnalysisState {
 }
 
 export const toolbarItems: ToolbarItem[] = [
-  { key: 'polygon-obstacle-analysis', label: '多边形障碍物分析', opensModal: true, mode: 'polygon' },
-  { key: 'point-obstacle-analysis', label: '点障碍物分析', opensModal: true, mode: 'point' },
-  { key: 'reset', label: '地图复位', opensModal: false },
+  { key: 'polygon-obstacle-analysis', label: '多边形障碍物分析', action: 'open-analysis', mode: 'polygon' },
+  { key: 'point-obstacle-analysis', label: '点障碍物分析', action: 'open-analysis', mode: 'point' },
+  { key: 'data-management', label: '数据管理', action: 'open-data-management' },
+  { key: 'reset', label: '地图复位', action: 'reset' },
 ]
 
 export const polygonObstacleTypeOptions = [

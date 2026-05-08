@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CesiumViewer from '../map/CesiumViewer.vue'
+import DataManagementModal from '../panel/DataManagementModal.vue'
 import SidePanel from '../panel/SidePanel.vue'
 import PolygonObstacleAnalysisModal from '../panel/PolygonObstacleAnalysisModal.vue'
 import TopToolbar from '../toolbar/TopToolbar.vue'
@@ -11,9 +12,11 @@ import type {
   ProtectionZoneNode,
   RenderedObstacle,
 } from '../../types/tool'
+import type { DataManagementState } from '../../composables/useDataManagement'
 
 const props = defineProps<{
   analysisState: PolygonObstacleAnalysisState
+  dataManagementState: DataManagementState
   resetTick: number
   renderedObstacles: RenderedObstacle[]
   initialCameraTarget: InitialCameraTarget | null
@@ -21,8 +24,47 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   openAnalysis: [mode: ObstacleAnalysisMode]
+  openDataManagement: []
+  switchDataManagementTab: [tab: DataManagementState['activeTab']]
   reset: []
   closeAnalysis: []
+  closeDataManagement: []
+  setAirportKeyword: [keyword: string]
+  setAirportHasCoordinates: [hasCoordinates: boolean]
+  changeAirportPage: [page: number]
+  changeAirportPageSize: [pageSize: number]
+  setRunwayAirportId: [airportId: string]
+  setRunwayKeyword: [keyword: string]
+  setRunwayRunNumber: [runNumber: string]
+  changeRunwayPage: [page: number]
+  changeRunwayPageSize: [pageSize: number]
+  setStationAirportId: [airportId: string]
+  setStationType: [stationType: string]
+  setStationKeyword: [keyword: string]
+  setStationRunwayNo: [runwayNo: string]
+  changeStationPage: [page: number]
+  changeStationPageSize: [pageSize: number]
+  openAirportCreateDialog: []
+  openAirportEditDialog: [airportId: string]
+  openRunwayCreateDialog: []
+  openRunwayEditDialog: [runwayId: string]
+  openRunwayDeleteConfirm: [runwayId: string]
+  closeRunwayFormDialog: []
+  saveRunwayDraft: []
+  closeRunwayDeleteConfirm: []
+  confirmRunwayDelete: []
+  openStationCreateDialog: []
+  openStationEditDialog: [stationId: string]
+  openStationDeleteConfirm: [stationId: string]
+  closeStationFormDialog: []
+  saveStationDraft: []
+  closeStationDeleteConfirm: []
+  confirmStationDelete: []
+  closeAirportFormDialog: []
+  saveAirportDraft: []
+  openAirportDeleteConfirm: [airportId: string]
+  closeAirportDeleteConfirm: []
+  confirmAirportDelete: []
   openStationPanel: []
   closeStationPanel: []
   selectAirport: [airportId: string]
@@ -109,7 +151,11 @@ function handleSelectAirport(event: Event) {
 
 <template>
   <div class="app-shell">
-    <TopToolbar @open-analysis="emit('openAnalysis', $event)" @reset="emit('reset')" />
+    <TopToolbar
+      @open-analysis="emit('openAnalysis', $event)"
+      @open-data-management="emit('openDataManagement')"
+      @reset="emit('reset')"
+    />
     <div class="app-shell__top-right-controls">
       <div class="app-shell__station-selector">
         <button
@@ -170,6 +216,47 @@ function handleSelectAirport(event: Event) {
         @set-zone-protection-zone-visibility="handleToggleProtectionZone"
         @start-analysis="emit('startAnalysis')"
         @export-report="emit('exportReport')"
+      />
+      <DataManagementModal
+        :state="dataManagementState"
+        @close="emit('closeDataManagement')"
+        @switch-tab="emit('switchDataManagementTab', $event)"
+        @set-airport-keyword="emit('setAirportKeyword', $event)"
+        @set-airport-has-coordinates="emit('setAirportHasCoordinates', $event)"
+        @change-airport-page="emit('changeAirportPage', $event)"
+        @change-airport-page-size="emit('changeAirportPageSize', $event)"
+        @set-runway-airport-id="emit('setRunwayAirportId', $event)"
+        @set-runway-keyword="emit('setRunwayKeyword', $event)"
+        @set-runway-run-number="emit('setRunwayRunNumber', $event)"
+        @change-runway-page="emit('changeRunwayPage', $event)"
+        @change-runway-page-size="emit('changeRunwayPageSize', $event)"
+        @set-station-airport-id="emit('setStationAirportId', $event)"
+        @set-station-type="emit('setStationType', $event)"
+        @set-station-keyword="emit('setStationKeyword', $event)"
+        @set-station-runway-no="emit('setStationRunwayNo', $event)"
+        @change-station-page="emit('changeStationPage', $event)"
+        @change-station-page-size="emit('changeStationPageSize', $event)"
+        @open-station-create-dialog="emit('openStationCreateDialog')"
+        @open-station-edit-dialog="emit('openStationEditDialog', $event)"
+        @open-station-delete-confirm="emit('openStationDeleteConfirm', $event)"
+        @close-station-form-dialog="emit('closeStationFormDialog')"
+        @save-station-draft="emit('saveStationDraft')"
+        @close-station-delete-confirm="emit('closeStationDeleteConfirm')"
+        @confirm-station-delete="emit('confirmStationDelete')"
+        @open-runway-create-dialog="emit('openRunwayCreateDialog')"
+        @open-runway-edit-dialog="emit('openRunwayEditDialog', $event)"
+        @open-runway-delete-confirm="emit('openRunwayDeleteConfirm', $event)"
+        @close-runway-form-dialog="emit('closeRunwayFormDialog')"
+        @save-runway-draft="emit('saveRunwayDraft')"
+        @close-runway-delete-confirm="emit('closeRunwayDeleteConfirm')"
+        @confirm-runway-delete="emit('confirmRunwayDelete')"
+        @open-airport-create-dialog="emit('openAirportCreateDialog')"
+        @open-airport-edit-dialog="emit('openAirportEditDialog', $event)"
+        @close-airport-form-dialog="emit('closeAirportFormDialog')"
+        @save-airport-draft="emit('saveAirportDraft')"
+        @open-airport-delete-confirm="emit('openAirportDeleteConfirm', $event)"
+        @close-airport-delete-confirm="emit('closeAirportDeleteConfirm')"
+        @confirm-airport-delete="emit('confirmAirportDelete')"
       />
       <CesiumViewer
         :reset-tick="resetTick"

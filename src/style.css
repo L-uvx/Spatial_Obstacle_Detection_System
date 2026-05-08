@@ -419,8 +419,563 @@ body {
 
 .analysis-modal__download {
   display: inline-flex;
-  margin-top: 0;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: #bfdbfe;
+  background: rgba(30, 41, 59, 0.65);
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.analysis-modal__download:hover {
+  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(37, 99, 235, 0.18);
+}
+
+/* ---------- 数据管理大弹窗 ---------- */
+
+.data-management-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 16;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 64px 24px 24px;
+  pointer-events: auto;
+}
+
+.data-management-modal__card {
+  width: min(1200px, 100%);
+  max-height: calc(100vh - 88px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 24px;
+  background: rgba(8, 17, 31, 0.94);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.45);
+}
+
+.data-management-modal__header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 28px;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  background: rgba(8, 17, 31, 0.97);
+  backdrop-filter: blur(20px);
+}
+
+.data-management-modal__header h2 {
+  margin: 0;
+  font-size: 24px;
+  color: #e8eefc;
+}
+
+.data-management-modal__close {
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 16px;
+  color: #d8e4ff;
+  background: rgba(51, 65, 85, 0.85);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.data-management-modal__close:hover {
+  background: rgba(71, 85, 105, 0.85);
+}
+
+.data-management-modal__tabs {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0;
+  padding: 0 28px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(8, 17, 31, 0.97);
+}
+
+.data-management-modal__tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 14px 24px;
+  color: #94a3b8;
+  background: transparent;
+  font-size: 15px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.data-management-modal__tab:hover {
+  color: #cbd5e1;
+}
+
+.data-management-modal__tab[data-active='true'] {
   color: #93c5fd;
+  border-bottom-color: #2563eb;
+}
+
+.data-management-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.data-management-modal__warnings {
+  flex: 0 0 auto;
+  margin: 0 28px;
+  padding: 14px 18px;
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  border-radius: 12px;
+  background: rgba(250, 204, 21, 0.06);
+}
+
+.data-management-modal__warnings p {
+  margin: 0;
+  color: #fde68a;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.data-management-modal__warnings p + p {
+  margin-top: 6px;
+}
+
+.data-management-modal__placeholder {
+  margin: 0;
+  padding: 0 28px 20px;
+  color: #93c5fd;
+}
+
+.data-management-modal__delete-confirm {
+  flex: 0 0 auto;
+  margin: 0 28px 20px;
+  padding: 18px;
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 16px;
+  background: rgba(239, 68, 68, 0.07);
+}
+
+.data-management-modal__delete-confirm p {
+  margin: 0;
+  color: #fecaca;
+  font-size: 14px;
+}
+
+.data-management-modal__delete-error {
+  margin-top: 10px;
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+.data-management-modal__delete-confirm button {
+  margin-top: 12px;
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 16px;
+  color: #fff;
+  background: rgba(239, 68, 68, 0.85);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.data-management-modal__delete-confirm button:hover {
+  background: rgba(220, 38, 38, 0.9);
+}
+
+.data-management-modal__delete-confirm button + button {
+  margin-left: 10px;
+  background: rgba(51, 65, 85, 0.85);
+}
+
+.data-management-modal__delete-confirm button + button:hover {
+  background: rgba(71, 85, 105, 0.85);
+}
+
+/* ---------- 数据管理表格 ---------- */
+
+.airport-table,
+.runway-table,
+.station-table {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 28px;
+  overflow: hidden;
+}
+
+.airport-table__toolbar,
+.runway-table__toolbar,
+.station-table__toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.airport-table__toolbar label,
+.runway-table__toolbar label,
+.station-table__toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.airport-table__toolbar input,
+.runway-table__toolbar input,
+.station-table__toolbar input {
+  width: 160px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: #e2e8f0;
+  font-size: 13px;
+  background: rgba(15, 23, 42, 0.64);
+}
+
+.airport-table__toolbar input::placeholder,
+.runway-table__toolbar input::placeholder,
+.station-table__toolbar input::placeholder {
+  color: #64748b;
+}
+
+.airport-table__toolbar button,
+.runway-table__toolbar button,
+.station-table__toolbar button {
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 16px;
+  color: #fff;
+  font-size: 13px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.airport-table__toolbar button:hover,
+.runway-table__toolbar button:hover,
+.station-table__toolbar button:hover {
+  opacity: 0.9;
+}
+
+.airport-table__table,
+.runway-table__table,
+.station-table__table {
+  flex: 1 1 auto;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.airport-table__table th,
+.runway-table__table th,
+.station-table__table th {
+  padding: 12px 14px;
+  color: #93c5fd;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.64);
+}
+
+.airport-table__table td,
+.runway-table__table td,
+.station-table__table td {
+  padding: 10px 14px;
+  color: #cbd5e1;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+}
+
+.airport-table__table tr:last-child td,
+.runway-table__table tr:last-child td,
+.station-table__table tr:last-child td {
+  border-bottom: 0;
+}
+
+.airport-table__table tr:hover td,
+.runway-table__table tr:hover td,
+.station-table__table tr:hover td {
+  background: rgba(30, 41, 59, 0.38);
+}
+
+.airport-table__table td button,
+.runway-table__table td button,
+.station-table__table td button {
+  border: 0;
+  border-radius: 8px;
+  padding: 5px 12px;
+  color: #d8e4ff;
+  font-size: 12px;
+  background: rgba(51, 65, 85, 0.65);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.airport-table__table td button:hover,
+.runway-table__table td button:hover,
+.station-table__table td button:hover {
+  background: rgba(71, 85, 105, 0.75);
+}
+
+.airport-table__table td button + button,
+.runway-table__table td button + button,
+.station-table__table td button + button {
+  margin-left: 8px;
+}
+
+/* ---------- 分页控件 ---------- */
+
+.airport-table__pager,
+.runway-table__pager,
+.station-table__pager {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.airport-table__pager p,
+.runway-table__pager p,
+.station-table__pager p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.airport-table__pager-controls,
+.runway-table__pager-controls,
+.station-table__pager-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.airport-table__pager-controls button,
+.runway-table__pager-controls button,
+.station-table__pager-controls button {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  padding: 6px 14px;
+  color: #cbd5e1;
+  font-size: 12px;
+  background: rgba(15, 23, 42, 0.56);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.airport-table__pager-controls button:hover:not(:disabled),
+.runway-table__pager-controls button:hover:not(:disabled),
+.station-table__pager-controls button:hover:not(:disabled) {
+  border-color: rgba(147, 197, 253, 0.35);
+  background: rgba(30, 41, 59, 0.75);
+}
+
+.airport-table__pager-controls button:disabled,
+.runway-table__pager-controls button:disabled,
+.station-table__pager-controls button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.airport-table__pager-controls span,
+.runway-table__pager-controls span,
+.station-table__pager-controls span {
+  color: #cbd5e1;
+  font-size: 13px;
+  min-width: 48px;
+  text-align: center;
+}
+
+.airport-table__pager-controls select,
+.runway-table__pager-controls select,
+.station-table__pager-controls select {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: #e2e8f0;
+  font-size: 12px;
+  background: rgba(15, 23, 42, 0.64);
+  cursor: pointer;
+}
+
+.airport-table__pager-controls label,
+.runway-table__pager-controls label,
+.station-table__pager-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+/* ---------- 表单弹窗 ---------- */
+
+.data-management-form-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 22;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 6, 12, 0.62);
+  backdrop-filter: blur(6px);
+}
+
+.data-management-form-dialog__card {
+  width: min(520px, calc(100vw - 48px));
+  max-height: calc(100vh - 160px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 24px;
+  background: rgba(8, 17, 31, 0.94);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.45);
+}
+
+.data-management-form-dialog__header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 28px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.data-management-form-dialog__header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #e8eefc;
+}
+
+.data-management-form-dialog__header button {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 14px;
+  color: #d8e4ff;
+  font-size: 13px;
+  background: rgba(51, 65, 85, 0.85);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.data-management-form-dialog__header button:hover {
+  background: rgba(71, 85, 105, 0.85);
+}
+
+.data-management-form-dialog__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px 28px;
+}
+
+.data-management-form-dialog__body label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.data-management-form-dialog__body label span {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.data-management-form-dialog__body input,
+.data-management-form-dialog__body select {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #e2e8f0;
+  font-size: 14px;
+  background: rgba(15, 23, 42, 0.64);
+}
+
+.data-management-form-dialog__body input::placeholder {
+  color: #64748b;
+}
+
+.data-management-form-dialog__body input:focus,
+.data-management-form-dialog__body select:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.5);
+}
+
+.data-management-form-dialog__error {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 10px;
+  color: #fca5a5;
+  font-size: 13px;
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.data-management-form-dialog__footer {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 28px 20px;
+  border-top: 1px solid rgba(148, 163, 184, 0.10);
+}
+
+.data-management-form-dialog__footer button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 24px;
+  color: #fff;
+  font-size: 14px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.data-management-form-dialog__footer button:hover {
+  opacity: 0.92;
+}
+
+.data-management-form-dialog__body label + section,
+.data-management-form-dialog__body section + label {
+  margin-top: 4px;
+}
+
+.data-management-form-dialog__body section h3 {
+  margin: 0 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  color: #93c5fd;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .analysis-modal__footer {
