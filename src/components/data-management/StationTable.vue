@@ -3,9 +3,6 @@ import type { StationListItem } from '../../types/dataManagement'
 
 const props = defineProps<{
   items: StationListItem[]
-  total: number
-  page: number
-  pageSize: number
   airportId: string
   stationType: string
   keyword: string
@@ -18,58 +15,11 @@ const emit = defineEmits<{
   'update:stationType': [stationType: string]
   'update:keyword': [keyword: string]
   'update:runwayNo': [runwayNo: string]
-  'change:page': [page: number]
-  'change:pageSize': [pageSize: number]
   create: []
+  detail: [station: StationListItem]
   edit: [station: StationListItem]
   delete: [station: StationListItem]
 }>()
-
-function getPagerSummary() {
-  if (props.total === 0) {
-    return '共 0 条'
-  }
-
-  const start = (props.page - 1) * props.pageSize + 1
-  const end = Math.min(props.page * props.pageSize, props.total)
-  return `第 ${start}-${end} 条，共 ${props.total} 条`
-}
-
-function getTotalPages() {
-  if (props.total === 0) {
-    return 0
-  }
-
-  return Math.ceil(props.total / props.pageSize)
-}
-
-function handlePreviousPage() {
-  if (props.page <= 1) {
-    return
-  }
-
-  emit('change:page', props.page - 1)
-}
-
-function handleNextPage() {
-  const totalPages = getTotalPages()
-
-  if (totalPages === 0 || props.page >= totalPages) {
-    return
-  }
-
-  emit('change:page', props.page + 1)
-}
-
-function handlePageSizeChange(event: Event) {
-  const target = event.target as HTMLSelectElement | null
-
-  if (!target) {
-    return
-  }
-
-  emit('change:pageSize', Number(target.value))
-}
 </script>
 
 <template>
@@ -141,46 +91,12 @@ function handlePageSizeChange(event: Event) {
           <td>{{ station.runwayNo || '-' }}</td>
           <td>{{ station.longitude ?? '-' }}, {{ station.latitude ?? '-' }}</td>
           <td>
+            <button type="button" data-action="detail-station" @click="emit('detail', station)">详情</button>
             <button type="button" data-action="edit-station" @click="emit('edit', station)">编辑</button>
             <button type="button" data-action="delete-station" @click="emit('delete', station)">删除</button>
           </td>
         </tr>
       </tbody>
     </table>
-
-    <div class="station-table__pager">
-      <p>{{ getPagerSummary() }}</p>
-      <div class="station-table__pager-controls">
-        <button
-          type="button"
-          data-testid="station-prev-page"
-          :disabled="page <= 1"
-          @click="handlePreviousPage"
-        >
-          上一页
-        </button>
-        <span data-testid="station-current-page">{{ page }} / {{ getTotalPages() }}</span>
-        <button
-          type="button"
-          data-testid="station-next-page"
-          :disabled="total === 0 || page >= getTotalPages()"
-          @click="handleNextPage"
-        >
-          下一页
-        </button>
-        <label>
-          <span>每页</span>
-          <select
-            data-testid="station-page-size"
-            :value="String(pageSize)"
-            @change="handlePageSizeChange"
-          >
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-          </select>
-        </label>
-      </div>
-    </div>
   </section>
 </template>

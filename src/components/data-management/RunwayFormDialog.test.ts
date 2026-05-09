@@ -7,6 +7,7 @@ import RunwayFormDialog from './RunwayFormDialog.vue'
 describe('RunwayFormDialog', () => {
   it('requires airportId and name before save', async () => {
     const wrapper = mount(RunwayFormDialog, {
+      global: { stubs: { Teleport: true } },
       props: {
         open: true,
         airportOptions: [],
@@ -37,6 +38,7 @@ describe('RunwayFormDialog', () => {
 
   it('rejects invalid heading degrees', async () => {
     const wrapper = mount(RunwayFormDialog, {
+      global: { stubs: { Teleport: true } },
       props: {
         open: true,
         airportOptions: [{ value: 'airport-1', label: '天河机场' }],
@@ -67,6 +69,7 @@ describe('RunwayFormDialog', () => {
 
   it('normalizes cleared numeric input to null before save', async () => {
     const wrapper = mount(RunwayFormDialog, {
+      global: { stubs: { Teleport: true } },
       props: {
         open: true,
         airportOptions: [{ value: 'airport-1', label: '天河机场' }],
@@ -101,6 +104,7 @@ describe('RunwayFormDialog', () => {
 
   it('renders airport options in a select control', () => {
     const wrapper = mount(RunwayFormDialog, {
+      global: { stubs: { Teleport: true } },
       props: {
         open: true,
         airportOptions: [{ value: 'airport-1', label: '天河机场' }],
@@ -129,6 +133,7 @@ describe('RunwayFormDialog', () => {
 
   it('renders all runway fields as independent label + input controls', () => {
     const wrapper = mount(RunwayFormDialog, {
+      global: { stubs: { Teleport: true } },
       props: {
         open: true,
         airportOptions: [],
@@ -154,10 +159,10 @@ describe('RunwayFormDialog', () => {
 
     const text = wrapper.text()
     const labels = [
-      '所属机场', '跑道名称', '跑道编号',
-      '经度', '纬度', '航向角', '长度（米）',
-      '宽度', '海拔', '入口高度', '最大适航等级',
-      '台站子类', '跑道代码 A', '跑道类型', '跑道代码 B',
+      '所属机场', '跑道名称', '跑道号码',
+      '经度', '纬度', '跑道真方位(°)', '跑道长度(米)',
+      '跑道宽度(米)', '机场基准点标高(米)', '跑道入口标高(米)', '最大适航机型(H:航空器高度)',
+      '仪表着陆系统类别', '跑道类型', '编码A', '编码B',
     ]
     for (const label of labels) {
       expect(text).toContain(label)
@@ -166,6 +171,7 @@ describe('RunwayFormDialog', () => {
 
   it('normalizes cleared new numeric fields to null before save', async () => {
     const wrapper = mount(RunwayFormDialog, {
+      global: { stubs: { Teleport: true } },
       props: {
         open: true,
         airportOptions: [{ value: 'airport-1', label: '天河机场' }],

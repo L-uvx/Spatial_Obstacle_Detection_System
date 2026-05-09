@@ -48,9 +48,6 @@ describe('StationTable', () => {
     const wrapper = mount(StationTable, {
       props: {
         items: [station],
-        total: 1,
-        page: 1,
-        pageSize: 20,
         airportId: '',
         stationType: '',
         keyword: '',
@@ -74,30 +71,5 @@ describe('StationTable', () => {
     expect(wrapper.emitted('create')).toEqual([[]])
     expect(wrapper.emitted('edit')).toEqual([[station]])
     expect(wrapper.emitted('delete')).toEqual([[station]])
-  })
-
-  it('emits pagination events and disables previous on first page', async () => {
-    const wrapper = mount(StationTable, {
-      props: {
-        items: [createStation()],
-        total: 11,
-        page: 1,
-        pageSize: 10,
-        airportId: '',
-        stationType: '',
-        keyword: '',
-        runwayNo: '',
-        loading: false,
-      },
-    })
-
-    expect(wrapper.get('[data-testid="station-prev-page"]').attributes('disabled')).toBeDefined()
-
-    await wrapper.get('[data-testid="station-next-page"]').trigger('click')
-    await wrapper.get('[data-testid="station-page-size"]').setValue('50')
-
-    expect(wrapper.emitted('change:page')).toEqual([[2]])
-    expect(wrapper.emitted('change:pageSize')).toEqual([[50]])
-    expect(wrapper.get('[data-testid="station-current-page"]').text()).toContain('1 / 2')
   })
 })

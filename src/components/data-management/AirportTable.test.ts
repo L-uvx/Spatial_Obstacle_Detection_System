@@ -26,9 +26,6 @@ describe('AirportTable', () => {
     const wrapper = mount(AirportTable, {
       props: {
         items: [airport],
-        total: 1,
-        page: 2,
-        pageSize: 20,
         keyword: '',
         hasCoordinates: false,
         loading: false,
@@ -46,36 +43,5 @@ describe('AirportTable', () => {
     expect(wrapper.emitted('create')).toEqual([[]])
     expect(wrapper.emitted('edit')).toEqual([[airport]])
     expect(wrapper.emitted('delete')).toEqual([[airport]])
-  })
-
-  it('emits pagination events and disables buttons at boundaries', async () => {
-    const wrapper = mount(AirportTable, {
-      props: {
-        items: [createAirport()],
-        total: 45,
-        page: 2,
-        pageSize: 20,
-        keyword: '',
-        hasCoordinates: false,
-        loading: false,
-      },
-    })
-
-    await wrapper.get('[data-testid="airport-prev-page"]').trigger('click')
-    await wrapper.get('[data-testid="airport-next-page"]').trigger('click')
-    await wrapper.get('[data-testid="airport-page-size"]').setValue('50')
-
-    expect(wrapper.emitted('change:page')).toEqual([[1], [3]])
-    expect(wrapper.emitted('change:pageSize')).toEqual([[50]])
-    expect(wrapper.get('[data-testid="airport-current-page"]').text()).toContain('2 / 3')
-
-    await wrapper.setProps({ page: 1 })
-    expect(wrapper.get('[data-testid="airport-prev-page"]').attributes('disabled')).toBeDefined()
-
-    await wrapper.setProps({ page: 3 })
-    expect(wrapper.get('[data-testid="airport-next-page"]').attributes('disabled')).toBeDefined()
-
-    await wrapper.setProps({ total: 0, page: 1 })
-    expect(wrapper.get('[data-testid="airport-next-page"]').attributes('disabled')).toBeDefined()
   })
 })

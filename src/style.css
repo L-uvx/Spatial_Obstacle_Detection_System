@@ -745,38 +745,34 @@ body {
   margin-left: 8px;
 }
 
-/* ---------- 分页控件 ---------- */
+/* ---------- 分页底栏（模态框底部） ---------- */
 
-.airport-table__pager,
-.runway-table__pager,
-.station-table__pager {
+.data-management-modal__footer {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 14px;
+  padding: 14px 28px;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(8, 17, 31, 0.97);
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
 }
 
-.airport-table__pager p,
-.runway-table__pager p,
-.station-table__pager p {
+.data-management-modal__footer p {
   margin: 0;
   color: #94a3b8;
   font-size: 13px;
 }
 
-.airport-table__pager-controls,
-.runway-table__pager-controls,
-.station-table__pager-controls {
+.data-management-modal__pager-controls {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.airport-table__pager-controls button,
-.runway-table__pager-controls button,
-.station-table__pager-controls button {
+.data-management-modal__pager-controls button {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 8px;
   padding: 6px 14px;
@@ -787,32 +783,24 @@ body {
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.airport-table__pager-controls button:hover:not(:disabled),
-.runway-table__pager-controls button:hover:not(:disabled),
-.station-table__pager-controls button:hover:not(:disabled) {
+.data-management-modal__pager-controls button:hover:not(:disabled) {
   border-color: rgba(147, 197, 253, 0.35);
   background: rgba(30, 41, 59, 0.75);
 }
 
-.airport-table__pager-controls button:disabled,
-.runway-table__pager-controls button:disabled,
-.station-table__pager-controls button:disabled {
+.data-management-modal__pager-controls button:disabled {
   opacity: 0.3;
   cursor: not-allowed;
 }
 
-.airport-table__pager-controls span,
-.runway-table__pager-controls span,
-.station-table__pager-controls span {
+.data-management-modal__pager-controls span {
   color: #cbd5e1;
   font-size: 13px;
   min-width: 48px;
   text-align: center;
 }
 
-.airport-table__pager-controls select,
-.runway-table__pager-controls select,
-.station-table__pager-controls select {
+.data-management-modal__pager-controls select {
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 8px;
   padding: 6px 10px;
@@ -822,9 +810,7 @@ body {
   cursor: pointer;
 }
 
-.airport-table__pager-controls label,
-.runway-table__pager-controls label,
-.station-table__pager-controls label {
+.data-management-modal__pager-controls label {
   display: flex;
   align-items: center;
   gap: 6px;

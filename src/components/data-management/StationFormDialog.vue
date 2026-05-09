@@ -4,6 +4,7 @@ import type { SelectOption, StationFormValue } from '../../types/dataManagement'
 
 const props = defineProps<{
   open: boolean
+  readonly?: boolean
   airportOptions: SelectOption[]
   stationTypeOptions: SelectOption[]
   modelValue: StationFormValue
@@ -106,6 +107,11 @@ function validate() {
 }
 
 function handleSave() {
+  if (props.readonly) {
+    emit('close')
+    return
+  }
+
   const nextError = validate()
 
   if (nextError) {
@@ -146,16 +152,17 @@ function handleSave() {
 </script>
 
 <template>
-  <section v-if="open" class="data-management-form-dialog" aria-label="台站表单">
+  <Teleport to="body">
+    <section v-if="open" class="data-management-form-dialog" aria-label="台站表单">
     <div class="data-management-form-dialog__card">
       <header class="data-management-form-dialog__header">
-        <h3>台站信息</h3>
+        <h3>{{ props.readonly ? '查看台站' : '台站信息' }}</h3>
         <button type="button" @click="emit('close')">关闭</button>
       </header>
-      <div class="data-management-form-dialog__body">
+      <div class="data-management-form-dialog__body shell-scrollbar">
         <label>
           <span>所属机场</span>
-          <select data-testid="station-airport-select" v-model="draft.airportId">
+          <select data-testid="station-airport-select" v-model="draft.airportId" :disabled="readonly">
             <option value="">请选择机场</option>
             <option v-for="option in airportOptions" :key="option.value" :value="option.value">
               {{ option.label }}
@@ -164,11 +171,11 @@ function handleSave() {
         </label>
         <label>
           <span>台站名称</span>
-          <input v-model="draft.name" type="text" />
+          <input v-model="draft.name" type="text" :disabled="readonly" />
         </label>
         <label>
           <span>台站类型</span>
-          <select data-testid="station-type-select" v-model="draft.stationType">
+          <select data-testid="station-type-select" v-model="draft.stationType" :disabled="readonly">
             <option value="">请选择台站类型</option>
             <option v-for="option in stationTypeOptions" :key="option.value" :value="option.value">
               {{ option.label }}
@@ -176,15 +183,16 @@ function handleSave() {
           </select>
         </label>
         <label>
-          <span>台站组</span>
-          <input v-model="draft.stationGroup" type="text" />
+          <span>台站组（选填）</span>
+          <input v-model="draft.stationGroup" type="text" :disabled="readonly" />
         </label>
         <label>
-          <span>频率</span>
+          <span>频率(MHz)</span>
           <input
             :value="draft.frequency ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.frequency = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
@@ -194,6 +202,7 @@ function handleSave() {
             :value="draft.longitude ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.longitude = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
@@ -203,175 +212,197 @@ function handleSave() {
             :value="draft.latitude ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.latitude = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>海拔</span>
+          <span>地势标高(国家85高程)(米)</span>
           <input
             data-testid="station-altitude-input"
             :value="draft.altitude ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.altitude = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>覆盖范围</span>
+          <span>覆盖范围(默认20海里)(米)</span>
           <input
             :value="draft.coverageRadius ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.coverageRadius = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
-        <label>
-          <span>飞行高度</span>
+        <!-- <label>
+          <span>天线高度()(米)</span>
           <input
             :value="draft.flyHeight ?? ''"
             type="number"
             step="any"
             @input="draft.flyHeight = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
-        </label>
+        </label> -->
         <label>
-          <span>天线高度</span>
+          <span>天线离地高(若下滑信标，填写上天线离地高)(米)</span>
           <input
             :value="draft.antennaHag ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.antennaHag = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>关联跑道</span>
-          <input v-model="draft.runwayNo" type="text" />
+          <span>关联跑道(LOC、GP、VOR、场监必填)</span>
+          <input v-model="draft.runwayNo" type="text" :disabled="readonly" />
         </label>
         <label>
-          <span>反射网高度</span>
+          <span>反射网离地高(米)(VOR)</span>
           <input
             :value="draft.reflectionNetHag ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.reflectionNetHag = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>中心天线高度</span>
+          <span>中心天线高度(VOR)</span>
           <input
             :value="draft.centerAntennaH ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.centerAntennaH = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>B 天线高度</span>
+          <span>边带天线到反射网高度(米)(VOR)</span>
           <input
             :value="draft.bAntennaH ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.bAntennaH = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>B 到中心距离</span>
+          <span>边带天线到中心天线距离(米)(VOR)</span>
           <input
             :value="draft.bToCenterDistance ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.bToCenterDistance = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>反射直径</span>
+          <span>反射网直径(米)(VOR)</span>
           <input
             :value="draft.reflectionDiameter ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.reflectionDiameter = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>下倾角</span>
+          <span>下滑角(°)(GP)</span>
           <input
             :value="draft.downwardAngle ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.downwardAngle = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
-        <label>
+        <!-- <label>
           <span>天线标签</span>
           <input v-model="draft.antennaTag" type="text" />
-        </label>
+        </label> -->
         <label>
-          <span>到跑道距离</span>
+          <span>后撤距离(米)(GP)</span>
           <input
             :value="draft.distanceToRunway ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.distanceToRunway = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>垂直跑道距离</span>
+          <span>距离跑道中线的距离(在进近方向左侧为负，右侧为正)(米)(GP)</span>
           <input
             :value="draft.distanceVToRunway ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.distanceVToRunway = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>到跑道端距</span>
-          <input
-            :value="draft.distanceEndoRunway ?? ''"
-            type="number"
-            step="any"
-            @input="draft.distanceEndoRunway = normalizeNumber(($event.target as HTMLInputElement).value)"
-          />
-        </label>
-        <label>
-          <span>单元编号</span>
-          <input
-            :value="draft.unitNumber ?? ''"
-            type="number"
-            step="any"
-            @input="draft.unitNumber = normalizeNumber(($event.target as HTMLInputElement).value)"
-          />
-        </label>
-        <label>
-          <span>航空器</span>
-          <input v-model="draft.aircraft" type="text" />
-        </label>
-        <label>
-          <span>天线架高</span>
+          <span>前方360米地势标高(米)（选填）(GP)</span>
           <input
             :value="draft.antennaHeight ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.antennaHeight = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>台站子类</span>
+          <span>与跑道末端距离(米)(LOC)</span>
+          <input
+            :value="draft.distanceEndoRunway ?? ''"
+            type="number"
+            step="any"
+            :disabled="readonly"
+            @input="draft.distanceEndoRunway = normalizeNumber(($event.target as HTMLInputElement).value)"
+          />
+        </label>
+        <label>
+          <span>天线单元个数(LOC)</span>
+          <input
+            :value="draft.unitNumber ?? ''"
+            type="number"
+            step="any"
+            :disabled="readonly"
+            @input="draft.unitNumber = normalizeNumber(($event.target as HTMLInputElement).value)"
+          />
+        </label>
+        <!-- <label>
+          <span>航空器</span>
+          <input v-model="draft.aircraft" type="text" />
+        </label> -->
+        <!-- <label>
+          <span>台站子类(选填)</span>
           <input v-model="draft.stationSubType" type="text" />
         </label>
         <label>
-          <span>组合 ID</span>
+          <span>组合 ID(选填)</span>
           <input
             :value="draft.combineId ?? ''"
             type="number"
             step="any"
             @input="draft.combineId = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
-        </label>
+        </label> -->
         <p v-if="errorMessage" class="data-management-form-dialog__error">{{ errorMessage }}</p>
       </div>
       <footer class="data-management-form-dialog__footer">
-        <button type="button" data-action="save-station" @click="handleSave">保存</button>
+        <button
+          type="button"
+          data-action="save-station"
+          @click="handleSave"
+        >
+          {{ readonly ? '关闭' : '保存' }}
+        </button>
       </footer>
     </div>
   </section>
+  </Teleport>
 </template>

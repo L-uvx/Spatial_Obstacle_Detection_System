@@ -10,6 +10,7 @@ interface AirportFormValue {
 
 const props = defineProps<{
   open: boolean
+  readonly?: boolean
   modelValue: AirportFormValue
 }>()
 
@@ -64,6 +65,11 @@ function validate() {
 }
 
 function handleSave() {
+  if (props.readonly) {
+    emit('close')
+    return
+  }
+
   const nextError = validate()
 
   if (nextError) {
@@ -81,16 +87,17 @@ function handleSave() {
 </script>
 
 <template>
-  <section v-if="open" class="data-management-form-dialog" aria-label="机场表单">
+  <Teleport to="body">
+    <section v-if="open" class="data-management-form-dialog" aria-label="机场表单">
     <div class="data-management-form-dialog__card">
       <header class="data-management-form-dialog__header">
-        <h3>机场信息</h3>
+        <h3>{{ props.readonly ? '查看机场' : '机场信息' }}</h3>
         <button type="button" @click="emit('close')">关闭</button>
       </header>
-      <div class="data-management-form-dialog__body">
+      <div class="data-management-form-dialog__body shell-scrollbar">
         <label>
           <span>机场名称</span>
-          <input v-model="draft.name" type="text" />
+          <input v-model="draft.name" type="text" :disabled="readonly" />
         </label>
         <label>
           <span>经度</span>
@@ -98,6 +105,7 @@ function handleSave() {
             :value="draft.longitude ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.longitude = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
@@ -107,6 +115,7 @@ function handleSave() {
             :value="draft.latitude ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.latitude = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
@@ -116,14 +125,22 @@ function handleSave() {
             :value="draft.altitude ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.altitude = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <p v-if="errorMessage" class="data-management-form-dialog__error">{{ errorMessage }}</p>
       </div>
       <footer class="data-management-form-dialog__footer">
-        <button type="button" data-action="save-airport" @click="handleSave">保存</button>
+        <button
+          type="button"
+          data-action="save-airport"
+          @click="handleSave"
+        >
+          {{ readonly ? '关闭' : '保存' }}
+        </button>
       </footer>
     </div>
   </section>
+  </Teleport>
 </template>

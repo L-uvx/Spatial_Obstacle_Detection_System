@@ -6,6 +6,7 @@ interface RunwayFormValue extends RunwayPayload {}
 
 const props = defineProps<{
   open: boolean
+  readonly?: boolean
   airportOptions: SelectOption[]
   modelValue: RunwayFormValue
 }>()
@@ -83,6 +84,11 @@ function validate() {
 }
 
 function handleSave() {
+  if (props.readonly) {
+    emit('close')
+    return
+  }
+
   const nextError = validate()
 
   if (nextError) {
@@ -111,16 +117,17 @@ function handleSave() {
 </script>
 
 <template>
-  <section v-if="open" class="data-management-form-dialog" aria-label="跑道表单">
+  <Teleport to="body">
+    <section v-if="open" class="data-management-form-dialog" aria-label="跑道表单">
     <div class="data-management-form-dialog__card">
       <header class="data-management-form-dialog__header">
-        <h3>跑道信息</h3>
+        <h3>{{ props.readonly ? '查看跑道' : '跑道信息' }}</h3>
         <button type="button" @click="emit('close')">关闭</button>
       </header>
-      <div class="data-management-form-dialog__body">
+      <div class="data-management-form-dialog__body shell-scrollbar">
         <label>
           <span>所属机场</span>
-          <select data-testid="runway-airport-select" v-model="draft.airportId">
+          <select data-testid="runway-airport-select" v-model="draft.airportId" :disabled="readonly">
             <option value="">请选择机场</option>
             <option v-for="option in airportOptions" :key="option.value" :value="option.value">
               {{ option.label }}
@@ -129,11 +136,11 @@ function handleSave() {
         </label>
         <label>
           <span>跑道名称</span>
-          <input v-model="draft.name" type="text" />
+          <input v-model="draft.name" type="text" :disabled="readonly" />
         </label>
         <label>
-          <span>跑道编号</span>
-          <input v-model="draft.runNumber" type="text" />
+          <span>跑道号码</span>
+          <input v-model="draft.runNumber" type="text" :disabled="readonly" />
         </label>
         <label>
           <span>经度</span>
@@ -141,6 +148,7 @@ function handleSave() {
             :value="draft.longitude ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.longitude = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
@@ -150,85 +158,99 @@ function handleSave() {
             :value="draft.latitude ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.latitude = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>航向角</span>
+          <span>跑道真方位(°)</span>
           <input
             data-testid="runway-heading-degrees-input"
             :value="draft.headingDegrees ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.headingDegrees = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>长度（米）</span>
+          <span>跑道长度(米)</span>
           <input
             :value="draft.lengthMeters ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.lengthMeters = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>宽度</span>
+          <span>跑道宽度(米)</span>
           <input
             :value="draft.width ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.width = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>海拔</span>
+          <span>机场基准点标高(米)</span>
           <input
             :value="draft.altitude ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.altitude = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>入口高度</span>
+          <span>跑道入口标高(米)</span>
           <input
             :value="draft.enterHeight ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.enterHeight = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>最大适航等级</span>
+          <span>最大适航机型(H:航空器高度)</span>
           <input
             :value="draft.maximumAirworthiness ?? ''"
             type="number"
             step="any"
+            :disabled="readonly"
             @input="draft.maximumAirworthiness = normalizeNumber(($event.target as HTMLInputElement).value)"
           />
         </label>
         <label>
-          <span>台站子类</span>
-          <input v-model="draft.stationSubType" type="text" />
-        </label>
-        <label>
-          <span>跑道代码 A</span>
-          <input v-model="draft.runwayCodeA" type="text" />
+          <span>仪表着陆系统类别</span>
+          <input v-model="draft.stationSubType" type="text" :disabled="readonly" />
         </label>
         <label>
           <span>跑道类型</span>
-          <input v-model="draft.runwayType" type="text" />
+          <input v-model="draft.runwayType" type="text" :disabled="readonly" />
         </label>
         <label>
-          <span>跑道代码 B</span>
-          <input v-model="draft.runwayCodeB" type="text" />
+          <span>编码A</span>
+          <input v-model="draft.runwayCodeA" type="text" :disabled="readonly" />
+        </label>
+        <label>
+          <span>编码B</span>
+          <input v-model="draft.runwayCodeB" type="text" :disabled="readonly" />
         </label>
         <p v-if="errorMessage" class="data-management-form-dialog__error">{{ errorMessage }}</p>
       </div>
       <footer class="data-management-form-dialog__footer">
-        <button type="button" data-action="save-runway" @click="handleSave">保存</button>
+        <button
+          type="button"
+          data-action="save-runway"
+          @click="handleSave"
+        >
+          {{ readonly ? '关闭' : '保存' }}
+        </button>
       </footer>
     </div>
   </section>
+  </Teleport>
 </template>

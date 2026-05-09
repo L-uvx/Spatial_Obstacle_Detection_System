@@ -7,6 +7,7 @@ import AirportFormDialog from './AirportFormDialog.vue'
 describe('AirportFormDialog', () => {
   it('requires airport name before save', async () => {
     const wrapper = mount(AirportFormDialog, {
+      global: { stubs: { Teleport: true } },
       props: {
         open: true,
         modelValue: {
@@ -25,6 +26,7 @@ describe('AirportFormDialog', () => {
 
   it('rejects invalid latitude', async () => {
     const wrapper = mount(AirportFormDialog, {
+      global: { stubs: { Teleport: true } },
       props: {
         open: true,
         modelValue: {
@@ -43,6 +45,7 @@ describe('AirportFormDialog', () => {
 
   it('normalizes cleared numeric input to null before save', async () => {
     const wrapper = mount(AirportFormDialog, {
+      global: { stubs: { Teleport: true } },
       props: {
         open: true,
         modelValue: {
@@ -65,6 +68,7 @@ describe('AirportFormDialog', () => {
 
   it('renders all airport fields with independent labels', () => {
     const wrapper = mount(AirportFormDialog, {
+      global: { stubs: { Teleport: true } },
       props: {
         open: true,
         modelValue: {

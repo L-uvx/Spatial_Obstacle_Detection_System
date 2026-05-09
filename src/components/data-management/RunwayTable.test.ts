@@ -36,9 +36,6 @@ describe('RunwayTable', () => {
     const wrapper = mount(RunwayTable, {
       props: {
         items: [runway],
-        total: 1,
-        page: 1,
-        pageSize: 20,
         airportId: '',
         keyword: '',
         runNumber: '',
@@ -59,31 +56,5 @@ describe('RunwayTable', () => {
     expect(wrapper.emitted('create')).toEqual([[]])
     expect(wrapper.emitted('edit')).toEqual([[runway]])
     expect(wrapper.emitted('delete')).toEqual([[runway]])
-  })
-
-  it('emits pagination events and disables next on last page', async () => {
-    const wrapper = mount(RunwayTable, {
-      props: {
-        items: [createRunway()],
-        total: 25,
-        page: 2,
-        pageSize: 10,
-        airportId: '',
-        keyword: '',
-        runNumber: '',
-        loading: false,
-      },
-    })
-
-    await wrapper.get('[data-testid="runway-prev-page"]').trigger('click')
-    await wrapper.get('[data-testid="runway-next-page"]').trigger('click')
-    await wrapper.get('[data-testid="runway-page-size"]').setValue('20')
-
-    expect(wrapper.emitted('change:page')).toEqual([[1], [3]])
-    expect(wrapper.emitted('change:pageSize')).toEqual([[20]])
-    expect(wrapper.get('[data-testid="runway-current-page"]').text()).toContain('2 / 3')
-
-    await wrapper.setProps({ page: 3 })
-    expect(wrapper.get('[data-testid="runway-next-page"]').attributes('disabled')).toBeDefined()
   })
 })

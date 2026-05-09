@@ -27,6 +27,7 @@ function createDataManagementState(overrides: Partial<DataManagementState> = {})
       errorMessage: '',
       warnings: [],
       formOpen: false,
+      readonly: false,
       draft: {
         name: '',
         longitude: null,
@@ -49,6 +50,7 @@ function createDataManagementState(overrides: Partial<DataManagementState> = {})
       errorMessage: '',
       warnings: [],
       formOpen: false,
+      readonly: false,
       draft: {
         airportId: '',
         name: '',
@@ -83,6 +85,7 @@ function createDataManagementState(overrides: Partial<DataManagementState> = {})
       errorMessage: '',
       warnings: [],
       formOpen: false,
+      readonly: false,
       draft: {
         airportId: '',
         name: '',

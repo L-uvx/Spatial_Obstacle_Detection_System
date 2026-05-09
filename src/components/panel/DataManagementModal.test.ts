@@ -24,6 +24,7 @@ function createState(overrides: Partial<DataManagementState> = {}): DataManageme
       errorMessage: '',
       warnings: [],
       formOpen: false,
+      readonly: false,
       draft: {
         name: '',
         longitude: null,
@@ -46,6 +47,7 @@ function createState(overrides: Partial<DataManagementState> = {}): DataManageme
       errorMessage: '',
       warnings: [],
       formOpen: false,
+      readonly: false,
       draft: {
         airportId: '',
         name: '',
@@ -80,6 +82,7 @@ function createState(overrides: Partial<DataManagementState> = {}): DataManageme
       errorMessage: '',
       warnings: [],
       formOpen: false,
+      readonly: false,
       draft: {
         airportId: '',
         name: '',
@@ -170,6 +173,7 @@ describe('DataManagementModal', () => {
             errorMessage: '机场下仍有关联数据，无法删除。',
             warnings: [],
             formOpen: false,
+            readonly: false,
             draft: {
               name: '',
               longitude: null,
@@ -216,6 +220,7 @@ describe('DataManagementModal', () => {
             errorMessage: '',
             warnings: ['机场坐标已按现有规则自动补齐'],
             formOpen: false,
+            readonly: false,
             draft: {
               name: '',
               longitude: null,
@@ -249,7 +254,7 @@ describe('DataManagementModal', () => {
   })
 
   it('renders runway form dialog when runway form state is open', () => {
-    const wrapper = mount(DataManagementModal, {
+    mount(DataManagementModal, {
       props: {
         state: createState({
           activeTab: 'runways',
@@ -267,6 +272,7 @@ describe('DataManagementModal', () => {
             errorMessage: '',
             warnings: [],
             formOpen: true,
+            readonly: false,
             draft: {
               airportId: 'airport-1',
               name: '东跑道',
@@ -290,7 +296,7 @@ describe('DataManagementModal', () => {
       },
     })
 
-    expect(wrapper.find('[aria-label="跑道表单"]').exists()).toBe(true)
+    expect(document.body.querySelector('[aria-label="跑道表单"]')).toBeTruthy()
   })
 
   it('renders runway delete conflict text and emits confirm delete', async () => {
@@ -312,6 +318,7 @@ describe('DataManagementModal', () => {
             errorMessage: '跑道下仍有关联台站，无法删除。',
             warnings: [],
             formOpen: false,
+            readonly: false,
             draft: {
               airportId: '',
               name: '',
@@ -381,6 +388,7 @@ describe('DataManagementModal', () => {
             errorMessage: '',
             warnings: ['跑道航向角已沿用现有值'],
             formOpen: false,
+            readonly: false,
             draft: {
               airportId: '',
               name: '',
@@ -444,6 +452,7 @@ describe('DataManagementModal', () => {
             errorMessage: '台站下仍有关联分析数据，无法删除。',
             warnings: [],
             formOpen: true,
+            readonly: false,
             draft: {
               airportId: 'airport-1',
               name: '近台',
@@ -511,7 +520,7 @@ describe('DataManagementModal', () => {
       },
     })
 
-    expect(wrapper.find('[aria-label="台站表单"]').exists()).toBe(true)
+    expect(document.body.querySelector('[aria-label="台站表单"]')).toBeTruthy()
     expect(wrapper.text()).toContain('台站下仍有关联分析数据，无法删除。')
 
     await wrapper.get('[data-testid="confirm-station-delete"]').trigger('click')
@@ -539,6 +548,7 @@ describe('DataManagementModal', () => {
             errorMessage: '',
             warnings: ['台站跑道号已按所属机场默认值补齐'],
             formOpen: false,
+            readonly: false,
             draft: {
               airportId: '',
               name: '',
@@ -577,5 +587,251 @@ describe('DataManagementModal', () => {
     expect(wrapper.get('[data-testid="data-management-warnings"]').text()).toContain(
       '台站跑道号已按所属机场默认值补齐',
     )
+  })
+
+  it('renders pagination footer on airports tab', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          airports: {
+            items: [],
+            total: 45,
+            page: 2,
+            pageSize: 20,
+            filters: { keyword: '', hasCoordinates: false },
+            loading: false,
+            errorMessage: '',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: { name: '', longitude: null, latitude: null, altitude: null },
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    expect(wrapper.find('.data-management-modal__footer').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="modal-prev-page"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="modal-next-page"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="modal-page-size"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="modal-current-page"]').text()).toBe('2 / 3')
+    expect(wrapper.find('.data-management-modal__footer').text()).toContain('第 21-40 条')
+  })
+
+  it('updates pagination footer when switching tabs', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          activeTab: 'runways',
+          runways: {
+            items: [],
+            total: 11,
+            page: 1,
+            pageSize: 10,
+            filters: { airportId: '', keyword: '', runNumber: '' },
+            loading: false,
+            errorMessage: '',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: {
+              airportId: '', name: '', runNumber: '', longitude: null, latitude: null,
+              headingDegrees: null, lengthMeters: null, width: null, altitude: null,
+              enterHeight: null, maximumAirworthiness: null, stationSubType: '',
+              runwayCodeA: '', runwayType: '', runwayCodeB: '',
+            },
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    expect(wrapper.get('[data-testid="modal-current-page"]').text()).toBe('1 / 2')
+  })
+
+  it('disables previous page button on first page', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          airports: {
+            items: [],
+            total: 45,
+            page: 1,
+            pageSize: 20,
+            filters: { keyword: '', hasCoordinates: false },
+            loading: false,
+            errorMessage: '',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: { name: '', longitude: null, latitude: null, altitude: null },
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    expect(wrapper.get('[data-testid="modal-prev-page"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="modal-next-page"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('disables next page button on last page', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          airports: {
+            items: [],
+            total: 20,
+            page: 1,
+            pageSize: 20,
+            filters: { keyword: '', hasCoordinates: false },
+            loading: false,
+            errorMessage: '',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: { name: '', longitude: null, latitude: null, altitude: null },
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    expect(wrapper.get('[data-testid="modal-next-page"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('disables next and shows no summary when total is zero', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState(),
+      },
+    })
+
+    expect(wrapper.get('[data-testid="modal-prev-page"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="modal-next-page"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('.data-management-modal__footer').text()).toContain('共 0 条')
+  })
+
+  it('emits changeAirportPage on prev/next click', async () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          airports: {
+            items: [],
+            total: 45,
+            page: 2,
+            pageSize: 20,
+            filters: { keyword: '', hasCoordinates: false },
+            loading: false,
+            errorMessage: '',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: { name: '', longitude: null, latitude: null, altitude: null },
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    await wrapper.get('[data-testid="modal-prev-page"]').trigger('click')
+    expect(wrapper.emitted('changeAirportPage')).toEqual([[1]])
+
+    await wrapper.get('[data-testid="modal-next-page"]').trigger('click')
+    expect(wrapper.emitted('changeAirportPage')).toEqual([[1], [3]])
+  })
+
+  it('emits changeAirportPageSize on page size change', async () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          airports: {
+            items: [],
+            total: 45,
+            page: 1,
+            pageSize: 20,
+            filters: { keyword: '', hasCoordinates: false },
+            loading: false,
+            errorMessage: '',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: { name: '', longitude: null, latitude: null, altitude: null },
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    await wrapper.get('[data-testid="modal-page-size"]').setValue('50')
+    expect(wrapper.emitted('changeAirportPageSize')).toEqual([[50]])
+  })
+
+  it('emits correct page event on runways tab', async () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          activeTab: 'runways',
+          runways: {
+            items: [],
+            total: 25,
+            page: 1,
+            pageSize: 10,
+            filters: { airportId: '', keyword: '', runNumber: '' },
+            loading: false,
+            errorMessage: '',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: {
+              airportId: '', name: '', runNumber: '', longitude: null, latitude: null,
+              headingDegrees: null, lengthMeters: null, width: null, altitude: null,
+              enterHeight: null, maximumAirworthiness: null, stationSubType: '',
+              runwayCodeA: '', runwayType: '', runwayCodeB: '',
+            },
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    await wrapper.get('[data-testid="modal-next-page"]').trigger('click')
+    expect(wrapper.emitted('changeRunwayPage')).toEqual([[2]])
+  })
+
+  it('emits correct page event on stations tab', async () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          activeTab: 'stations',
+          stations: {
+            items: [],
+            total: 25,
+            page: 1,
+            pageSize: 10,
+            filters: { airportId: '', stationType: '', keyword: '', runwayNo: '' },
+            loading: false,
+            errorMessage: '',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: {
+              airportId: '', name: '', stationType: '', stationGroup: null, frequency: null,
+              runwayNo: '', longitude: null, latitude: null, altitude: null, coverageRadius: null,
+              flyHeight: null, antennaHag: null, reflectionNetHag: null, centerAntennaH: null,
+              bAntennaH: null, bToCenterDistance: null, reflectionDiameter: null, downwardAngle: null,
+              antennaTag: null, distanceToRunway: null, distanceVToRunway: null,
+              distanceEndoRunway: null, unitNumber: null, aircraft: '', antennaHeight: null,
+              stationSubType: null, combineId: null,
+            },
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    await wrapper.get('[data-testid="modal-next-page"]').trigger('click')
+    expect(wrapper.emitted('changeStationPage')).toEqual([[2]])
   })
 })

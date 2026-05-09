@@ -66,6 +66,7 @@ export interface DataManagementState {
     errorMessage: string
     warnings: string[]
     formOpen: boolean
+    readonly: boolean
     draft: AirportDraft
     deleteTarget: AirportListItem | null
   }
@@ -79,6 +80,7 @@ export interface DataManagementState {
     errorMessage: string
     warnings: string[]
     formOpen: boolean
+    readonly: boolean
     draft: RunwayDraft
     deleteTarget: RunwayListItem | null
   }
@@ -92,6 +94,7 @@ export interface DataManagementState {
     errorMessage: string
     warnings: string[]
     formOpen: boolean
+    readonly: boolean
     draft: StationDraft
     deleteTarget: StationListItem | null
   }
@@ -177,6 +180,7 @@ function createInitialState(): DataManagementState {
       errorMessage: '',
       warnings: [],
       formOpen: false,
+      readonly: false,
       draft: createEmptyAirportDraft(),
       deleteTarget: null,
     },
@@ -194,6 +198,7 @@ function createInitialState(): DataManagementState {
       errorMessage: '',
       warnings: [],
       formOpen: false,
+      readonly: false,
       draft: createEmptyRunwayDraft(),
       deleteTarget: null,
     },
@@ -212,6 +217,7 @@ function createInitialState(): DataManagementState {
       errorMessage: '',
       warnings: [],
       formOpen: false,
+      readonly: false,
       draft: createEmptyStationDraft(),
       deleteTarget: null,
     },
@@ -496,6 +502,22 @@ export function useDataManagement(_options: UseDataManagementOptions) {
   function closeAirportFormDialog() {
     clearAirportWarnings()
     state.airports.formOpen = false
+    state.airports.readonly = false
+  }
+
+  function openAirportDetailDialog(item: AirportListItem) {
+    state.airports.errorMessage = ''
+    state.airports.readonly = false
+    clearAirportWarnings()
+    state.airports.draft = {
+      id: item.id,
+      name: item.name,
+      longitude: item.longitude,
+      latitude: item.latitude,
+      altitude: item.altitude,
+    }
+    state.airports.readonly = true
+    state.airports.formOpen = true
   }
 
   function openRunwayCreateDialog() {
@@ -553,6 +575,33 @@ export function useDataManagement(_options: UseDataManagementOptions) {
   function closeRunwayFormDialog() {
     clearRunwayWarnings()
     state.runways.formOpen = false
+    state.runways.readonly = false
+  }
+
+  function openRunwayDetailDialog(item: RunwayListItem) {
+    state.runways.errorMessage = ''
+    state.runways.readonly = false
+    clearRunwayWarnings()
+    state.runways.draft = {
+      id: item.id,
+      airportId: item.airportId,
+      name: item.name,
+      runNumber: item.runNumber,
+      longitude: item.longitude,
+      latitude: item.latitude,
+      headingDegrees: item.headingDegrees,
+      lengthMeters: item.lengthMeters,
+      width: item.width,
+      altitude: item.altitude,
+      enterHeight: item.enterHeight,
+      maximumAirworthiness: item.maximumAirworthiness,
+      stationSubType: item.stationSubType,
+      runwayCodeA: item.runwayCodeA,
+      runwayType: item.runwayType,
+      runwayCodeB: item.runwayCodeB,
+    }
+    state.runways.readonly = true
+    state.runways.formOpen = true
   }
 
   function openStationCreateDialog() {
@@ -622,6 +671,45 @@ export function useDataManagement(_options: UseDataManagementOptions) {
   function closeStationFormDialog() {
     clearStationWarnings()
     state.stations.formOpen = false
+    state.stations.readonly = false
+  }
+
+  function openStationDetailDialog(item: StationListItem) {
+    state.stations.errorMessage = ''
+    state.stations.readonly = false
+    clearStationWarnings()
+    state.stations.draft = {
+      id: item.id,
+      airportId: item.airportId,
+      name: item.name,
+      stationType: item.stationType,
+      stationGroup: item.stationGroup,
+      frequency: item.frequency,
+      runwayNo: item.runwayNo,
+      longitude: item.longitude,
+      latitude: item.latitude,
+      altitude: item.altitude,
+      coverageRadius: item.coverageRadius,
+      flyHeight: item.flyHeight,
+      antennaHag: item.antennaHag,
+      reflectionNetHag: item.reflectionNetHag,
+      centerAntennaH: item.centerAntennaH,
+      bAntennaH: item.bAntennaH,
+      bToCenterDistance: item.bToCenterDistance,
+      reflectionDiameter: item.reflectionDiameter,
+      downwardAngle: item.downwardAngle,
+      antennaTag: item.antennaTag,
+      distanceToRunway: item.distanceToRunway,
+      distanceVToRunway: item.distanceVToRunway,
+      distanceEndoRunway: item.distanceEndoRunway,
+      unitNumber: item.unitNumber,
+      aircraft: item.aircraft,
+      antennaHeight: item.antennaHeight,
+      stationSubType: item.stationSubType,
+      combineId: item.combineId,
+    }
+    state.stations.readonly = true
+    state.stations.formOpen = true
   }
 
   async function saveAirportDraft(value: AirportFormValue) {
@@ -858,14 +946,17 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     changeStationPageSize,
     openAirportCreateDialog,
     openAirportEditDialog,
+    openAirportDetailDialog,
     closeAirportFormDialog,
     saveAirportDraft,
     openRunwayCreateDialog,
     openRunwayEditDialog,
+    openRunwayDetailDialog,
     closeRunwayFormDialog,
     saveRunwayDraft,
     openStationCreateDialog,
     openStationEditDialog,
+    openStationDetailDialog,
     closeStationFormDialog,
     saveStationDraft,
     openAirportDeleteConfirm,

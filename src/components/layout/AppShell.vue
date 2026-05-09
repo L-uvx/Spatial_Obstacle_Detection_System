@@ -12,7 +12,8 @@ import type {
   ProtectionZoneNode,
   RenderedObstacle,
 } from '../../types/tool'
-import type { DataManagementState } from '../../composables/useDataManagement'
+import type { AirportFormValue, DataManagementState } from '../../composables/useDataManagement'
+import type { AirportListItem, RunwayListItem, RunwayPayload, StationListItem, StationPayload } from '../../types/dataManagement'
 
 const props = defineProps<{
   analysisState: PolygonObstacleAnalysisState
@@ -46,22 +47,25 @@ const emit = defineEmits<{
   changeStationPageSize: [pageSize: number]
   openAirportCreateDialog: []
   openAirportEditDialog: [airportId: string]
+  openAirportDetailDialog: [airport: AirportListItem]
   openRunwayCreateDialog: []
   openRunwayEditDialog: [runwayId: string]
+  openRunwayDetailDialog: [runway: RunwayListItem]
+  openStationDetailDialog: [station: StationListItem]
   openRunwayDeleteConfirm: [runwayId: string]
   closeRunwayFormDialog: []
-  saveRunwayDraft: []
+  saveRunwayDraft: [value: RunwayPayload]
   closeRunwayDeleteConfirm: []
   confirmRunwayDelete: []
   openStationCreateDialog: []
   openStationEditDialog: [stationId: string]
   openStationDeleteConfirm: [stationId: string]
   closeStationFormDialog: []
-  saveStationDraft: []
+  saveStationDraft: [value: StationPayload]
   closeStationDeleteConfirm: []
   confirmStationDelete: []
   closeAirportFormDialog: []
-  saveAirportDraft: []
+  saveAirportDraft: [value: AirportFormValue]
   openAirportDeleteConfirm: [airportId: string]
   closeAirportDeleteConfirm: []
   confirmAirportDelete: []
@@ -240,20 +244,23 @@ function handleSelectAirport(event: Event) {
         @open-station-edit-dialog="emit('openStationEditDialog', $event)"
         @open-station-delete-confirm="emit('openStationDeleteConfirm', $event)"
         @close-station-form-dialog="emit('closeStationFormDialog')"
-        @save-station-draft="emit('saveStationDraft')"
+        @save-station-draft="emit('saveStationDraft', $event)"
         @close-station-delete-confirm="emit('closeStationDeleteConfirm')"
         @confirm-station-delete="emit('confirmStationDelete')"
+        @open-airport-detail-dialog="emit('openAirportDetailDialog', $event)"
+        @open-runway-detail-dialog="emit('openRunwayDetailDialog', $event)"
+        @open-station-detail-dialog="emit('openStationDetailDialog', $event)"
         @open-runway-create-dialog="emit('openRunwayCreateDialog')"
         @open-runway-edit-dialog="emit('openRunwayEditDialog', $event)"
         @open-runway-delete-confirm="emit('openRunwayDeleteConfirm', $event)"
         @close-runway-form-dialog="emit('closeRunwayFormDialog')"
-        @save-runway-draft="emit('saveRunwayDraft')"
+        @save-runway-draft="emit('saveRunwayDraft', $event)"
         @close-runway-delete-confirm="emit('closeRunwayDeleteConfirm')"
         @confirm-runway-delete="emit('confirmRunwayDelete')"
         @open-airport-create-dialog="emit('openAirportCreateDialog')"
         @open-airport-edit-dialog="emit('openAirportEditDialog', $event)"
         @close-airport-form-dialog="emit('closeAirportFormDialog')"
-        @save-airport-draft="emit('saveAirportDraft')"
+        @save-airport-draft="emit('saveAirportDraft', $event)"
         @open-airport-delete-confirm="emit('openAirportDeleteConfirm', $event)"
         @close-airport-delete-confirm="emit('closeAirportDeleteConfirm')"
         @confirm-airport-delete="emit('confirmAirportDelete')"

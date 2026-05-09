@@ -4,6 +4,8 @@ import AppShell from './components/layout/AppShell.vue'
 import { useDataManagement } from './composables/useDataManagement'
 import { useWorkflowActions } from './composables/useWorkflowActions'
 import type { ImportFormValue, ObstacleAnalysisMode, ProtectionZoneNode } from './types/tool'
+import type { AirportFormValue } from './composables/useDataManagement'
+import type { AirportListItem, RunwayListItem, RunwayPayload, StationListItem, StationPayload } from './types/dataManagement'
 
 const resetTick = ref(0)
 const {
@@ -60,11 +62,14 @@ const {
   confirmStationDelete,
   openAirportCreateDialog,
   openAirportEditDialog,
+  openAirportDetailDialog,
   closeAirportFormDialog,
   saveAirportDraft,
   openAirportDeleteConfirm,
   closeAirportDeleteConfirm,
   confirmAirportDelete,
+  openRunwayDetailDialog,
+  openStationDetailDialog,
   setActiveTab,
 } = useDataManagement({
   onRefreshBootstrap: async () => {
@@ -178,8 +183,8 @@ function handleCloseRunwayFormDialog() {
   closeRunwayFormDialog()
 }
 
-function handleSaveRunwayDraft() {
-  void saveRunwayDraft(dataManagementState.runways.draft)
+function handleSaveRunwayDraft(value: RunwayPayload) {
+  void saveRunwayDraft(value)
 }
 
 function handleOpenRunwayDeleteConfirm(runwayId: string) {
@@ -212,8 +217,8 @@ function handleCloseStationFormDialog() {
   closeStationFormDialog()
 }
 
-function handleSaveStationDraft() {
-  void saveStationDraft(dataManagementState.stations.draft)
+function handleSaveStationDraft(value: StationPayload) {
+  void saveStationDraft(value)
 }
 
 function handleOpenStationDeleteConfirm(stationId: string) {
@@ -242,12 +247,24 @@ function handleOpenAirportEditDialog(airportId: string) {
   void openAirportEditDialog(airportId)
 }
 
+function handleOpenAirportDetailDialog(airport: AirportListItem) {
+  openAirportDetailDialog(airport)
+}
+
+function handleOpenRunwayDetailDialog(runway: RunwayListItem) {
+  openRunwayDetailDialog(runway)
+}
+
+function handleOpenStationDetailDialog(station: StationListItem) {
+  openStationDetailDialog(station)
+}
+
 function handleCloseAirportFormDialog() {
   closeAirportFormDialog()
 }
 
-function handleSaveAirportDraft() {
-  saveAirportDraft(dataManagementState.airports.draft)
+function handleSaveAirportDraft(value: AirportFormValue) {
+  saveAirportDraft(value)
 }
 
 function handleOpenAirportDeleteConfirm(airportId: string) {
@@ -370,6 +387,9 @@ function handleFlyToProtectionZone(zone: ProtectionZoneNode) {
     @confirm-station-delete="handleConfirmStationDelete"
     @open-airport-create-dialog="handleOpenAirportCreateDialog"
     @open-airport-edit-dialog="handleOpenAirportEditDialog"
+    @open-airport-detail-dialog="handleOpenAirportDetailDialog"
+    @open-runway-detail-dialog="handleOpenRunwayDetailDialog"
+    @open-station-detail-dialog="handleOpenStationDetailDialog"
     @close-airport-form-dialog="handleCloseAirportFormDialog"
     @save-airport-draft="handleSaveAirportDraft"
     @open-airport-delete-confirm="handleOpenAirportDeleteConfirm"
