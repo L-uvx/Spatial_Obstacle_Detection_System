@@ -35,6 +35,60 @@ export interface AnalysisSelectedTarget {
   category: '机场' | '空管局'
 }
 
+export interface AnalysisRuleMetrics {
+  /** Maps from backend `enteredProtectionZone`; always `false` if absent */
+  isInProtectionZone: boolean
+  actualDistanceMeters?: number
+  requiredDistanceMeters?: number
+  actualElevationAngleDegrees?: number
+  baseHeightMeters?: number
+  elevationAngleDegrees?: number
+  allowedHeightMeters?: number
+  topElevationMeters?: number
+  innerRadiusMeters?: number
+  outerRadiusMeters?: number
+  rectangleLengthMeters?: number
+  heightLimitMeters?: number
+  worstAllowedHeightMeters?: number
+  areaType?: string
+  limitHeightMeters?: number
+  centerDirectionDegrees?: number | null
+  effectiveForwardDistanceMeters?: number | null
+  isCable?: boolean
+  forwardDistanceMeters?: number | null
+  isAirportRingRoad?: boolean
+  requiresClearanceEvaluation?: boolean
+  clearanceLimitHeightMeters?: number
+  overHeightMeters?: number | null
+  stationSubType?: string
+  isRoadOrRail?: boolean
+  minDistanceMeters?: number
+  verticalAngleDegrees?: number | null
+  limitAngleDegrees?: number
+  radiusMeters?: number
+  minimumDistanceMeters?: number
+  coverageRadiusMeters?: number
+  relativeHeightMeters?: number
+  verticalMaskAngleDegrees?: number
+  horizontalMaskAngleDegrees?: number
+  verticalLimitAngleDegrees?: number
+  horizontalLimitAngleDegrees?: number
+  isInRunwayTriangle?: boolean
+  runwayNumber?: string
+  runwayLengthMeters?: number
+  runwayDirectionDegrees?: number
+  triangleGateApplied?: boolean
+  gatedByRunwayTriangle?: boolean
+  boundaryMode?: string
+  maxDistanceMeters?: number
+  clampedDistanceMeters?: number
+  shadowRadiusMeters?: number
+  benchmarkHeightMeters?: number
+  heightDiffMeters?: number
+  horizontalAngularWidthDegrees?: number
+  delegatedRule?: string
+}
+
 export interface AnalysisRuleStandardResult {
   code: string
   text: string
@@ -49,6 +103,7 @@ export interface AnalysisRuleResult {
   obstacleName: string
   rawObstacleType: string
   globalObstacleCategory: string
+  ruleCode: string
   ruleName: string
   zoneCode: string
   zoneName: string
@@ -57,10 +112,19 @@ export interface AnalysisRuleResult {
   isApplicable: boolean
   isCompliant: boolean
   message: string
+  metrics: AnalysisRuleMetrics | null
   standards: {
-    gb: AnalysisRuleStandardResult | null
-    mh: AnalysisRuleStandardResult | null
+    gb: AnalysisRuleStandardResult[]
+    mh: AnalysisRuleStandardResult[]
   }
+  overDistanceMeters: number
+  azimuthDegrees: number
+  maxHorizontalAngleDegrees: number
+  minHorizontalAngleDegrees: number
+  relativeHeightMeters: number
+  isInRadius: boolean
+  isInZone: boolean
+  details: string
 }
 
 export type PositionCoordinate = [number, number]

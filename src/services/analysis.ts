@@ -1,4 +1,5 @@
 import type {
+  AnalysisRuleMetrics,
   AnalysisRuleResult,
   AnalysisRuleStandardResult,
   AnalysisSelectedTarget,
@@ -47,6 +48,7 @@ interface AnalysisRuleResultResponse {
   obstacleName: string
   rawObstacleType: string
   globalObstacleCategory: string
+  ruleCode: string
   ruleName: string
   zoneCode: string
   zoneName: string
@@ -55,10 +57,19 @@ interface AnalysisRuleResultResponse {
   isApplicable: boolean
   isCompliant: boolean
   message: string
+  metrics?: Record<string, unknown>
   standards?: {
-    gb?: AnalysisRuleStandardResponse
-    mh?: AnalysisRuleStandardResponse
+    gb?: AnalysisRuleStandardResponse[]
+    mh?: AnalysisRuleStandardResponse[]
   }
+  overDistanceMeters?: number
+  azimuthDegrees?: number
+  maxHorizontalAngleDegrees?: number
+  minHorizontalAngleDegrees?: number
+  relativeHeightMeters?: number
+  isInRadius?: boolean
+  isInZone?: boolean
+  details?: string
 }
 
 interface ProtectionZoneResponse {
@@ -173,18 +184,93 @@ function isValidAnalysisTaskResultResponse(value: unknown): value is AnalysisTas
   )
 }
 
-function normalizeAnalysisRuleStandard(
-  standard: AnalysisRuleStandardResponse | undefined,
-): AnalysisRuleStandardResult | null {
-  if (!standard || typeof standard.code !== 'string' || typeof standard.text !== 'string') {
+function asNum(v: unknown): number | undefined {
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined
+}
+
+function asBool(v: unknown): boolean | undefined {
+  return typeof v === 'boolean' ? v : undefined
+}
+
+function asStr(v: unknown): string | undefined {
+  return typeof v === 'string' ? v : undefined
+}
+
+function normalizeAnalysisRuleMetrics(
+  raw: unknown,
+): AnalysisRuleMetrics | null {
+  if (!raw || typeof raw !== 'object') {
     return null
   }
+  const m = raw as Record<string, unknown>
 
   return {
-    code: standard.code,
-    text: standard.text,
-    isCompliant: standard.isCompliant === true,
+    isInProtectionZone: m.enteredProtectionZone === true,
+    actualDistanceMeters: asNum(m.actualDistanceMeters),
+    requiredDistanceMeters: asNum(m.requiredDistanceMeters),
+    actualElevationAngleDegrees: asNum(m.actualElevationAngleDegrees),
+    baseHeightMeters: asNum(m.baseHeightMeters),
+    elevationAngleDegrees: asNum(m.elevationAngleDegrees),
+    allowedHeightMeters: asNum(m.allowedHeightMeters),
+    topElevationMeters: asNum(m.topElevationMeters),
+    innerRadiusMeters: asNum(m.innerRadiusMeters),
+    outerRadiusMeters: asNum(m.outerRadiusMeters),
+    rectangleLengthMeters: asNum(m.rectangleLengthMeters),
+    heightLimitMeters: asNum(m.heightLimitMeters),
+    worstAllowedHeightMeters: asNum(m.worstAllowedHeightMeters),
+    areaType: asStr(m.areaType),
+    limitHeightMeters: asNum(m.limitHeightMeters),
+    centerDirectionDegrees: asNum(m.centerDirectionDegrees) ?? null,
+    effectiveForwardDistanceMeters: asNum(m.effectiveForwardDistanceMeters) ?? null,
+    isCable: asBool(m.isCable),
+    forwardDistanceMeters: asNum(m.forwardDistanceMeters) ?? null,
+    isAirportRingRoad: asBool(m.isAirportRingRoad),
+    requiresClearanceEvaluation: asBool(m.requiresClearanceEvaluation),
+    clearanceLimitHeightMeters: asNum(m.clearanceLimitHeightMeters),
+    overHeightMeters: asNum(m.overHeightMeters) ?? null,
+    stationSubType: asStr(m.stationSubType),
+    isRoadOrRail: asBool(m.isRoadOrRail),
+    minDistanceMeters: asNum(m.minDistanceMeters),
+    verticalAngleDegrees: asNum(m.verticalAngleDegrees) ?? null,
+    limitAngleDegrees: asNum(m.limitAngleDegrees),
+    radiusMeters: asNum(m.radiusMeters),
+    minimumDistanceMeters: asNum(m.minimumDistanceMeters),
+    coverageRadiusMeters: asNum(m.coverageRadiusMeters),
+    relativeHeightMeters: asNum(m.relativeHeightMeters),
+    verticalMaskAngleDegrees: asNum(m.verticalMaskAngleDegrees),
+    horizontalMaskAngleDegrees: asNum(m.horizontalMaskAngleDegrees),
+    verticalLimitAngleDegrees: asNum(m.verticalLimitAngleDegrees),
+    horizontalLimitAngleDegrees: asNum(m.horizontalLimitAngleDegrees),
+    isInRunwayTriangle: asBool(m.isInRunwayTriangle),
+    runwayNumber: asStr(m.runwayNumber),
+    runwayLengthMeters: asNum(m.runwayLengthMeters),
+    runwayDirectionDegrees: asNum(m.runwayDirectionDegrees),
+    triangleGateApplied: asBool(m.triangleGateApplied),
+    gatedByRunwayTriangle: asBool(m.gatedByRunwayTriangle),
+    boundaryMode: asStr(m.boundaryMode),
+    maxDistanceMeters: asNum(m.maxDistanceMeters),
+    clampedDistanceMeters: asNum(m.clampedDistanceMeters),
+    shadowRadiusMeters: asNum(m.shadowRadiusMeters),
+    benchmarkHeightMeters: asNum(m.benchmarkHeightMeters),
+    heightDiffMeters: asNum(m.heightDiffMeters),
+    horizontalAngularWidthDegrees: asNum(m.horizontalAngularWidthDegrees),
+    delegatedRule: asStr(m.delegatedRule),
   }
+}
+
+function normalizeAnalysisRuleStandardList(
+  standards: AnalysisRuleStandardResponse[] | undefined,
+): AnalysisRuleStandardResult[] {
+  if (!Array.isArray(standards)) {
+    return []
+  }
+  return standards
+    .filter((s) => typeof s.code === 'string' && typeof s.text === 'string')
+    .map((s) => ({
+      code: s.code as string,
+      text: s.text as string,
+      isCompliant: s.isCompliant === true,
+    }))
 }
 
 function isValidAnalysisRuleResultResponse(item: unknown): item is AnalysisRuleResultResponse {
@@ -202,6 +288,7 @@ function isValidAnalysisRuleResultResponse(item: unknown): item is AnalysisRuleR
     && typeof candidate.obstacleName === 'string'
     && typeof candidate.rawObstacleType === 'string'
     && typeof candidate.globalObstacleCategory === 'string'
+    && typeof candidate.ruleCode === 'string'
     && typeof candidate.ruleName === 'string'
     && typeof candidate.zoneCode === 'string'
     && typeof candidate.zoneName === 'string'
@@ -227,6 +314,7 @@ function normalizeAnalysisRuleResults(results: unknown[] = []): AnalysisRuleResu
       obstacleName: item.obstacleName,
       rawObstacleType: item.rawObstacleType,
       globalObstacleCategory: item.globalObstacleCategory,
+      ruleCode: item.ruleCode,
       ruleName: item.ruleName,
       zoneCode: item.zoneCode,
       zoneName: item.zoneName,
@@ -235,10 +323,19 @@ function normalizeAnalysisRuleResults(results: unknown[] = []): AnalysisRuleResu
       isApplicable: item.isApplicable,
       isCompliant: item.isCompliant,
       message: item.message,
+      metrics: normalizeAnalysisRuleMetrics(item.metrics),
       standards: {
-        gb: normalizeAnalysisRuleStandard(item.standards?.gb),
-        mh: normalizeAnalysisRuleStandard(item.standards?.mh),
+        gb: normalizeAnalysisRuleStandardList(item.standards?.gb),
+        mh: normalizeAnalysisRuleStandardList(item.standards?.mh),
       },
+      overDistanceMeters: Number(item.overDistanceMeters) || 0,
+      azimuthDegrees: Number(item.azimuthDegrees) || 0,
+      maxHorizontalAngleDegrees: Number(item.maxHorizontalAngleDegrees) || 0,
+      minHorizontalAngleDegrees: Number(item.minHorizontalAngleDegrees) || 0,
+      relativeHeightMeters: Number(item.relativeHeightMeters) || 0,
+      isInRadius: item.isInRadius === true,
+      isInZone: item.isInZone === true,
+      details: String(item.details ?? ''),
     }]
   })
 }

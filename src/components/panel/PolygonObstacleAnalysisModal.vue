@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { pointObstacleTypeOptions, polygonObstacleTypeOptions } from '../../types/tool'
 import type { ImportFormValue, PolygonObstacleAnalysisState } from '../../types/tool'
 import ObstacleTypeSelect from '../common/ObstacleTypeSelect.vue'
+import { getMetricsEntries } from '../../utils/metricsLabels'
 
 const props = defineProps<{
   state: PolygonObstacleAnalysisState
@@ -252,10 +253,32 @@ watch(
                   <li v-for="item in group.items" :key="`${item.obstacleId}:${item.ruleName}:${item.regionCode}`">
                     <p>障碍物：{{ item.obstacleName }}</p>
                     <p>规则：{{ item.ruleName }}</p>
-                    <p>结论：{{ item.isCompliant ? '符合' : '不符合' }}</p>
+                    <p>规则编码：{{ item.ruleCode }}</p>
+                    <p>结论：{{ item.isCompliant ? '符合' : '不符合' }} | 适用：{{ item.isApplicable ? '是' : '否' }}</p>
+                    <p>区域状态：isInRadius={{ item.isInRadius }} | isInZone={{ item.isInZone }}</p>
                     <p>{{ item.message }}</p>
-                    <p v-if="item.standards.gb">国标：{{ item.standards.gb.text }}（{{ item.standards.gb.code }}）</p>
-                    <p v-if="item.standards.mh">行标：{{ item.standards.mh.text }}（{{ item.standards.mh.code }}）</p>
+
+                    <p>超限距离：{{ item.overDistanceMeters }}m</p>
+                    <p>相对高度：{{ item.relativeHeightMeters }}m</p>
+                    <div v-if="item.metrics">
+                      <p v-for="entry in getMetricsEntries(item.metrics)" :key="entry.label">
+                        {{ entry.label }}：{{ entry.displayValue }}
+                      </p>
+                    </div>
+                    <p>方位角：{{ item.azimuthDegrees }}°（最小 {{ item.minHorizontalAngleDegrees }}° ~ 最大 {{ item.maxHorizontalAngleDegrees }}°）</p>
+
+                    <div v-if="item.standards.gb.length > 0">
+                      <p v-for="s in item.standards.gb" :key="s.code">
+                        国标：{{ s.text }}（{{ s.code }}）— 结论：{{ s.isCompliant ? '符合' : '不符合' }}
+                      </p>
+                    </div>
+                    <div v-if="item.standards.mh.length > 0">
+                      <p v-for="s in item.standards.mh" :key="s.code">
+                        行标：{{ s.text }}（{{ s.code }}）— 结论：{{ s.isCompliant ? '符合' : '不符合' }}
+                      </p>
+                    </div>
+
+                    <p v-if="item.details">详情：{{ item.details }}</p>
                   </li>
                 </ul>
               </div>

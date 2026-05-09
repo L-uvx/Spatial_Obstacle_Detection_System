@@ -540,6 +540,7 @@ describe('PolygonObstacleAnalysisModal', () => {
               obstacleName: '障碍物2',
               rawObstacleType: '建筑物/构建物',
               globalObstacleCategory: 'building_general',
+              ruleCode: 'ndb_minimum_distance_50m',
               ruleName: 'ndb_minimum_distance_50m',
               zoneCode: 'ndb_minimum_distance_50m',
               zoneName: 'NDB 50m minimum distance zone',
@@ -548,18 +549,41 @@ describe('PolygonObstacleAnalysisModal', () => {
               isApplicable: true,
               isCompliant: true,
               message: 'distance meets minimum threshold',
-              standards: {
-                gb: {
-                  code: 'GB_NDB_50m最小间距区域_50',
-                  text: '无方向信标天线与地形地物之间的最小间距国标内容',
-                  isCompliant: true,
-                },
-                mh: {
-                  code: 'MH_NDB_50m最小间距区域_50',
-                  text: '无方向信标天线与地形地物之间的最小间距行标内容',
-                  isCompliant: true,
-                },
+              metrics: {
+                isInProtectionZone: true,
+                actualDistanceMeters: 150.5,
+                actualElevationAngleDegrees: 1.2,
+                baseHeightMeters: 30,
+                elevationAngleDegrees: 3,
+                allowedHeightMeters: 200,
+                topElevationMeters: 80,
+                innerRadiusMeters: 50,
+                outerRadiusMeters: 37040,
               },
+              standards: {
+                gb: [
+                  {
+                    code: 'GB_NDB_50m最小间距区域_50',
+                    text: '无方向信标天线与地形地物之间的最小间距国标内容',
+                    isCompliant: true,
+                  },
+                ],
+                mh: [
+                  {
+                    code: 'MH_NDB_50m最小间距区域_50',
+                    text: '无方向信标天线与地形地物之间的最小间距行标内容',
+                    isCompliant: true,
+                  },
+                ],
+              },
+              overDistanceMeters: 0,
+              azimuthDegrees: 90,
+              maxHorizontalAngleDegrees: 95,
+              minHorizontalAngleDegrees: 85,
+              relativeHeightMeters: 50,
+              isInRadius: true,
+              isInZone: true,
+              details: '',
             },
           ],
         },
@@ -573,6 +597,12 @@ describe('PolygonObstacleAnalysisModal', () => {
     expect(wrapper.text()).toContain('行标内容')
     expect(wrapper.text()).toContain('GB_NDB_50m最小间距区域_50')
     expect(wrapper.text()).toContain('MH_NDB_50m最小间距区域_50')
+    expect(wrapper.text()).toContain('规则编码：ndb_minimum_distance_50m')
+    expect(wrapper.text()).toContain('实际距离（米）：150.5')
+    expect(wrapper.text()).toContain('是否进入保护区：是')
+    expect(wrapper.text()).toContain('90°')
+    expect(wrapper.text()).toContain('isInRadius=true')
+    expect(wrapper.text()).toContain('isInZone=true')
   })
 
   it('renders export running progress in analysis result view', () => {

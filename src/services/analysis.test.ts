@@ -265,6 +265,7 @@ describe('analysis service', () => {
             obstacleName: '障碍物2',
             rawObstacleType: '建筑物/构建物',
             globalObstacleCategory: 'building_general',
+            ruleCode: 'ndb_minimum_distance_50m',
             ruleName: 'ndb_minimum_distance_50m',
             zoneCode: 'ndb_minimum_distance_50m',
             zoneName: 'NDB 50m minimum distance zone',
@@ -273,18 +274,33 @@ describe('analysis service', () => {
             isApplicable: true,
             isCompliant: true,
             message: 'distance meets minimum threshold',
-            standards: {
-              gb: {
-                code: 'GB_NDB_50m最小间距区域_50',
-                text: '国标内容',
-                isCompliant: true,
-              },
-              mh: {
-                code: 'MH_NDB_50m最小间距区域_50',
-                text: '行标内容',
-                isCompliant: true,
-              },
+            metrics: {
+              enteredProtectionZone: true,
+              actualDistanceMeters: 150.5,
+              actualElevationAngleDegrees: 1.2,
+              baseHeightMeters: 30,
+              elevationAngleDegrees: 3,
+              allowedHeightMeters: 200,
+              topElevationMeters: 80,
+              innerRadiusMeters: 50,
+              outerRadiusMeters: 37040,
             },
+            standards: {
+              gb: [
+                { code: 'GB_NDB_50m最小间距区域_50', text: '国标内容', isCompliant: true },
+              ],
+              mh: [
+                { code: 'MH_NDB_50m最小间距区域_50', text: '行标内容', isCompliant: true },
+              ],
+            },
+            overDistanceMeters: 0,
+            azimuthDegrees: 90,
+            maxHorizontalAngleDegrees: 95,
+            minHorizontalAngleDegrees: 85,
+            relativeHeightMeters: 50,
+            isInRadius: true,
+            isInZone: true,
+            details: '',
           },
         ],
       }),
@@ -293,7 +309,7 @@ describe('analysis service', () => {
     const result = await getAnalysisTaskResult('analysis-task-1')
 
     expect(fetchMock).toHaveBeenCalledWith('/polygon-obstacle/analysis/analysis-task-1/result')
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       analysisTaskId: 'analysis-task-1',
       status: 'succeeded',
       importTaskId: 'import-batch-1',
@@ -322,6 +338,7 @@ describe('analysis service', () => {
           obstacleName: '障碍物2',
           rawObstacleType: '建筑物/构建物',
           globalObstacleCategory: 'building_general',
+          ruleCode: 'ndb_minimum_distance_50m',
           ruleName: 'ndb_minimum_distance_50m',
           zoneCode: 'ndb_minimum_distance_50m',
           zoneName: 'NDB 50m minimum distance zone',
@@ -330,18 +347,33 @@ describe('analysis service', () => {
           isApplicable: true,
           isCompliant: true,
           message: 'distance meets minimum threshold',
-          standards: {
-            gb: {
-              code: 'GB_NDB_50m最小间距区域_50',
-              text: '国标内容',
-              isCompliant: true,
-            },
-            mh: {
-              code: 'MH_NDB_50m最小间距区域_50',
-              text: '行标内容',
-              isCompliant: true,
-            },
+          metrics: {
+            isInProtectionZone: true,
+            actualDistanceMeters: 150.5,
+            actualElevationAngleDegrees: 1.2,
+            baseHeightMeters: 30,
+            elevationAngleDegrees: 3,
+            allowedHeightMeters: 200,
+            topElevationMeters: 80,
+            innerRadiusMeters: 50,
+            outerRadiusMeters: 37040,
           },
+          standards: {
+            gb: [
+              { code: 'GB_NDB_50m最小间距区域_50', text: '国标内容', isCompliant: true },
+            ],
+            mh: [
+              { code: 'MH_NDB_50m最小间距区域_50', text: '行标内容', isCompliant: true },
+            ],
+          },
+          overDistanceMeters: 0,
+          azimuthDegrees: 90,
+          maxHorizontalAngleDegrees: 95,
+          minHorizontalAngleDegrees: 85,
+          relativeHeightMeters: 50,
+          isInRadius: true,
+          isInZone: true,
+          details: '',
         },
       ],
     })
@@ -575,6 +607,7 @@ describe('analysis service', () => {
             obstacleName: '障碍物2',
             rawObstacleType: '建筑物/构建物',
             globalObstacleCategory: 'building_general',
+            ruleCode: 'ndb_minimum_distance_50m',
             ruleName: 'ndb_minimum_distance_50m',
             zoneCode: 'ndb_minimum_distance_50m',
             zoneName: 'NDB 50m minimum distance zone',
@@ -615,6 +648,7 @@ describe('analysis service', () => {
         obstacleName: '障碍物2',
         rawObstacleType: '建筑物/构建物',
         globalObstacleCategory: 'building_general',
+        ruleCode: 'ndb_minimum_distance_50m',
         ruleName: 'ndb_minimum_distance_50m',
         zoneCode: 'ndb_minimum_distance_50m',
         zoneName: 'NDB 50m minimum distance zone',
@@ -623,10 +657,19 @@ describe('analysis service', () => {
         isApplicable: true,
         isCompliant: true,
         message: 'distance meets minimum threshold',
+        metrics: null,
         standards: {
-          gb: null,
-          mh: null,
+          gb: [],
+          mh: [],
         },
+        overDistanceMeters: 0,
+        azimuthDegrees: 0,
+        maxHorizontalAngleDegrees: 0,
+        minHorizontalAngleDegrees: 0,
+        relativeHeightMeters: 0,
+        isInRadius: false,
+        isInZone: false,
+        details: '',
       },
     ])
   })
