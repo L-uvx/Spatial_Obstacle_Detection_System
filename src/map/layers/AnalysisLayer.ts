@@ -144,6 +144,109 @@ function createClosedTriangleHierarchy(points: RegionTriangleDefinition) {
   )
 }
 
+// 为 distance_parameterized point+radial 面计算环上所有顶点的高度。
+function computeRingHeights(
+  vertical: PolygonObstacleAnalysisState['visibleProtectionZones'][number]['vertical'],
+  ring: PolygonObstacleAnalysisState['visibleProtectionZones'][number]['geometry']['coordinates'][number][number],
+): number[] {
+  const profile = buildVerticalProfile(
+    vertical,
+    ring.map(([longitude, latitude]) => ({
+      longitude,
+      latitude,
+      radialDistanceMeters: 0,
+    })),
+  )
+
+  if (profile.mode !== 'analytic_surface') {
+    throw new Error(`Expected analytic_surface profile but received ${profile.mode}`)
+  }
+
+  return profile.points.map((point) => point.heightMeters)
+}
+
+// 为 distance_parameterized point+radial 面（无孔洞）生成从中心到外环的三角扇。
+function createTriangleFanFromCenter(
+  region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
+  outerRing: PolygonObstacleAnalysisState['visibleProtectionZones'][number]['geometry']['coordinates'][number][number],
+  outerHeights: number[],
+): RegionTriangleDefinition[] {
+  const analyticVertical = region.vertical as Extract<typeof region.vertical, { mode: 'analytic_surface' }>
+  const surface = analyticVertical.surface as { distanceSource: { point: [number, number] } }
+  const [centerLongitude, centerLatitude] = surface.distanceSource.point
+  const centerHeightMeters = analyticVertical.baseHeightMeters
+  const triangles: RegionTriangleDefinition[] = []
+
+  for (let index = 0; index < outerRing.length - 1; index += 1) {
+    triangles.push([
+      [centerLongitude, centerLatitude, centerHeightMeters],
+      [outerRing[index][0], outerRing[index][1], outerHeights[index]],
+      [outerRing[index + 1][0], outerRing[index + 1][1], outerHeights[index + 1]],
+      [centerLongitude, centerLatitude, centerHeightMeters],
+    ])
+  }
+
+  return triangles
+}
+
+// 为 distance_parameterized point+radial 面（含同心孔洞环）生成外环到内环的三角形条带。
+// 外环和外环的顶点顺序相反（外环 CCW，内环 CW），因此内环索引需要反向映射。
+function createRingTriangleStrip(
+  _region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
+  outerRing: PolygonObstacleAnalysisState['visibleProtectionZones'][number]['geometry']['coordinates'][number][number],
+  innerRing: PolygonObstacleAnalysisState['visibleProtectionZones'][number]['geometry']['coordinates'][number][number],
+  outerHeights: number[],
+  innerHeights: number[],
+): RegionTriangleDefinition[] {
+  const triangles: RegionTriangleDefinition[] = []
+  const vertexCount = outerRing.length - 1
+
+  for (let i = 0; i < vertexCount; i += 1) {
+    const iNext = i + 1
+    const innerIdxLow = i === 0 ? 0 : vertexCount - i
+    const innerIdxHigh = iNext === vertexCount ? 0 : vertexCount - iNext
+
+    triangles.push([
+      [outerRing[i][0], outerRing[i][1], outerHeights[i]],
+      [outerRing[iNext][0], outerRing[iNext][1], outerHeights[iNext]],
+      [innerRing[innerIdxLow][0], innerRing[innerIdxLow][1], innerHeights[innerIdxLow]],
+      [outerRing[i][0], outerRing[i][1], outerHeights[i]],
+    ])
+
+    triangles.push([
+      [outerRing[iNext][0], outerRing[iNext][1], outerHeights[iNext]],
+      [innerRing[innerIdxHigh][0], innerRing[innerIdxHigh][1], innerHeights[innerIdxHigh]],
+      [innerRing[innerIdxLow][0], innerRing[innerIdxLow][1], innerHeights[innerIdxLow]],
+      [outerRing[iNext][0], outerRing[iNext][1], outerHeights[iNext]],
+    ])
+  }
+
+  return triangles
+}
+
+// 为 distance_parameterized point+radial 面生成三角定义（适配有/无孔洞两种场景）。
+function createPointRadialTriangleDefinitions(
+  region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
+): RegionTriangleDefinition[] {
+  const polygon = region.geometry.coordinates[0]
+  const [outerRing, ...holeRings] = polygon ?? []
+
+  if (!outerRing) {
+    return []
+  }
+
+  const outerHeights = computeRingHeights(region.vertical, outerRing)
+
+  if (holeRings.length === 0) {
+    return createTriangleFanFromCenter(region, outerRing, outerHeights)
+  }
+
+  const innerRing = holeRings[0]
+  const innerHeights = computeRingHeights(region.vertical, innerRing)
+
+  return createRingTriangleStrip(region, outerRing, innerRing, outerHeights, innerHeights)
+}
+
 // 为 radial_cone_surface 解析面生成以中心点为公共顶点的扇形三角片。
 function createRadialConeTriangleDefinitions(
   region: PolygonObstacleAnalysisState['visibleProtectionZones'][number],
@@ -287,6 +390,22 @@ function createEntities(
 
       if (region.vertical.surface.type === 'radial_cone_surface') {
         return createRadialConeTriangleDefinitions(region).map((triangle, polygonIndex) =>
+          createEntity(
+            region,
+            createClosedTriangleHierarchy(triangle),
+            polygonIndex,
+            true,
+            undefined,
+          ),
+        )
+      }
+
+      if (
+        region.vertical.surface.type === 'distance_parameterized'
+        && region.vertical.surface.distanceSource.kind === 'point'
+        && region.vertical.surface.distanceMetric === 'radial'
+      ) {
+        return createPointRadialTriangleDefinitions(region).map((triangle, polygonIndex) =>
           createEntity(
             region,
             createClosedTriangleHierarchy(triangle),

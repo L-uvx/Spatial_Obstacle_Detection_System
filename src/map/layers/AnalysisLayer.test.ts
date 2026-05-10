@@ -445,8 +445,16 @@ describe('syncAnalysisLayer', () => {
     expectHierarchyToMatchRing((hierarchy as Cesium.PolygonHierarchy).holes[0], holeGeometry.coordinates[0][1], [492, 492, 492, 492, 492])
   })
 
-  it('renders analytic_surface multipolygon regions with actual generated per-position heights', () => {
+  it('renders distance_parameterized point+radial with no holes as triangle fan', () => {
     const { viewer, add } = createViewer()
+    const center: [number, number] = [114.2, 30.69]
+    const ring = createRing([
+      [114.19, 30.70],
+      [114.21, 30.70],
+      [114.21, 30.68],
+      [114.19, 30.68],
+      [114.19, 30.70],
+    ])
     const vertical = {
       mode: 'analytic_surface' as const,
       baseReference: 'station' as const,
@@ -455,81 +463,143 @@ describe('syncAnalysisLayer', () => {
         type: 'distance_parameterized' as const,
         distanceSource: {
           kind: 'point' as const,
-          point: [114.2, 30.69] as [number, number],
+          point: center,
         },
         distanceMetric: 'radial' as const,
         clampRange: {
-          startMeters: 50,
-          endMeters: 500,
+          startMeters: 0,
+          endMeters: 5000,
         },
         heightModel: {
           type: 'angle_linear_rise' as const,
           angleDegrees: 3,
-          distanceOffsetMeters: 50,
+          distanceOffsetMeters: 0,
         },
       },
     }
-    const ring = createVisibleRegion().geometry.coordinates[0][0]
+    const expectedHeights = buildExpectedAnalyticHeights(ring, vertical)
 
-    const result = syncAnalysisLayer(viewer as never, [
+    syncAnalysisLayer(viewer as never, [
       createVisibleRegion({
+        geometry: {
+          shapeType: 'multipolygon',
+          coordinates: [[ring]],
+        },
         vertical,
       }),
     ])
 
-    const hierarchy = add.mock.calls[0][0].polygon?.hierarchy
+    expect(add).toHaveBeenCalledTimes(ring.length - 1)
+    expect(add.mock.calls.every((call) => call[0].polygon?.perPositionHeight === true)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].polygon?.height === undefined)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].polygon?.outline === false)).toBe(true)
 
-    expect(add).toHaveBeenCalledTimes(1)
-    expect(add.mock.calls[0][0].polygon?.perPositionHeight).toBe(true)
-    expect(add.mock.calls[0][0].polygon?.outline).toBe(false)
-    expect(add.mock.calls[0][0].polygon?.height).toBeUndefined()
-    expectHierarchyToMatchRing(hierarchy, ring, buildExpectedAnalyticHeights(ring, vertical))
-    expect(result.addedKeys).toEqual(['airport-1:station-1:zone-a:rule-a:region-north'])
+    for (let index = 0; index < ring.length - 1; index += 1) {
+      expectHierarchyToMatchRing(
+        add.mock.calls[index][0].polygon?.hierarchy,
+        [center, ring[index], ring[index + 1], center],
+        [vertical.baseHeightMeters, expectedHeights[index], expectedHeights[index + 1], vertical.baseHeightMeters],
+      )
+    }
   })
 
-  it('routes analytic_surface holes through the analytic-height path', () => {
+  it('renders distance_parameterized point+radial ring as triangle strip', () => {
     const { viewer, add } = createViewer()
+    const center: [number, number] = [114.2, 30.69]
+    const outerRing = createRing([
+      [114.18, 30.71],
+      [114.18, 30.67],
+      [114.22, 30.67],
+      [114.22, 30.71],
+      [114.18, 30.71],
+    ])
+    const innerRing = createRing([
+      [114.19, 30.70],
+      [114.21, 30.70],
+      [114.21, 30.68],
+      [114.19, 30.68],
+      [114.19, 30.70],
+    ])
     const vertical = {
       mode: 'analytic_surface' as const,
       baseReference: 'station' as const,
-      baseHeightMeters: 491.1,
+      baseHeightMeters: 500,
       surface: {
         type: 'distance_parameterized' as const,
         distanceSource: {
           kind: 'point' as const,
-          point: [103.93586, 30.55461] as [number, number],
+          point: center,
         },
         distanceMetric: 'radial' as const,
         clampRange: {
-          startMeters: 50,
-          endMeters: 37040,
+          startMeters: 0,
+          endMeters: 5000,
         },
         heightModel: {
           type: 'angle_linear_rise' as const,
           angleDegrees: 3,
-          distanceOffsetMeters: 50,
+          distanceOffsetMeters: 0,
         },
       },
     }
+    const outerHeights = buildExpectedAnalyticHeights(outerRing, vertical)
+    const innerHeights = buildExpectedAnalyticHeights(innerRing, vertical)
+    const vertexCount = outerRing.length - 1
 
     syncAnalysisLayer(viewer as never, [
       createVisibleRegion({
-        geometry: holeGeometry,
+        geometry: {
+          shapeType: 'multipolygon',
+          coordinates: [[outerRing, innerRing]],
+        },
         vertical,
       }),
     ])
 
-    const hierarchy = add.mock.calls[0][0].polygon?.hierarchy as Cesium.PolygonHierarchy
-    const holeHeights = toHierarchyPoints(hierarchy.holes[0]).map((point) => point.height)
+    expect(add).toHaveBeenCalledTimes(vertexCount * 2)
+    expect(add.mock.calls.every((call) => call[0].polygon?.perPositionHeight === true)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].polygon?.height === undefined)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].polygon?.outline === false)).toBe(true)
 
-    expect(hierarchy.holes).toHaveLength(1)
-    expectHierarchyToMatchRing(hierarchy, holeGeometry.coordinates[0][0], buildExpectedAnalyticHeights(holeGeometry.coordinates[0][0], vertical))
-    expectHierarchyToMatchRing(hierarchy.holes[0], holeGeometry.coordinates[0][1], buildExpectedAnalyticHeights(holeGeometry.coordinates[0][1], vertical))
-    expect(holeHeights.some((height) => Math.abs(height - vertical.baseHeightMeters) > 0.01)).toBe(true)
+    function innerIdx(segmentIndex: number) {
+      return segmentIndex === 0 ? 0 : vertexCount - segmentIndex
+    }
+
+    for (let i = 0; i < vertexCount; i += 1) {
+      const il = innerIdx(i)
+      const ih = innerIdx(i + 1)
+
+      expectHierarchyToMatchRing(
+        add.mock.calls[i * 2][0].polygon?.hierarchy,
+        [outerRing[i], outerRing[i + 1], innerRing[il], outerRing[i]],
+        [outerHeights[i], outerHeights[i + 1], innerHeights[il], outerHeights[i]],
+      )
+
+      expectHierarchyToMatchRing(
+        add.mock.calls[i * 2 + 1][0].polygon?.hierarchy,
+        [outerRing[i + 1], innerRing[ih], innerRing[il], outerRing[i + 1]],
+        [outerHeights[i + 1], innerHeights[ih], innerHeights[il], outerHeights[i + 1]],
+      )
+    }
   })
 
-  it('renders radar_site_protection_mask_angle analytic_surface regions through the per-position-height path', () => {
+  it('renders radar_site_protection_mask_angle point+radial ring as triangle strip', () => {
     const { viewer, add } = createViewer()
+    const center: [number, number] = [103.935511, 30.542172]
+    const outerRing = createRing([
+      [103.94, 30.56],
+      [103.94, 30.55],
+      [103.95, 30.55],
+      [103.95, 30.56],
+      [103.94, 30.56],
+    ])
+    const innerRing = createRing([
+      [103.944, 30.557],
+      [103.946, 30.557],
+      [103.946, 30.553],
+      [103.944, 30.553],
+      [103.944, 30.557],
+    ])
     const vertical = {
       mode: 'analytic_surface' as const,
       baseReference: 'station' as const,
@@ -538,7 +608,7 @@ describe('syncAnalysisLayer', () => {
         type: 'distance_parameterized' as const,
         distanceSource: {
           kind: 'point' as const,
-          point: [103.935511, 30.542172] as [number, number],
+          point: center,
         },
         distanceMetric: 'radial' as const,
         clampRange: {
@@ -554,23 +624,44 @@ describe('syncAnalysisLayer', () => {
         },
       },
     }
-    const ring = holeGeometry.coordinates[0][0]
+    const outerHeights = buildExpectedRadarMaskAngleHeights(outerRing, vertical)
+    const innerHeights = buildExpectedRadarMaskAngleHeights(innerRing, vertical)
+    const vertexCount = outerRing.length - 1
 
     syncAnalysisLayer(viewer as never, [
       createVisibleRegion({
-        geometry: holeGeometry,
+        geometry: {
+          shapeType: 'multipolygon',
+          coordinates: [[outerRing, innerRing]],
+        },
         vertical,
       }),
     ])
 
-    const hierarchy = add.mock.calls[0][0].polygon?.hierarchy as Cesium.PolygonHierarchy
-    const expectedHeights = buildExpectedRadarMaskAngleHeights(ring, vertical)
+    expect(add).toHaveBeenCalledTimes(vertexCount * 2)
+    expect(add.mock.calls.every((call) => call[0].polygon?.perPositionHeight === true)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].polygon?.height === undefined)).toBe(true)
 
-    expect(add).toHaveBeenCalledTimes(1)
-    expect(add.mock.calls[0][0].polygon?.perPositionHeight).toBe(true)
-    expect(add.mock.calls[0][0].polygon?.height).toBeUndefined()
-    expectHierarchyToMatchRing(hierarchy, ring, expectedHeights)
-    expect(toHierarchyPoints(hierarchy).some((point, index) => Math.abs(point.height - expectedHeights[index]) > 0.01)).toBe(false)
+    function innerIdx(segmentIndex: number) {
+      return segmentIndex === 0 ? 0 : vertexCount - segmentIndex
+    }
+
+    for (let i = 0; i < vertexCount; i += 1) {
+      const il = innerIdx(i)
+      const ih = innerIdx(i + 1)
+
+      expectHierarchyToMatchRing(
+        add.mock.calls[i * 2][0].polygon?.hierarchy,
+        [outerRing[i], outerRing[i + 1], innerRing[il], outerRing[i]],
+        [outerHeights[i], outerHeights[i + 1], innerHeights[il], outerHeights[i]],
+      )
+
+      expectHierarchyToMatchRing(
+        add.mock.calls[i * 2 + 1][0].polygon?.hierarchy,
+        [outerRing[i + 1], innerRing[ih], innerRing[il], outerRing[i + 1]],
+        [outerHeights[i + 1], innerHeights[ih], innerHeights[il], outerHeights[i + 1]],
+      )
+    }
   })
 
   it('renders front_reference_line analytic_surface regions through the per-position-height path', () => {

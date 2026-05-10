@@ -399,19 +399,12 @@ describe('CesiumViewer camera rules', () => {
       [zone],
     )
 
-    expect(add).toHaveBeenCalledTimes(1)
+    expect(add).toHaveBeenCalledTimes(8)
     expect(removeById).not.toHaveBeenCalled()
-    expect(add.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({
-        id: 'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0',
-        name: '北侧区域',
-        polygon: expect.objectContaining({
-          perPositionHeight: true,
-          height: undefined,
-          extrudedHeight: undefined,
-        }),
-      }),
-    )
+    expect(add.mock.calls.every((call) => call[0].polygon?.perPositionHeight === true)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].polygon?.height === undefined)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].polygon?.extrudedHeight === undefined)).toBe(true)
+    expect(add.mock.calls[0]?.[0].id).toBe('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
     expect(result).toEqual({
       message: '分析保护区已同步到地图图层。',
       addedKeys: [zone.key],
