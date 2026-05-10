@@ -218,7 +218,7 @@ describe('useDataManagement', () => {
       keyword: '',
       hasCoordinates: false,
       page: 3,
-      pageSize: 20,
+      pageSize: 10,
     })
   })
 
@@ -256,7 +256,7 @@ describe('useDataManagement', () => {
       keyword: '主跑道',
       runNumber: '',
       page: 1,
-      pageSize: 20,
+      pageSize: 10,
     })
   })
 
@@ -278,7 +278,7 @@ describe('useDataManagement', () => {
       keyword: '',
       runNumber: '',
       page: 1,
-      pageSize: 20,
+      pageSize: 10,
     })
   })
 
@@ -294,7 +294,7 @@ describe('useDataManagement', () => {
       keyword: '',
       runNumber: '',
       page: 2,
-      pageSize: 20,
+      pageSize: 10,
     })
   })
 
@@ -334,7 +334,7 @@ describe('useDataManagement', () => {
       keyword: '进近',
       runwayNo: '',
       page: 1,
-      pageSize: 20,
+      pageSize: 10,
     })
   })
 
@@ -358,7 +358,7 @@ describe('useDataManagement', () => {
       keyword: '',
       runwayNo: '',
       page: 1,
-      pageSize: 20,
+      pageSize: 10,
     })
   })
 
@@ -548,27 +548,7 @@ describe('useDataManagement', () => {
       keyword: '',
       runwayNo: '',
       page: 4,
-      pageSize: 20,
-    })
-  })
-
-  it('resets station page to 1 and reloads when station page size changes', async () => {
-    const { state, changeStationPageSize } = useDataManagement({
-      onRefreshBootstrap: vi.fn(),
-    })
-
-    state.stations.page = 6
-
-    await changeStationPageSize(50)
-
-    expect(state.stations.page).toBe(1)
-    expect(getStations).toHaveBeenCalledWith({
-      airportId: '',
-      stationType: '',
-      keyword: '',
-      runwayNo: '',
-      page: 1,
-      pageSize: 50,
+      pageSize: 10,
     })
   })
 

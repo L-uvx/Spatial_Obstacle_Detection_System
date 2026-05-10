@@ -635,6 +635,18 @@ body {
   font-size: 12px;
 }
 
+.airport-table__toolbar label.airport-table__toolbar-checkbox,
+.runway-table__toolbar label.airport-table__toolbar-checkbox,
+.station-table__toolbar label.airport-table__toolbar-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding-bottom: 8px;
+  color: #e2e8f0;
+  font-size: 13px;
+}
+
 .airport-table__toolbar input,
 .runway-table__toolbar input,
 .station-table__toolbar input {
@@ -651,6 +663,15 @@ body {
 .runway-table__toolbar input::placeholder,
 .station-table__toolbar input::placeholder {
   color: #64748b;
+}
+
+.airport-table__toolbar input[type="checkbox"],
+.runway-table__toolbar input[type="checkbox"],
+.station-table__toolbar input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+  border: none;
+  accent-color: #3b82f6;
 }
 
 .airport-table__toolbar button,

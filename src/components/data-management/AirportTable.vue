@@ -30,14 +30,14 @@ const emit = defineEmits<{
           @input="emit('update:keyword', ($event.target as HTMLInputElement).value)"
         />
       </label>
-      <label>
+      <label class="airport-table__toolbar-checkbox">
         <input
           data-testid="airport-has-coordinates"
           type="checkbox"
           :checked="hasCoordinates"
           @change="emit('update:hasCoordinates', ($event.target as HTMLInputElement).checked)"
         />
-        仅看有坐标机场
+        <span>仅看有坐标机场</span>
       </label>
       <button type="button" data-action="create-airport" @click="emit('create')">新建机场</button>
     </div>

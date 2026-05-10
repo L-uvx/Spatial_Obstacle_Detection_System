@@ -171,7 +171,7 @@ function createInitialState(): DataManagementState {
       items: [],
       total: 0,
       page: 1,
-      pageSize: 20,
+      pageSize: 10,
       filters: {
         keyword: '',
         hasCoordinates: false,
@@ -188,7 +188,7 @@ function createInitialState(): DataManagementState {
       items: [],
       total: 0,
       page: 1,
-      pageSize: 20,
+      pageSize: 10,
       filters: {
         airportId: '',
         keyword: '',
@@ -206,7 +206,7 @@ function createInitialState(): DataManagementState {
       items: [],
       total: 0,
       page: 1,
-      pageSize: 20,
+      pageSize: 10,
       filters: {
         airportId: '',
         stationType: '',
