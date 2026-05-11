@@ -197,7 +197,7 @@ export interface ProtectionZoneMultipolygonGeometry {
 
 export interface ProtectionZoneFlatVertical {
   mode: 'flat'
-  baseReference: 'station'
+  baseReference: 'station' | 'runway'
   baseHeightMeters: number
 }
 

@@ -437,13 +437,16 @@ function normalizeProtectionZoneVertical(
   const candidate = vertical as Record<string, unknown>
 
   if (candidate.mode === 'flat') {
-    if (candidate.baseReference !== 'station' || !isFiniteNumber(candidate.baseHeightMeters)) {
+    if (
+      (candidate.baseReference !== 'station' && candidate.baseReference !== 'runway')
+      || !isFiniteNumber(candidate.baseHeightMeters)
+    ) {
       return null
     }
 
     return {
       mode: 'flat',
-      baseReference: 'station',
+      baseReference: candidate.baseReference,
       baseHeightMeters: candidate.baseHeightMeters,
     }
   }
