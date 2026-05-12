@@ -494,4 +494,30 @@ describe('AppShell', () => {
     expect(Object.keys(viewerProps)).not.toContain('samplingStepDegrees')
     expect(Object.keys(viewerProps)).not.toContain('samplingStep')
   })
+
+  it('forwards importAirports event from DataManagementModal', async () => {
+    const wrapper = mount(AppShell, {
+      props: {
+        analysisState: createState({ protectionZoneTree: [] }),
+        dataManagementState: createDataManagementState(),
+        resetTick: 0,
+        renderedObstacles: [],
+        initialCameraTarget: null,
+      },
+      global: {
+        stubs: {
+          CesiumViewer: true,
+          PolygonObstacleAnalysisModal: true,
+          SidePanel: true,
+          TopToolbar: true,
+        },
+      },
+    })
+
+    const dmModal = wrapper.findComponent({ name: 'DataManagementModal' })
+
+    await dmModal.vm.$emit('importAirports')
+
+    expect(wrapper.emitted('importAirports')).toEqual([[]])
+  })
 })

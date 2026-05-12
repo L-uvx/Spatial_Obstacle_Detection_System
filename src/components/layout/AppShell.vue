@@ -69,6 +69,7 @@ const emit = defineEmits<{
   openAirportDeleteConfirm: [airportId: string]
   closeAirportDeleteConfirm: []
   confirmAirportDelete: []
+  importAirports: []
   openStationPanel: []
   closeStationPanel: []
   selectAirport: [airportId: string]
@@ -264,6 +265,7 @@ function handleSelectAirport(event: Event) {
         @open-airport-delete-confirm="emit('openAirportDeleteConfirm', $event)"
         @close-airport-delete-confirm="emit('closeAirportDeleteConfirm')"
         @confirm-airport-delete="emit('confirmAirportDelete')"
+        @import-airports="emit('importAirports')"
       />
       <CesiumViewer
         :reset-tick="resetTick"

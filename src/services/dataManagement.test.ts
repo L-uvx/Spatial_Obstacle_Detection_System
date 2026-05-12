@@ -16,6 +16,7 @@ import {
   getStationDetail,
   getStationTypeOptions,
   getStations,
+  importAirports,
   updateAirport,
   updateRunway,
   updateStation,
@@ -777,6 +778,90 @@ describe('dataManagement service', () => {
       antennaHeight: 15,
       stationSubType: 'NDB',
       combineId: 100,
+    })
+  })
+
+  it('sends excelFiles to the import airports endpoint', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        items: [],
+        totalFiles: 1,
+        importedCount: 1,
+        skippedCount: 0,
+      }),
+    }))
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const file = new File(['test'], 'test.xlsx')
+    const result = await importAirports([file])
+
+    expect(fetchMock).toHaveBeenCalledWith('/data-management/import/airports', {
+      method: 'POST',
+      body: expect.any(FormData),
+    })
+
+    const callArgs = fetchMock.mock.calls[0] as unknown as [string, { body: FormData }]
+    const formData = callArgs[1].body
+    expect(formData.get('excelFiles')).toBeDefined()
+
+    expect(result).toEqual({
+      items: [],
+      totalFiles: 1,
+      importedCount: 1,
+      skippedCount: 0,
+    })
+  })
+
+  it('handles import with empty files array', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        items: [],
+        totalFiles: 0,
+        importedCount: 0,
+        skippedCount: 0,
+      }),
+    }))
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await importAirports([])
+
+    expect(fetchMock).toHaveBeenCalledWith('/data-management/import/airports', {
+      method: 'POST',
+      body: expect.any(FormData),
+    })
+
+    expect(result).toEqual({
+      items: [],
+      totalFiles: 0,
+      importedCount: 0,
+      skippedCount: 0,
+    })
+  })
+
+  it('handles import error response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          detail: {
+            code: 'import_failed',
+            message: '文件格式错误',
+          },
+        }),
+      })),
+    )
+
+    const file = new File(['bad data'], 'invalid.txt')
+    await expect(importAirports([file])).rejects.toMatchObject({
+      code: 'import_failed',
+      detailMessage: '文件格式错误',
+      status: 400,
     })
   })
 })

@@ -13,6 +13,7 @@ import type {
   StationPayload,
   StationListItem,
   StationTypeOptionResponse,
+  ImportAirportsResult,
 } from '../types/dataManagement'
 
 export interface AirportPayload {
@@ -494,4 +495,17 @@ export async function getStationTypeOptions(): Promise<SelectOption[]> {
   return Array.isArray(result)
     ? result.map((item) => normalizeStationTypeOption(item)).filter((item): item is SelectOption => item !== null)
     : []
+}
+
+export async function importAirports(files: File[]): Promise<ImportAirportsResult> {
+  const formData = new FormData()
+  files.forEach((file) => formData.append('excelFiles', file))
+
+  const response = await fetch('/data-management/import/airports', {
+    method: 'POST',
+    body: formData,
+  })
+
+  await ensureOk(response)
+  return readJson<ImportAirportsResult>(response)
 }

@@ -166,3 +166,20 @@ export interface DataManagementConflict {
   code: string
   message: string
 }
+
+export interface ImportAirportItem {
+  fileName: string
+  status: 'imported' | 'skipped' | 'error'
+  airportId: number | null
+  airportName: string | null
+  runwayCount: number
+  stationCount: number
+  errorMessage: string | null
+}
+
+export interface ImportAirportsResult {
+  items: ImportAirportItem[]
+  totalFiles: number
+  importedCount: number
+  skippedCount: number
+}

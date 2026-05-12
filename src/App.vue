@@ -29,6 +29,9 @@ const {
 } = useWorkflowActions()
 const {
   state: dataManagementState,
+  loadAirportPage,
+  loadRunwayPage,
+  loadStationPage,
   openDataManagement,
   closeDataManagement,
   setAirportKeyword,
@@ -285,6 +288,17 @@ function handleConfirmAirportDelete() {
   void confirmAirportDelete()
 }
 
+async function handleImportAirports() {
+  if (dataManagementState.activeTab === 'airports') {
+    await loadAirportPage()
+  } else if (dataManagementState.activeTab === 'runways') {
+    await loadRunwayPage()
+  } else {
+    await loadStationPage()
+  }
+  await bootstrap()
+}
+
 // 打开当前机场选择面板。
 function handleOpenStationPanel() {
   openStationPanel()
@@ -395,6 +409,7 @@ function handleFlyToProtectionZone(zone: ProtectionZoneNode) {
     @open-airport-delete-confirm="handleOpenAirportDeleteConfirm"
     @close-airport-delete-confirm="handleCloseAirportDeleteConfirm"
     @confirm-airport-delete="handleConfirmAirportDelete"
+    @import-airports="handleImportAirports"
     @reset="handleReset"
     @close-analysis="handleCloseAnalysis"
     @close-data-management="handleCloseDataManagement"

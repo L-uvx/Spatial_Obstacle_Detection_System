@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+vi.mock('../../services/dataManagement')
+
 import DataManagementModal from './DataManagementModal.vue'
 import type { DataManagementState } from '../../composables/useDataManagement'
 
@@ -833,5 +835,27 @@ describe('DataManagementModal', () => {
 
     await wrapper.get('[data-testid="modal-next-page"]').trigger('click')
     expect(wrapper.emitted('changeStationPage')).toEqual([[2]])
+  })
+
+  it('renders import button when modal is open', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState(),
+      },
+    })
+
+    expect(wrapper.find('.data-management-modal__import-btn').exists()).toBe(true)
+    expect(wrapper.find('.data-management-modal__import-btn').text()).toBe('导入机场')
+  })
+
+  it('has hidden file input for import', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState(),
+      },
+    })
+
+    const fileInput = wrapper.find('input[type="file"][hidden]')
+    expect(fileInput.exists()).toBe(true)
   })
 })

@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 import AirportFormDialog from '../data-management/AirportFormDialog.vue'
+import { importAirports } from '../../services/dataManagement'
+import type { ImportAirportItem } from '../../types/dataManagement'
 import AirportTable from '../data-management/AirportTable.vue'
 import RunwayFormDialog from '../data-management/RunwayFormDialog.vue'
 import StationFormDialog from '../data-management/StationFormDialog.vue'
@@ -153,7 +156,91 @@ const emit = defineEmits<{
   confirmAirportDelete: []
   openRunwayDetailDialog: [runway: RunwayListItem]
   openStationDetailDialog: [station: StationListItem]
+  importAirports: []
 }>()
+
+const importFileInput = ref<HTMLInputElement | null>(null)
+const fileImportInput = ref<HTMLInputElement | null>(null)
+const showImportDropdown = ref(false)
+const importing = ref(false)
+const importResultItems = ref<ImportAirportItem[]>([])
+const importResultTotalFiles = ref(0)
+const importResultImportedCount = ref(0)
+const importResultSkippedCount = ref(0)
+const showImportResultDialog = ref(false)
+
+function handleImportBtnClick() {
+  showImportDropdown.value = !showImportDropdown.value
+}
+
+function handleSelectFolder() {
+  showImportDropdown.value = false
+  importFileInput.value?.click()
+}
+
+function handleSelectFile() {
+  showImportDropdown.value = false
+  fileImportInput.value?.click()
+}
+
+function handleImportFileChange(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  if (!input?.files || input.files.length === 0) {
+    return
+  }
+
+  const files = Array.from(input.files)
+  importing.value = true
+
+  importAirports(files)
+    .then((result) => {
+      importResultItems.value = result.items
+      importResultTotalFiles.value = result.totalFiles
+      importResultImportedCount.value = result.importedCount
+      importResultSkippedCount.value = result.skippedCount
+      showImportResultDialog.value = true
+
+      if (result.importedCount > 0) {
+        emit('importAirports')
+      }
+    })
+    .catch((error) => {
+      importResultTotalFiles.value = 1
+      importResultImportedCount.value = 0
+      importResultSkippedCount.value = 0
+      importResultItems.value = [{
+        fileName: '',
+        status: 'error',
+        airportId: null,
+        airportName: null,
+        runwayCount: 0,
+        stationCount: 0,
+        errorMessage: error instanceof Error ? error.message : '导入失败',
+      }]
+      showImportResultDialog.value = true
+    })
+    .finally(() => {
+      importing.value = false
+      input.value = ''
+    })
+}
+
+function handleCloseImportResult() {
+  showImportResultDialog.value = false
+  importResultItems.value = []
+}
+
+function handleClickOutside(event: MouseEvent) {
+  const target = event.target as HTMLElement
+  const trigger = target.closest('.data-management-modal__import-btn-wrapper')
+  const dropdown = target.closest('.data-management-modal__import-dropdown')
+  if (!trigger && !dropdown) {
+    showImportDropdown.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('click', handleClickOutside))
+onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 </script>
 
 <template>
@@ -161,7 +248,53 @@ const emit = defineEmits<{
     <div class="data-management-modal__card">
       <header class="data-management-modal__header">
         <h2>数据管理</h2>
-        <button type="button" class="data-management-modal__close" @click="emit('close')">关闭</button>
+        <div class="data-management-modal__header-actions">
+          <input
+            ref="importFileInput"
+            type="file"
+            multiple
+            webkitdirectory
+            accept=".xlsx,.xls"
+            hidden
+            @change="handleImportFileChange"
+          >
+          <input
+            ref="fileImportInput"
+            type="file"
+            multiple
+            accept=".xlsx,.xls"
+            hidden
+            @change="handleImportFileChange"
+          >
+          <div class="data-management-modal__import-btn-wrapper">
+            <button
+              type="button"
+              class="data-management-modal__import-btn"
+              :disabled="importing"
+              @click="handleImportBtnClick"
+            >
+              {{ importing ? '导入中...' : '导入机场' }}
+              <span class="data-management-modal__import-btn-arrow">&#9662;</span>
+            </button>
+            <div v-if="showImportDropdown" class="data-management-modal__import-dropdown">
+              <button
+                type="button"
+                class="data-management-modal__import-dropdown-item"
+                @click="handleSelectFolder"
+              >
+                选择文件夹
+              </button>
+              <button
+                type="button"
+                class="data-management-modal__import-dropdown-item"
+                @click="handleSelectFile"
+              >
+                选择文件（支持多选）
+              </button>
+            </div>
+          </div>
+          <button type="button" class="data-management-modal__close" @click="emit('close')">关闭</button>
+        </div>
       </header>
       <nav class="data-management-modal__tabs" aria-label="数据管理标签页">
         <button type="button" class="data-management-modal__tab" data-tab="airports" :data-active="state.activeTab === 'airports'" @click="emit('switchTab', 'airports')">
@@ -348,5 +481,51 @@ const emit = defineEmits<{
         </div>
       </footer>
     </div>
+    <Teleport to="body">
+      <div v-if="showImportResultDialog" class="data-management-modal__import-result-overlay" @click.self="handleCloseImportResult">
+        <div class="data-management-modal__import-result-card">
+          <header class="data-management-modal__import-result-header">
+            <h3>导入结果</h3>
+            <button type="button" class="data-management-modal__import-result-close" @click="handleCloseImportResult">&times;</button>
+          </header>
+          <div class="data-management-modal__import-result-body shell-scrollbar">
+            <div
+              v-for="item in importResultItems"
+              :key="item.fileName || 'error'"
+              class="data-management-modal__import-result-item"
+              :data-status="item.status"
+            >
+              <span class="data-management-modal__import-result-icon">
+                <template v-if="item.status === 'imported'">&#10003;</template>
+                <template v-else-if="item.status === 'skipped'">&#8855;</template>
+                <template v-else>&#10007;</template>
+              </span>
+              <div class="data-management-modal__import-result-info">
+                <p class="data-management-modal__import-result-filename">{{ item.fileName || '未知文件' }}</p>
+                <p class="data-management-modal__import-result-detail">
+                  <template v-if="item.status === 'imported'">
+                    机场: {{ item.airportName }} | 跑道: {{ item.runwayCount }} | 台站: {{ item.stationCount }}
+                  </template>
+                  <template v-else-if="item.status === 'skipped'">
+                    已跳过（非 Excel 文件）
+                  </template>
+                  <template v-else>
+                    {{ item.errorMessage || '解析失败' }}
+                  </template>
+                </p>
+              </div>
+            </div>
+          </div>
+          <footer class="data-management-modal__import-result-footer">
+            <span class="data-management-modal__import-result-summary">
+              成功 <strong>{{ importResultImportedCount }}</strong>
+              &nbsp; 跳过 <strong>{{ importResultSkippedCount }}</strong>
+              &nbsp; 失败 <strong>{{ importResultTotalFiles - importResultImportedCount - importResultSkippedCount }}</strong>
+            </span>
+            <button type="button" class="data-management-modal__import-result-close-btn" @click="handleCloseImportResult">关闭</button>
+          </footer>
+        </div>
+      </div>
+    </Teleport>
   </section>
-</template>
+  </template>
