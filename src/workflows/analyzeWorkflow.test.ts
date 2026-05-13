@@ -1,48 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runAnalyzeWorkflow } from './analyzeWorkflow'
 import * as analysisService from '../services/analysis'
-import type { ProtectionZoneRegion } from '../types/tool'
-
-function createProtectionZones(): ProtectionZoneRegion[] {
-  return [
-    {
-      id: 'airport-1-station-1-zone-a-rule-a-region-north',
-      airportId: 'airport-1',
-      airportName: '天河机场',
-      stationId: 'station-1',
-      stationName: '导航台A',
-      stationType: 'VOR',
-      ruleCode: 'rule-a',
-      ruleName: '规则A',
-      zoneCode: 'zone-a',
-      zoneName: 'A区',
-      regionCode: 'region-north',
-      regionName: '北侧区域',
-      geometry: {
-        shapeType: 'multipolygon',
-        coordinates: [
-          [
-            [
-              [114.2, 30.7],
-              [114.21, 30.7],
-              [114.21, 30.69],
-              [114.2, 30.69],
-              [114.2, 30.7],
-            ],
-          ],
-        ],
-      },
-      vertical: {
-        mode: 'flat',
-        baseReference: 'station',
-        baseHeightMeters: 500,
-      },
-      properties: {
-        label: '北侧区域',
-      },
-    },
-  ]
-}
 
 vi.mock('../services/analysis', () => ({
   createAnalysisTask: vi.fn(),
@@ -84,7 +42,6 @@ describe('runAnalyzeWorkflow', () => {
       ],
       obstacleCount: 2,
       summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
-      protectionZones: createProtectionZones(),
       ruleResults: [
         {
           stationId: '4',
@@ -150,7 +107,6 @@ describe('runAnalyzeWorkflow', () => {
         { id: '2', name: 'Airport Far', category: '机场' },
       ],
       obstacleCount: 2,
-      protectionZones: createProtectionZones(),
       ruleResults: [
         {
           stationId: '4',
@@ -222,7 +178,6 @@ describe('runAnalyzeWorkflow', () => {
       selectedTargets: [{ id: '1', name: 'Airport Near', category: '机场' }],
       obstacleCount: 1,
       summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
-      protectionZones: createProtectionZones(),
       ruleResults: [
         {
           stationId: '4',
@@ -315,7 +270,6 @@ describe('runAnalyzeWorkflow', () => {
       ],
       obstacleCount: 2,
       summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
-      protectionZones: createProtectionZones(),
       ruleResults: [
         {
           stationId: '4',
@@ -374,7 +328,6 @@ describe('runAnalyzeWorkflow', () => {
     expect(analysisService.getAnalysisTaskResult).toHaveBeenCalledTimes(1)
     expect(analysisService.getAnalysisTaskResult).toHaveBeenCalledWith('analysis-task-1')
     expect(result.message).toBe('analysis task finished')
-    expect(result.protectionZones).toEqual(createProtectionZones())
   })
 
   it('throws on terminal failed status without requesting the analysis result', async () => {

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useWorkflowActions } from './useWorkflowActions'
 import { getBootstrapData } from '../services/bootstrap'
+import { getAirportProtectionZones } from '../services/analysis'
 import { runAnalyzeWorkflow } from '../workflows/analyzeWorkflow'
 import { runImportWorkflow } from '../workflows/importWorkflow'
 import { runExportWorkflow } from '../workflows/exportWorkflow'
@@ -151,6 +152,10 @@ vi.mock('../services/bootstrap', () => ({
   getBootstrapData: vi.fn(),
 }))
 
+vi.mock('../services/analysis', () => ({
+  getAirportProtectionZones: vi.fn().mockResolvedValue([]),
+}))
+
 vi.mock('../workflows/importWorkflow', () => ({
   runImportWorkflow: vi.fn(async () => ({
     importTaskId: 'import-batch-3',
@@ -200,7 +205,6 @@ vi.mock('../workflows/analyzeWorkflow', () => ({
       { id: '2', name: 'Airport Far', category: '机场' },
     ],
     obstacleCount: 2,
-    protectionZones: createProtectionZones(),
     ruleResults: [
       {
         stationId: '4',
@@ -233,7 +237,7 @@ vi.mock('../workflows/exportWorkflow', () => ({
 
 describe('useWorkflowActions', () => {
   afterEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it('stores bootstrap airport target and historical obstacles without changing wizard stage', async () => {
@@ -732,6 +736,7 @@ describe('useWorkflowActions', () => {
 
     const {
       state,
+      bootstrap,
       submitImport,
       toggleTarget,
       startAnalysis,
@@ -751,6 +756,58 @@ describe('useWorkflowActions', () => {
     expect(visibleRegion.id).toBe('airport-1-station-1-zone-a-rule-a-region-north')
     expect(visibleRegion.geometry.shapeType).toBe('multipolygon')
     expect(visibleRegion.vertical.mode).toBe('flat')
+
+    vi.mocked(getBootstrapData).mockResolvedValueOnce({
+      initialCameraTarget: { longitude: 103.95056, latitude: 30.57972, height: 10000, pitch: -90 },
+      airports: [{
+        id: 'airport-1',
+        name: '天河机场',
+        longitude: 103.95056,
+        latitude: 30.57972,
+        stations: [{
+          id: 'station-1',
+          airportId: 'airport-1',
+          name: '导航台A',
+          stationType: 'VOR',
+          longitude: 103.95,
+          latitude: 30.58,
+          altitude: 500,
+        }],
+      }],
+      historicalObstacles: [],
+    })
+
+    vi.mocked(getAirportProtectionZones).mockResolvedValueOnce(createProtectionZones())
+
+    await bootstrap()
+
+    expect(state.protectionZonePanelOpen).toBe(true)
+    expect(state.protectionZoneTree).toHaveLength(1)
+    expect(state.protectionZoneTree[0].airportName).toBe('天河机场')
+    expect(state.protectionZoneTree[0].stations[0].zones.map((zone) => zone.key)).toEqual(['airport-1:station-1:zone-a'])
+    expect(state.visibleProtectionZones).toEqual([])
+    expect(state.protectionZoneTree[0].stations[0].zones.map((zone) => ({
+      key: zone.key,
+      ruleCode: zone.ruleCode,
+      visible: zone.visible,
+    }))).toEqual([
+      { key: 'airport-1:station-1:zone-a', ruleCode: 'rule-a', visible: false },
+    ])
+    expect(
+      state.protectionZoneTree[0].stations[0].zones[0].regions.map((region) => ({
+        key: `${region.airportId}:${region.stationId}:${region.zoneCode}:${region.ruleCode}:${region.regionCode}`,
+        ruleCode: region.ruleCode,
+      })),
+    ).toEqual([
+      {
+        key: 'airport-1:station-1:zone-a:rule-a:region-north',
+        ruleCode: 'rule-a',
+      },
+      {
+        key: 'airport-1:station-1:zone-a:rule-b:region-south',
+        ruleCode: 'rule-b',
+      },
+    ])
 
     openModal('polygon')
 
@@ -854,33 +911,9 @@ describe('useWorkflowActions', () => {
       },
     ])
     expect(state.statusMessage).toBe('analysis task created')
+    // Protection zones are loaded during bootstrap, not analysis
     expect(state.protectionZonePanelOpen).toBe(true)
     expect(state.protectionZoneTree).toHaveLength(1)
-    expect(state.protectionZoneTree[0].airportName).toBe('天河机场')
-    expect(state.protectionZoneTree[0].stations[0].zones.map((zone) => zone.key)).toEqual(['airport-1:station-1:zone-a'])
-    expect(state.visibleProtectionZones).toEqual([])
-    expect(state.protectionZoneTree[0].stations[0].zones.map((zone) => ({
-      key: zone.key,
-      ruleCode: zone.ruleCode,
-      visible: zone.visible,
-    }))).toEqual([
-      { key: 'airport-1:station-1:zone-a', ruleCode: 'rule-a', visible: false },
-    ])
-    expect(
-      state.protectionZoneTree[0].stations[0].zones[0].regions.map((region) => ({
-        key: `${region.airportId}:${region.stationId}:${region.zoneCode}:${region.ruleCode}:${region.regionCode}`,
-        ruleCode: region.ruleCode,
-      })),
-    ).toEqual([
-      {
-        key: 'airport-1:station-1:zone-a:rule-a:region-north',
-        ruleCode: 'rule-a',
-      },
-      {
-        key: 'airport-1:station-1:zone-a:rule-b:region-south',
-        ruleCode: 'rule-b',
-      },
-    ])
 
     toggleProtectionZoneVisibility('airport-1', 'station-1', 'zone-a', true)
 

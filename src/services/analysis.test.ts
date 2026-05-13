@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createAnalysisTask,
+  getAirportProtectionZones,
   getAnalysisTaskResult,
   getAnalysisTaskStatus,
 } from './analysis'
@@ -255,7 +256,6 @@ describe('analysis service', () => {
         ],
         obstacleCount: 2,
         summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
-        protectionZones: [],
         ruleResults: [
           {
             stationId: 4,
@@ -328,7 +328,6 @@ describe('analysis service', () => {
       ],
       obstacleCount: 2,
       summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
-      protectionZones: [],
       ruleResults: [
         {
           stationId: '4',
@@ -400,7 +399,6 @@ describe('analysis service', () => {
         ],
         obstacleCount: 2,
         summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
-        protectionZones: [],
         ruleResults: [],
       }),
     } as Response)
@@ -427,7 +425,6 @@ describe('analysis service', () => {
         selectedTargets: [],
         obstacleCount: '2',
         summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
-        protectionZones: [],
         ruleResults: [],
       }),
     } as Response)
@@ -461,13 +458,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 2,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-1',
@@ -528,14 +520,13 @@ describe('analysis service', () => {
             properties: { label: 'NDB 3 degree conical clearance zone' },
           },
         ],
-        ruleResults: [],
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toHaveLength(1)
-    expect(result.protectionZones[0].geometry).toEqual({
+    expect(result).toHaveLength(1)
+    expect(result[0].geometry).toEqual({
       shapeType: 'multipolygon',
       coordinates: [
         [
@@ -556,7 +547,7 @@ describe('analysis service', () => {
         ],
       ],
     })
-    expect(result.protectionZones[0].vertical).toEqual({
+    expect(result[0].vertical).toEqual({
       mode: 'analytic_surface',
       baseReference: 'station',
       baseHeightMeters: 491.1,
@@ -597,7 +588,6 @@ describe('analysis service', () => {
         ],
         obstacleCount: 1,
         summary: 'summary',
-        protectionZones: [],
         ruleResults: [
           {
             stationId: 4,
@@ -678,13 +668,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-invalid-properties',
@@ -721,26 +706,20 @@ describe('analysis service', () => {
             properties: 'bad properties payload',
           },
         ],
-        ruleResults: [],
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones[0]?.properties).toEqual({})
+    expect(result[0]?.properties).toEqual({})
   })
 
   it('accepts formal analytic_surface payloads when coordinateSystem is omitted', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-2',
@@ -794,14 +773,13 @@ describe('analysis service', () => {
             properties: { label: 'NDB 3 degree conical clearance zone' },
           },
         ],
-        ruleResults: [],
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toHaveLength(1)
-    expect(result.protectionZones[0].vertical).toEqual({
+    expect(result).toHaveLength(1)
+    expect(result[0].vertical).toEqual({
       mode: 'analytic_surface',
       baseReference: 'station',
       baseHeightMeters: 491.1,
@@ -829,13 +807,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-front-reference-line',
@@ -901,9 +874,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones[0]?.vertical).toEqual({
+    expect(result[0]?.vertical).toEqual({
       mode: 'analytic_surface',
       baseReference: 'gp360_altitude',
       baseHeightMeters: 493.8,
@@ -941,13 +914,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-front-reference-line-invalid',
@@ -1006,9 +974,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -1027,13 +995,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-front-reference-line-invalid-center',
@@ -1092,9 +1055,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -1113,13 +1076,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-front-reference-line-invalid-station',
@@ -1184,9 +1142,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -1205,13 +1163,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 2,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-front-reference-line-missing-front-offset',
@@ -1333,9 +1286,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledTimes(2)
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
@@ -1352,13 +1305,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-r3',
@@ -1410,9 +1358,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones[0]?.vertical).toEqual({
+    expect(result[0]?.vertical).toEqual({
       mode: 'analytic_surface',
       baseReference: 'station',
       baseHeightMeters: 492,
@@ -1440,13 +1388,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-r3-invalid',
@@ -1495,9 +1438,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -1516,13 +1459,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-r3-invalid-numeric',
@@ -1572,9 +1510,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -1593,13 +1531,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'legacy-zone',
@@ -1626,9 +1559,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -1647,13 +1580,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'invalid-vertical-zone',
@@ -1700,9 +1628,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -1721,13 +1649,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           null,
           {
@@ -1755,9 +1678,9 @@ describe('analysis service', () => {
       }),
     } as unknown as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledTimes(1)
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
@@ -1794,13 +1717,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'ring-zone',
@@ -1826,9 +1744,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones[0].geometry.coordinates).toEqual(coordinates)
+    expect(result[0].geometry.coordinates).toEqual(coordinates)
   })
 
   it('drops multipolygon geometry when a linear ring is not closed', async () => {
@@ -1837,13 +1755,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'open-ring-zone',
@@ -1878,9 +1791,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -1899,13 +1812,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'invalid-point-zone',
@@ -1961,9 +1869,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -1980,13 +1888,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-radar-mask-angle',
@@ -2045,10 +1948,10 @@ describe('analysis service', () => {
       }),
     } as unknown as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toHaveLength(1)
-    expect(result.protectionZones[0]?.vertical).toEqual({
+    expect(result).toHaveLength(1)
+    expect(result[0]?.vertical).toEqual({
       mode: 'analytic_surface',
       baseReference: 'station',
       baseHeightMeters: 525,
@@ -2078,13 +1981,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-radial-cone-angle',
@@ -2141,10 +2039,10 @@ describe('analysis service', () => {
       }),
     } as unknown as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toHaveLength(1)
-    expect(result.protectionZones[0]?.vertical).toEqual({
+    expect(result).toHaveLength(1)
+    expect(result[0]?.vertical).toEqual({
       mode: 'analytic_surface',
       baseReference: 'station',
       baseHeightMeters: 530,
@@ -2172,13 +2070,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-radial-cone-radar',
@@ -2237,10 +2130,10 @@ describe('analysis service', () => {
       }),
     } as unknown as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toHaveLength(1)
-    expect(result.protectionZones[0]?.vertical).toEqual({
+    expect(result).toHaveLength(1)
+    expect(result[0]?.vertical).toEqual({
       mode: 'analytic_surface',
       baseReference: 'station',
       baseHeightMeters: 530,
@@ -2272,13 +2165,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-radial-cone-hole',
@@ -2342,9 +2230,9 @@ describe('analysis service', () => {
       }),
     } as unknown as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -2362,13 +2250,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-radar-mask-angle-invalid-divisor',
@@ -2427,9 +2310,9 @@ describe('analysis service', () => {
       }),
     } as unknown as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -2448,13 +2331,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-invalid-radial-cone-front-reference-line',
@@ -2519,9 +2397,9 @@ describe('analysis service', () => {
       }),
     } as unknown as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -2540,13 +2418,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 1,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'zone-radar-mask-angle-invalid-angle',
@@ -2605,9 +2478,9 @@ describe('analysis service', () => {
       }),
     } as unknown as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([])
+    expect(result).toEqual([])
     expect(warnSpy).toHaveBeenCalledWith(
       '[analysis] Ignored invalid protection zone region.',
       expect.objectContaining({
@@ -2624,13 +2497,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-task-1',
-        targetIds: [1],
-        selectedTargets: [{ id: 1, name: 'Airport Near', category: '机场' }],
-        obstacleCount: 2,
-        summary: 'summary',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 'airport-1-station-7-zone-loc_site_protection-region-default',
@@ -2670,9 +2538,9 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toEqual([
+    expect(result).toEqual([
       {
         id: 'airport-1-station-7-zone-loc_site_protection-region-default',
         airportId: '1',
@@ -2714,13 +2582,8 @@ describe('analysis service', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-batch-1',
-        targetIds: [1],
-        selectedTargets: [],
-        obstacleCount: 0,
-        summary: 'ok',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 1,
@@ -2755,10 +2618,10 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(fetchMock).toHaveBeenCalledWith('/polygon-obstacle/analysis/analysis-task-1/result')
-    expect(result.protectionZones[0]?.style).toEqual({
+    expect(fetchMock).toHaveBeenCalledWith('/polygon-obstacle/airport/1/protection-zones')
+    expect(result[0]?.style).toEqual({
       fill: 'rgba(255, 165, 0, 0.25)',
     })
   })
@@ -2767,13 +2630,8 @@ describe('analysis service', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-batch-1',
-        targetIds: [1],
-        selectedTargets: [],
-        obstacleCount: 0,
-        summary: 'ok',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 1,
@@ -2805,23 +2663,18 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toHaveLength(1)
-    expect(result.protectionZones[0]?.style).toBeUndefined()
+    expect(result).toHaveLength(1)
+    expect(result[0]?.style).toBeUndefined()
   })
 
   it('keeps a protection zone when style fill is blank', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        analysisTaskId: 'analysis-task-1',
-        status: 'succeeded',
-        importTaskId: 'import-batch-1',
-        targetIds: [1],
-        selectedTargets: [],
-        obstacleCount: 0,
-        summary: 'ok',
+        airportId: 1,
+        airportName: '双流机场',
         protectionZones: [
           {
             id: 1,
@@ -2856,10 +2709,140 @@ describe('analysis service', () => {
       }),
     } as Response)
 
-    const result = await getAnalysisTaskResult('analysis-task-1')
+    const result = await getAirportProtectionZones('1')
 
-    expect(result.protectionZones).toHaveLength(1)
-    expect(result.protectionZones[0]?.style).toBeUndefined()
+    expect(result).toHaveLength(1)
+    expect(result[0]?.style).toBeUndefined()
+  })
+
+  describe('getAirportProtectionZones', () => {
+    it('fetches and normalizes protection zones for an airport', async () => {
+      const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          airportId: 1,
+          airportName: '双流机场',
+          protectionZones: [
+            {
+              id: 'zone-1',
+              airportId: 1,
+              airportName: '双流机场',
+              stationId: 4,
+              stationName: '西南近无方向信标台',
+              stationType: 'NDB',
+              ruleCode: 'ndb_conical_clearance_3deg',
+              ruleName: 'ndb_conical_clearance_3deg',
+              zoneCode: 'ndb_conical_clearance_3deg',
+              zoneName: 'NDB 3 degree conical clearance zone',
+              regionCode: 'default',
+              regionName: 'default',
+              geometry: {
+                shapeType: 'multipolygon',
+                coordinates: [
+                  [
+                    [
+                      [103.94, 30.56],
+                      [103.95, 30.56],
+                      [103.95, 30.55],
+                      [103.94, 30.55],
+                      [103.94, 30.56],
+                    ],
+                  ],
+                ],
+              },
+              vertical: {
+                mode: 'analytic_surface',
+                baseReference: 'station',
+                baseHeightMeters: 491.1,
+                surface: {
+                  type: 'distance_parameterized',
+                  distanceSource: {
+                    kind: 'point',
+                    point: [0, 0],
+                  },
+                  distanceMetric: 'radial',
+                  clampRange: {
+                    startMeters: 50,
+                    endMeters: 37040,
+                  },
+                  heightModel: {
+                    type: 'angle_linear_rise',
+                    angleDegrees: 3,
+                    distanceOffsetMeters: 50,
+                  },
+                },
+              },
+              properties: { label: 'NDB 3 degree conical clearance zone' },
+            },
+          ],
+        }),
+      } as unknown as Response)
+
+      const result = await getAirportProtectionZones('1')
+
+      expect(fetchMock).toHaveBeenCalledWith('/polygon-obstacle/airport/1/protection-zones')
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe('zone-1')
+      expect(result[0].geometry).toEqual({
+        shapeType: 'multipolygon',
+        coordinates: [
+          [
+            [
+              [103.94, 30.56],
+              [103.95, 30.56],
+              [103.95, 30.55],
+              [103.94, 30.55],
+              [103.94, 30.56],
+            ],
+          ],
+        ],
+      })
+    })
+
+    it('surfaces backend detail when the response is not ok', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({
+          detail: 'airport not found',
+        }),
+      } as unknown as Response)
+
+      await expect(getAirportProtectionZones('999')).rejects.toThrow('airport not found')
+    })
+
+    it('falls back to default error message when detail is unreadable', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => {
+          throw new Error('invalid json')
+        },
+      } as unknown as Response)
+
+      await expect(getAirportProtectionZones('1')).rejects.toThrow('获取机场保护区失败：500')
+    })
+
+    it('throws shape mismatch error when response is missing protectionZones', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          airportId: 1,
+          airportName: '双流机场',
+        }),
+      } as unknown as Response)
+
+      await expect(getAirportProtectionZones('1')).rejects.toThrow('保护区响应格式无效')
+    })
+
+    it('throws shape mismatch error when response is not an object', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: async () => 'unexpected string',
+      } as unknown as Response)
+
+      await expect(getAirportProtectionZones('1')).rejects.toThrow('保护区响应格式无效')
+    })
   })
 
 })

@@ -1,5 +1,5 @@
 import { createAnalysisTask, getAnalysisTaskResult, getAnalysisTaskStatus } from '../services/analysis'
-import type { AnalysisRuleResult, AnalysisSelectedTarget, ProtectionZoneRegion } from '../types/tool'
+import type { AnalysisRuleResult, AnalysisSelectedTarget } from '../types/tool'
 
 export interface AnalyzeWorkflowResult {
   analysisTaskId: string
@@ -7,7 +7,6 @@ export interface AnalyzeWorkflowResult {
   message: string
   selectedTargets: AnalysisSelectedTarget[]
   obstacleCount: number
-  protectionZones: ProtectionZoneRegion[]
   ruleResults: AnalysisRuleResult[]
 }
 
@@ -52,7 +51,6 @@ export async function runAnalyzeWorkflow(input: {
     message: statusResult.message,
     selectedTargets: result.selectedTargets,
     obstacleCount: result.obstacleCount,
-    protectionZones: result.protectionZones,
     ruleResults: result.ruleResults,
   }
 }

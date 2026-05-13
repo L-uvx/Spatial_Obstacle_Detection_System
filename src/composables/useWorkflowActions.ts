@@ -17,6 +17,7 @@ import {
   toggleStationVisibility,
   toggleZoneVisibility,
 } from '../map/layers/analysis/protectionZoneTree'
+import { getAirportProtectionZones } from '../services/analysis'
 import { getBootstrapData } from '../services/bootstrap'
 import { runAnalyzeWorkflow } from '../workflows/analyzeWorkflow'
 import { runExportWorkflow } from '../workflows/exportWorkflow'
@@ -135,6 +136,18 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
   const state = reactive(createInitialState(initialObstacles))
   let exportRunId = 0
 
+  // 根据当前机场拉取保护区几何并合并到长期状态中。
+  async function loadProtectionZones(airportId: string) {
+    try {
+      const zones = await getAirportProtectionZones(airportId)
+      state.protectionZoneTree = mergeProtectionZones([], zones)
+      state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
+      state.protectionZonePanelOpen = state.protectionZoneTree.length > 0
+    } catch (error) {
+      console.warn('加载机场保护区失败:', error)
+    }
+  }
+
   // 启动系统初始化，加载机场基线和历史障碍物。
   async function bootstrap() {
     state.bootstrapStatus = 'loading'
@@ -149,6 +162,11 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       state.visibleStations = defaultAirport ? [...defaultAirport.stations] : []
       state.initialCameraTarget = defaultAirport ? buildAirportCameraTarget(defaultAirport) : null
       state.renderedObstacles = appendRenderedObstacles(state.renderedObstacles, result.historicalObstacles)
+
+      if (defaultAirport?.id) {
+        await loadProtectionZones(defaultAirport.id)
+      }
+
       state.bootstrapStatus = 'success'
       state.bootstrapMessage = '系统初始化完成。'
     } catch (error) {
@@ -210,6 +228,8 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     state.selectedAirportId = airportId
     state.visibleStations = resolveVisibleStations(state.airports, airportId)
     state.initialCameraTarget = buildAirportCameraTarget(selectedAirport)
+
+    void loadProtectionZones(airportId)
   }
 
   // 提交导入表单，拉起导入任务并切到对象选择阶段。
@@ -287,9 +307,6 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       state.analysisSelectedTargets = workflowResult.selectedTargets
       state.analysisObstacleCount = workflowResult.obstacleCount
       state.analysisRuleResults = workflowResult.ruleResults
-      state.protectionZoneTree = mergeProtectionZones(state.protectionZoneTree, workflowResult.protectionZones)
-      state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
-      state.protectionZonePanelOpen = state.protectionZoneTree.length > 0
       state.stage = 'analysis-result'
       state.statusMessage = workflowResult.message
     } catch (error) {

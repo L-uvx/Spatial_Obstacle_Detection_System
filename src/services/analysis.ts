@@ -30,7 +30,6 @@ export interface AnalysisTaskResult {
   selectedTargets: AnalysisSelectedTarget[]
   obstacleCount: number
   summary: string
-  protectionZones: ProtectionZoneRegion[]
   ruleResults: AnalysisRuleResult[]
 }
 
@@ -747,6 +746,27 @@ function parseErrorDetail(detail: unknown, fallbackMessage: string) {
   return fallbackMessage
 }
 
+export async function getAirportProtectionZones(airportId: string): Promise<ProtectionZoneRegion[]> {
+  const response = await fetch(`/polygon-obstacle/airport/${airportId}/protection-zones`)
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { detail?: unknown } | null
+    throw new Error(parseErrorDetail(payload?.detail, `获取机场保护区失败：${response.status}`))
+  }
+
+  const result = await response.json()
+
+  if (
+    !result
+    || typeof result !== 'object'
+    || !Array.isArray((result as Record<string, unknown>).protectionZones)
+  ) {
+    throw new Error('保护区响应格式无效')
+  }
+
+  return normalizeProtectionZones(((result as Record<string, unknown>).protectionZones) as ProtectionZoneResponse[])
+}
+
 export async function createAnalysisTask(input: {
   importTaskId: string
   targetIds: Array<string | number>
@@ -839,7 +859,6 @@ export async function getAnalysisTaskResult(taskId: string): Promise<AnalysisTas
     selectedTargets: normalizeAnalysisSelectedTargets(result.selectedTargets),
     obstacleCount: result.obstacleCount,
     summary: result.summary,
-    protectionZones: normalizeProtectionZones(result.protectionZones ?? []),
     ruleResults: normalizeAnalysisRuleResults(result.ruleResults ?? []),
   }
 }
