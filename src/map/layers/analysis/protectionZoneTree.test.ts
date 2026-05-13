@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createProtectionZoneKey,
+  flattenAllProtectionZones,
   flattenVisibleProtectionZones,
   mergeProtectionZones,
   toggleAirportVisibility,
@@ -414,5 +415,68 @@ describe('protectionZoneTree', () => {
     const hiddenZoneTree = toggleZoneVisibility(restoredAirportTree, '1', '101', 'zone-1', false)
 
     expect(flattenVisibleProtectionZones(hiddenZoneTree)).toEqual([])
+  })
+
+  describe('flattenAllProtectionZones', () => {
+    it('returns all regions when all nodes are visible', () => {
+      const tree = mergeProtectionZones([], [
+        createRegion({ id: 'region-default-1', regionCode: 'default' }),
+        createRegion({ id: 'region-inner-1', regionCode: 'inner' }),
+      ])
+      const visibleAirportTree = toggleAirportVisibility(tree, '1', true)
+
+      const allRegions = flattenAllProtectionZones(visibleAirportTree)
+
+      expect(allRegions).toHaveLength(2)
+      expect(allRegions.map((item) => item.key)).toEqual([
+        '1:101:zone-1:rule-1:default',
+        '1:101:zone-1:rule-1:inner',
+      ])
+    })
+
+    it('returns all regions when all nodes are NOT visible', () => {
+      const tree = mergeProtectionZones([], [
+        createRegion({ id: 'region-default-1', regionCode: 'default' }),
+        createRegion({ id: 'region-inner-1', regionCode: 'inner' }),
+      ])
+
+      const allRegions = flattenAllProtectionZones(tree)
+
+      expect(allRegions).toHaveLength(2)
+      expect(allRegions.map((item) => item.key)).toEqual([
+        '1:101:zone-1:rule-1:default',
+        '1:101:zone-1:rule-1:inner',
+      ])
+    })
+
+    it('returns all regions when mix of visible and hidden across airports', () => {
+      const tree = mergeProtectionZones([], [
+        createRegion({ id: 'region-a-1', airportId: '1', airportName: 'Airport A' }),
+        createRegion({ id: 'region-b-1', airportId: '2', airportName: 'Airport B', stationId: '201' }),
+      ])
+      const mixedTree = toggleAirportVisibility(tree, '1', true)
+
+      const allRegions = flattenAllProtectionZones(mixedTree)
+
+      expect(allRegions).toHaveLength(2)
+      expect(allRegions.map((item) => item.id)).toEqual(['region-a-1', 'region-b-1'])
+    })
+
+    it('preserves region style when flattening all protection zones', () => {
+      const tree = mergeProtectionZones([], [
+        createRegion({
+          style: {
+            fill: 'rgba(255, 165, 0, 0.25)',
+          },
+        }),
+      ])
+
+      const allRegions = flattenAllProtectionZones(tree)
+
+      expect(allRegions).toHaveLength(1)
+      expect(allRegions[0]?.style).toEqual({
+        fill: 'rgba(255, 165, 0, 0.25)',
+      })
+    })
   })
 })

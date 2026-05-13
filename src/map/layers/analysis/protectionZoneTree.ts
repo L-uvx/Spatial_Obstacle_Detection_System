@@ -254,6 +254,28 @@ export function mergeProtectionZones(
   return appendedTree
 }
 
+function regionToVisibleRegion(region: ProtectionZoneRegion): VisibleProtectionZoneRegion {
+  return {
+    key: createProtectionZoneKey(region),
+    id: region.id,
+    airportId: region.airportId,
+    airportName: region.airportName,
+    stationId: region.stationId,
+    stationName: region.stationName,
+    stationType: region.stationType,
+    zoneCode: region.zoneCode,
+    zoneName: region.zoneName,
+    ruleCode: region.ruleCode,
+    ruleName: region.ruleName,
+    regionCode: region.regionCode,
+    regionName: region.regionName,
+    geometry: region.geometry,
+    vertical: region.vertical,
+    properties: region.properties,
+    style: region.style,
+  }
+}
+
 export function flattenVisibleProtectionZones(tree: ProtectionZoneAirportNode[]): VisibleProtectionZoneRegion[] {
   const visibleRegions: VisibleProtectionZoneRegion[] = []
 
@@ -273,31 +295,29 @@ export function flattenVisibleProtectionZones(tree: ProtectionZoneAirportNode[])
         }
 
         for (const region of zone.regions) {
-          visibleRegions.push({
-            key: createProtectionZoneKey(region),
-            id: region.id,
-            airportId: region.airportId,
-            airportName: region.airportName,
-            stationId: region.stationId,
-            stationName: region.stationName,
-            stationType: region.stationType,
-            zoneCode: region.zoneCode,
-            zoneName: region.zoneName,
-            ruleCode: region.ruleCode,
-            ruleName: region.ruleName,
-            regionCode: region.regionCode,
-            regionName: region.regionName,
-            geometry: region.geometry,
-            vertical: region.vertical,
-            properties: region.properties,
-            style: region.style,
-          })
+          visibleRegions.push(regionToVisibleRegion(region))
         }
       }
     }
   }
 
   return visibleRegions
+}
+
+export function flattenAllProtectionZones(tree: ProtectionZoneAirportNode[]): VisibleProtectionZoneRegion[] {
+  const allRegions: VisibleProtectionZoneRegion[] = []
+
+  for (const airport of tree) {
+    for (const station of airport.stations) {
+      for (const zone of station.zones) {
+        for (const region of zone.regions) {
+          allRegions.push(regionToVisibleRegion(region))
+        }
+      }
+    }
+  }
+
+  return allRegions
 }
 
 export function toggleAirportVisibility(

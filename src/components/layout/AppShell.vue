@@ -272,6 +272,7 @@ function handleSelectAirport(event: Event) {
         :obstacles="renderedObstacles"
         :visible-stations="analysisState.visibleStations"
         :initial-camera-target="initialCameraTarget"
+        :loaded-protection-zones="analysisState.loadedProtectionZones"
         :visible-protection-zones="analysisState.visibleProtectionZones"
         :fly-to-target-tick="analysisState.flyToTargetTick"
         :fly-to-target-payload="analysisState.flyToTargetPayload"

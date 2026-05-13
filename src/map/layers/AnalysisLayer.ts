@@ -7,36 +7,17 @@ import { buildVerticalProfile } from './analysis/vertical'
 const ENTITY_ID_PREFIX = 'analysis-zone-'
 const DEFAULT_ZONE_MATERIAL = Cesium.Color.fromCssColorString('#4db3ff').withAlpha(0.28)
 
-interface SyncedRegionSnapshot {
-  fingerprint: string
-  entityIds: string[]
-}
+const registryByViewer = new WeakMap<object, Map<string, string[]>>()
 
-interface AnalysisLayerCache {
-  regionsByKey: Map<string, SyncedRegionSnapshot>
-}
-
-export interface AnalysisLayerSyncResult {
-  message: string
-  addedKeys: string[]
-  updatedKeys: string[]
-  removedKeys: string[]
-}
-
-const cacheByViewer = new WeakMap<object, AnalysisLayerCache>()
-
-// 获取当前 Viewer 对应的保护区同步缓存。
-function getLayerCache(viewer: Cesium.Viewer) {
-  const existing = cacheByViewer.get(viewer)
+function getRegistry(viewer: Cesium.Viewer): Map<string, string[]> {
+  const existing = registryByViewer.get(viewer)
 
   if (existing) {
     return existing
   }
 
-  const next: AnalysisLayerCache = {
-    regionsByKey: new Map(),
-  }
-  cacheByViewer.set(viewer, next)
+  const next = new Map<string, string[]>()
+  registryByViewer.set(viewer, next)
 
   return next
 }
@@ -47,16 +28,6 @@ function createEntityId(regionKey: string, polygonIndex: number) {
 }
 
 type RegionTriangleDefinition = Array<[number, number, number]>
-
-// 为保护区生成指纹，用于判断是否需要重建实体。
-function createRegionFingerprint(region: PolygonObstacleAnalysisState['visibleProtectionZones'][number]) {
-  return JSON.stringify({
-    key: region.key,
-    geometry: region.geometry,
-    vertical: region.vertical,
-    style: region.style,
-  })
-}
 
 // 仅在 fill 可被 Cesium 正常解析时使用自定义填充色，否则回退默认蓝色。
 function resolveRegionMaterial(region: PolygonObstacleAnalysisState['visibleProtectionZones'][number]) {
@@ -339,6 +310,7 @@ function createEntity(
 ) {
   return {
     id: createEntityId(region.key, polygonIndex),
+    show: false,
     name: region.properties.label || region.regionName || region.zoneName,
     properties: {
       airportId: region.airportId,
@@ -430,75 +402,55 @@ function createEntities(
   }
 }
 
-// 将可见保护区增量同步到地图，并复用缓存避免无效重建。
-export function syncAnalysisLayer(
+// 全量重建保护区实体并写入注册表。所有实体初始 show = false。
+export function rebuildAnalysisLayer(
   viewer: Cesium.Viewer | null | undefined,
   zones: PolygonObstacleAnalysisState['visibleProtectionZones'] = [],
-): AnalysisLayerSyncResult {
+): void {
   if (!viewer) {
-    return {
-      message: '未返回可渲染的分析保护区。',
-      addedKeys: [],
-      updatedKeys: [],
-      removedKeys: [],
-    }
+    return
   }
 
-  const renderableZones = zones
-  const cache = getLayerCache(viewer)
-  const nextKeys = new Set(renderableZones.map((zone) => zone.key))
-  const addedKeys: string[] = []
-  const updatedKeys: string[] = []
-  const removedKeys: string[] = []
+  const registry = getRegistry(viewer)
 
-  for (const [cachedKey, cachedRegion] of cache.regionsByKey.entries()) {
-    if (nextKeys.has(cachedKey)) {
-      continue
-    }
-
-    for (const entityId of cachedRegion.entityIds) {
+  for (const entityIds of registry.values()) {
+    for (const entityId of entityIds) {
       viewer.entities.removeById(entityId)
     }
-
-    cache.regionsByKey.delete(cachedKey)
-    removedKeys.push(cachedKey)
   }
 
-  for (const region of renderableZones) {
-    const fingerprint = createRegionFingerprint(region)
-    const cached = cache.regionsByKey.get(region.key)
+  registry.clear()
 
-    if (cached && cached.fingerprint === fingerprint) {
-      continue
-    }
+  for (const region of zones) {
+    const entityIds = createEntities(region).map((entityDef) => {
+      entityDef.show = false
+      viewer.entities.add(entityDef)
+      return entityDef.id
+    })
 
-    if (cached) {
-      for (const entityId of cached.entityIds) {
-        viewer.entities.removeById(entityId)
+    registry.set(region.key, entityIds)
+  }
+}
+
+// 根据可见 key 集合切换保护区的显隐状态。不增删任何 entity。
+export function applyAnalysisVisibility(
+  viewer: Cesium.Viewer | null | undefined,
+  visibleKeys: Set<string>,
+): void {
+  if (!viewer) {
+    return
+  }
+
+  const registry = getRegistry(viewer)
+
+  for (const [key, entityIds] of registry.entries()) {
+    const show = visibleKeys.has(key)
+
+    for (const entityId of entityIds) {
+      const entity = viewer.entities.getById(entityId)
+      if (entity) {
+        entity.show = show
       }
-
-      updatedKeys.push(region.key)
-    } else {
-      addedKeys.push(region.key)
     }
-
-    const entityIds = createEntities(region).map((entity) => {
-      viewer.entities.add(entity)
-      return entity.id
-    })
-
-    cache.regionsByKey.set(region.key, {
-      fingerprint,
-      entityIds,
-    })
-  }
-
-  const changedCount = addedKeys.length + updatedKeys.length + removedKeys.length
-
-  return {
-    message: changedCount > 0 ? '分析保护区已同步到地图图层。' : '分析保护区无增量变化。',
-    addedKeys,
-    updatedKeys,
-    removedKeys,
   }
 }

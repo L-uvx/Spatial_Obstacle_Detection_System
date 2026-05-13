@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as Cesium from 'cesium'
 import { mapConfig } from '../../config/map'
-import { syncAnalysisLayer } from '../../map/layers/AnalysisLayer'
+import { rebuildAnalysisLayer, applyAnalysisVisibility } from '../../map/layers/AnalysisLayer'
 import { getObstacleFlyToOptions, syncObstacleLayer } from '../../map/layers/ObstacleLayer'
 import { syncStationLayer } from '../../map/layers/StationLayer'
 import type {
@@ -19,6 +19,7 @@ const props = defineProps<{
   visibleStations: RenderedStation[]
   initialCameraTarget: InitialCameraTarget | null
   visibleProtectionZones: PolygonObstacleAnalysisState['visibleProtectionZones']
+  loadedProtectionZones: PolygonObstacleAnalysisState['visibleProtectionZones']
   flyToTargetTick: number
   flyToTargetPayload: InitialCameraTarget | null
 }>()
@@ -56,9 +57,13 @@ function syncObstacles(obstacles: RenderedObstacle[], flyToNewlyAdded: boolean) 
   }
 }
 
-// 同步当前可见的保护区图层。
-function syncAnalysisZones(zones: PolygonObstacleAnalysisState['visibleProtectionZones']) {
-  syncAnalysisLayer(viewerRef.value, zones)
+function rebuildAnalysisZones(zones: PolygonObstacleAnalysisState['visibleProtectionZones']) {
+  rebuildAnalysisLayer(viewerRef.value, zones)
+}
+
+function applyZoneVisibility(zones: PolygonObstacleAnalysisState['visibleProtectionZones']) {
+  const keySet = new Set(zones.map((z) => z.key))
+  applyAnalysisVisibility(viewerRef.value, keySet)
 }
 
 // 同步当前机场的台站点位与标签。
@@ -182,7 +187,8 @@ async function initViewer() {
     errorMessage.value = ''
     syncObstacles(props.obstacles, false)
     syncStations(props.visibleStations)
-    syncAnalysisZones(props.visibleProtectionZones)
+    rebuildAnalysisZones(props.loadedProtectionZones)
+    applyZoneVisibility(props.visibleProtectionZones)
 
     if (props.initialCameraTarget) {
       flyToTarget(props.initialCameraTarget)
@@ -227,9 +233,16 @@ watch(
 watch(
   () => props.visibleProtectionZones,
   (zones) => {
-    syncAnalysisZones(zones)
+    applyZoneVisibility(zones)
   },
-  { deep: true },
+)
+
+watch(
+  () => props.loadedProtectionZones,
+  (zones) => {
+    rebuildAnalysisZones(zones)
+    applyZoneVisibility(props.visibleProtectionZones)
+  },
 )
 
 watch(

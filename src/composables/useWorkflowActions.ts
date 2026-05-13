@@ -11,6 +11,7 @@ import type {
   RenderedObstacle,
 } from '../types/tool'
 import {
+  flattenAllProtectionZones,
   flattenVisibleProtectionZones,
   mergeProtectionZones,
   toggleAirportVisibility,
@@ -126,6 +127,7 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
     exportErrorMessage: '',
     renderedObstacles,
     protectionZoneTree: [],
+    loadedProtectionZones: [],
     visibleProtectionZones: [],
     flyToTargetTick: 0,
     flyToTargetPayload: null,
@@ -141,6 +143,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     try {
       const zones = await getAirportProtectionZones(airportId)
       state.protectionZoneTree = mergeProtectionZones([], zones)
+      state.loadedProtectionZones = flattenAllProtectionZones(state.protectionZoneTree)
       state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
       state.protectionZonePanelOpen = state.protectionZoneTree.length > 0
     } catch (error) {
@@ -200,6 +203,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     const preservedStationPanelOpen = state.stationPanelOpen
     const preservedProtectionZoneTree = state.protectionZoneTree
     const preservedProtectionZonePanelOpen = state.protectionZonePanelOpen
+    const preservedLoadedProtectionZones = state.loadedProtectionZones
     const nextVisibleProtectionZones = flattenVisibleProtectionZones(preservedProtectionZoneTree)
 
     Object.assign(state, {
@@ -213,6 +217,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       stationPanelOpen: preservedStationPanelOpen,
       protectionZonePanelOpen: preservedProtectionZonePanelOpen,
       protectionZoneTree: preservedProtectionZoneTree,
+      loadedProtectionZones: preservedLoadedProtectionZones,
       visibleProtectionZones: nextVisibleProtectionZones,
     })
   }

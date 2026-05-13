@@ -292,6 +292,7 @@ describe('useWorkflowActions', () => {
     expect(state.renderedObstacles.map((item) => item.id)).toEqual(['history-17'])
     expect(state.protectionZoneTree).toEqual([])
     expect(state.visibleProtectionZones).toEqual([])
+    expect(state.loadedProtectionZones).toEqual([])
   })
 
   it('keeps the app usable when bootstrap fails', async () => {
@@ -308,6 +309,7 @@ describe('useWorkflowActions', () => {
     expect(state.bootstrapMessage).toContain('初始化')
     expect(state.protectionZoneTree).toEqual([])
     expect(state.visibleProtectionZones).toEqual([])
+    expect(state.loadedProtectionZones).toEqual([])
   })
 
   it('preserves bootstrap state when closing the modal', async () => {
@@ -809,6 +811,12 @@ describe('useWorkflowActions', () => {
       },
     ])
 
+    expect(state.loadedProtectionZones).toHaveLength(2)
+    expect(state.loadedProtectionZones.map((item) => item.key)).toEqual([
+      'airport-1:station-1:zone-a:rule-a:region-north',
+      'airport-1:station-1:zone-a:rule-b:region-south',
+    ])
+
     openModal('polygon')
 
     expect(state.isOpen).toBe(true)
@@ -966,6 +974,11 @@ describe('useWorkflowActions', () => {
     expect(state.visibleProtectionZones.map((item) => ({ key: item.key, ruleCode: item.ruleCode }))).toEqual([
       { key: 'airport-1:station-1:zone-a:rule-a:region-north', ruleCode: 'rule-a' },
       { key: 'airport-1:station-1:zone-a:rule-b:region-south', ruleCode: 'rule-b' },
+    ])
+    expect(state.loadedProtectionZones).toHaveLength(2)
+    expect(state.loadedProtectionZones.map((item) => item.key)).toEqual([
+      'airport-1:station-1:zone-a:rule-a:region-north',
+      'airport-1:station-1:zone-a:rule-b:region-south',
     ])
 
     vi.useRealTimers()

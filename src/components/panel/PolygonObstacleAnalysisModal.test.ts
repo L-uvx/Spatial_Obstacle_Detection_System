@@ -86,6 +86,7 @@ function createImportFormState(): PolygonObstacleAnalysisState {
     exportErrorMessage: '',
     renderedObstacles: [],
     protectionZoneTree: [],
+    loadedProtectionZones: [],
     visibleProtectionZones: [createVisibleProtectionZoneRegion()],
     flyToTargetTick: 0,
     flyToTargetPayload: null,

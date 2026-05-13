@@ -411,6 +411,7 @@ export interface PolygonObstacleAnalysisState {
   exportErrorMessage: string
   renderedObstacles: RenderedObstacle[]
   protectionZoneTree: ProtectionZoneAirportNode[]
+  loadedProtectionZones: VisibleProtectionZoneRegion[]
   visibleProtectionZones: VisibleProtectionZoneRegion[]
   flyToTargetTick: number
   flyToTargetPayload: InitialCameraTarget | null

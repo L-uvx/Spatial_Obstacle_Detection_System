@@ -162,11 +162,12 @@ function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): Pol
       {
         airportId: 'airport-1',
         airportName: '天河机场',
-        visible: false,
-        stations: [],
-      },
-    ],
-    visibleProtectionZones: [],
+    visible: true,
+    stations: [],
+  },
+],
+loadedProtectionZones: [],
+visibleProtectionZones: [],
     flyToTargetTick: 0,
     flyToTargetPayload: null,
     ...overrides,
@@ -469,7 +470,7 @@ describe('AppShell', () => {
         stubs: {
           CesiumViewer: defineComponent({
             name: 'CesiumViewer',
-            props: ['resetTick', 'obstacles', 'visibleStations', 'initialCameraTarget', 'visibleProtectionZones'],
+             props: ['resetTick', 'obstacles', 'visibleStations', 'initialCameraTarget', 'loadedProtectionZones', 'visibleProtectionZones'],
             setup(props) {
               receivedViewerProps = props as unknown as { visibleProtectionZones: unknown[] } & Record<string, unknown>
               return () => null

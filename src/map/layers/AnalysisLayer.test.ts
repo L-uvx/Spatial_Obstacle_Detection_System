@@ -1,6 +1,6 @@
 import * as Cesium from 'cesium'
 import { describe, expect, it, vi } from 'vitest'
-import { syncAnalysisLayer } from './AnalysisLayer'
+import { rebuildAnalysisLayer, applyAnalysisVisibility } from './AnalysisLayer'
 import type { PolygonObstacleAnalysisState, ProtectionZoneMultipolygonGeometry, PositionCoordinate } from '../../types/tool'
 
 function createRing(points: PositionCoordinate[]): PositionCoordinate[] {
@@ -219,16 +219,16 @@ function createVisibleRegion(
     key: 'airport-1:station-1:zone-a:rule-a:region-north',
     id: 'airport-1-station-1-zone-a-rule-a-region-north',
     airportId: 'airport-1',
-    airportName: '天河机场',
+    airportName: '\u5929\u6cb3\u673a\u573a',
     stationId: 'station-1',
-    stationName: '导航台A',
+    stationName: '\u5bfc\u822a\u53f0A',
     stationType: 'VOR',
     zoneCode: 'zone-a',
-    zoneName: 'A区',
+    zoneName: 'A\u533a',
     ruleCode: 'rule-a',
-    ruleName: '规则A',
+    ruleName: '\u89c4\u5219A',
     regionCode: 'region-north',
-    regionName: '北侧区域',
+    regionName: '\u5317\u4fa7\u533a\u57df',
     geometry: {
       shapeType: 'multipolygon',
       coordinates: [
@@ -249,7 +249,7 @@ function createVisibleRegion(
       baseHeightMeters: 500,
     },
     properties: {
-      label: '北侧区域',
+      label: '\u5317\u4fa7\u533a\u57df',
     },
     ...overrides,
   }
@@ -328,13 +328,13 @@ function createRadialConeVisibleRegion(
 }
 
 function createViewer() {
-  const entitiesById = new Map<string, { id: string; polygon?: Record<string, unknown> }>()
-  const add = vi.fn((entity: { id: string; polygon?: Record<string, unknown> }) => {
-    entitiesById.set(entity.id, entity)
+  const entitiesById = new Map<string, { id: string; show: boolean; polygon?: Record<string, unknown> }>()
+  const add = vi.fn((entity: { id: string; show?: boolean; polygon?: Record<string, unknown> }) => {
+    entitiesById.set(entity.id, entity as { id: string; show: boolean; polygon?: Record<string, unknown> })
     return entity
   })
   const removeById = vi.fn((id: string) => entitiesById.delete(id))
-  const getById = vi.fn((id: string) => entitiesById.get(id))
+  const getById = vi.fn((id: string) => entitiesById.get(id) ?? undefined)
 
   return {
     viewer: {
@@ -351,7 +351,7 @@ function createViewer() {
   }
 }
 
-describe('syncAnalysisLayer', () => {
+describe('rebuildAnalysisLayer', () => {
   const multiPolygonGeometry = {
     shapeType: 'multipolygon' as const,
     coordinates: [
@@ -399,9 +399,9 @@ describe('syncAnalysisLayer', () => {
   } satisfies ProtectionZoneMultipolygonGeometry
 
   it('adds one entity for a single multipolygon region', () => {
-    const { viewer, add, removeById, entitiesById } = createViewer()
+    const { viewer, add, removeById, entitiesById, getById } = createViewer()
 
-    const result = syncAnalysisLayer(viewer as never, [createVisibleRegion()])
+    rebuildAnalysisLayer(viewer as never, [createVisibleRegion()])
     const hierarchy = add.mock.calls[0][0].polygon?.hierarchy
 
     expect(add).toHaveBeenCalledTimes(1)
@@ -410,20 +410,21 @@ describe('syncAnalysisLayer', () => {
     expect(add.mock.calls[0][0].polygon?.outline).toBe(false)
     expect(add.mock.calls[0][0].polygon?.height).toBe(500)
     expect(add.mock.calls[0][0].polygon?.extrudedHeight).toBeUndefined()
+    expect(add.mock.calls[0][0].show).toBe(false)
     expectHierarchyToMatchRing(
       hierarchy,
       createVisibleRegion().geometry.coordinates[0][0],
       [500, 500, 500, 500, 500],
     )
-    expect(result.addedKeys).toEqual(['airport-1:station-1:zone-a:rule-a:region-north'])
-    expect(result.updatedKeys).toEqual([])
     expect(removeById).not.toHaveBeenCalled()
     expect(entitiesById.has('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')).toBe(true)
+    const entity = getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
+    expect(entity?.show).toBe(false)
   })
 
   it('preserves holes for a multipolygon polygon with inner rings', () => {
     const { viewer, add } = createViewer()
-    syncAnalysisLayer(viewer as never, [
+    rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion({
         geometry: holeGeometry,
         vertical: {
@@ -440,6 +441,7 @@ describe('syncAnalysisLayer', () => {
     expect(add).toHaveBeenCalledTimes(1)
     expect(add.mock.calls[0][0].polygon?.perPositionHeight).toBe(false)
     expect(add.mock.calls[0][0].polygon?.height).toBe(492)
+    expect(add.mock.calls[0][0].show).toBe(false)
     expect(holes).toHaveLength(1)
     expectHierarchyToMatchRing(hierarchy, holeGeometry.coordinates[0][0], [492, 492, 492, 492, 492])
     expectHierarchyToMatchRing((hierarchy as Cesium.PolygonHierarchy).holes[0], holeGeometry.coordinates[0][1], [492, 492, 492, 492, 492])
@@ -479,7 +481,7 @@ describe('syncAnalysisLayer', () => {
     }
     const expectedHeights = buildExpectedAnalyticHeights(ring, vertical)
 
-    syncAnalysisLayer(viewer as never, [
+    rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion({
         geometry: {
           shapeType: 'multipolygon',
@@ -493,6 +495,7 @@ describe('syncAnalysisLayer', () => {
     expect(add.mock.calls.every((call) => call[0].polygon?.perPositionHeight === true)).toBe(true)
     expect(add.mock.calls.every((call) => call[0].polygon?.height === undefined)).toBe(true)
     expect(add.mock.calls.every((call) => call[0].polygon?.outline === false)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].show === false)).toBe(true)
 
     for (let index = 0; index < ring.length - 1; index += 1) {
       expectHierarchyToMatchRing(
@@ -546,7 +549,7 @@ describe('syncAnalysisLayer', () => {
     const innerHeights = buildExpectedAnalyticHeights(innerRing, vertical)
     const vertexCount = outerRing.length - 1
 
-    syncAnalysisLayer(viewer as never, [
+    rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion({
         geometry: {
           shapeType: 'multipolygon',
@@ -560,6 +563,7 @@ describe('syncAnalysisLayer', () => {
     expect(add.mock.calls.every((call) => call[0].polygon?.perPositionHeight === true)).toBe(true)
     expect(add.mock.calls.every((call) => call[0].polygon?.height === undefined)).toBe(true)
     expect(add.mock.calls.every((call) => call[0].polygon?.outline === false)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].show === false)).toBe(true)
 
     function innerIdx(segmentIndex: number) {
       return segmentIndex === 0 ? 0 : vertexCount - segmentIndex
@@ -628,7 +632,7 @@ describe('syncAnalysisLayer', () => {
     const innerHeights = buildExpectedRadarMaskAngleHeights(innerRing, vertical)
     const vertexCount = outerRing.length - 1
 
-    syncAnalysisLayer(viewer as never, [
+    rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion({
         geometry: {
           shapeType: 'multipolygon',
@@ -641,6 +645,7 @@ describe('syncAnalysisLayer', () => {
     expect(add).toHaveBeenCalledTimes(vertexCount * 2)
     expect(add.mock.calls.every((call) => call[0].polygon?.perPositionHeight === true)).toBe(true)
     expect(add.mock.calls.every((call) => call[0].polygon?.height === undefined)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].show === false)).toBe(true)
 
     function innerIdx(segmentIndex: number) {
       return segmentIndex === 0 ? 0 : vertexCount - segmentIndex
@@ -704,7 +709,7 @@ describe('syncAnalysisLayer', () => {
       [103.95282, 30.594308],
     ])
 
-    syncAnalysisLayer(viewer as never, [
+    rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion({
         geometry: {
           shapeType: 'multipolygon',
@@ -719,13 +724,14 @@ describe('syncAnalysisLayer', () => {
     expect(add).toHaveBeenCalledTimes(1)
     expect(polygon?.perPositionHeight).toBe(true)
     expect(polygon?.height).toBeUndefined()
+    expect(add.mock.calls[0][0].show).toBe(false)
     expectHierarchyToMatchRing(polygon?.hierarchy, ring, buildExpectedAnalyticHeights(ring, vertical))
   })
 
   it('renders loc_building_restriction_zone_region_3 as fan triangles plus side closing triangles', () => {
     const { viewer, add } = createViewer()
 
-    syncAnalysisLayer(viewer as never, [createLocRegion3VisibleRegion()])
+    rebuildAnalysisLayer(viewer as never, [createLocRegion3VisibleRegion()])
 
     expect(add).toHaveBeenCalledTimes(4)
     expect(add.mock.calls.map((call) => call[0].id)).toEqual([
@@ -735,6 +741,7 @@ describe('syncAnalysisLayer', () => {
       'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-3',
     ])
     expect(add.mock.calls.every((call) => call[0].polygon?.outline === false)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].show === false)).toBe(true)
 
     const firstHierarchy = add.mock.calls[0][0].polygon?.hierarchy
     const secondHierarchy = add.mock.calls[1][0].polygon?.hierarchy
@@ -794,11 +801,12 @@ describe('syncAnalysisLayer', () => {
     const region = createRadialConeVisibleRegion()
     const ring = region.geometry.coordinates[0][0]
 
-    syncAnalysisLayer(viewer as never, [region])
+    rebuildAnalysisLayer(viewer as never, [region])
 
     expect(add).toHaveBeenCalledTimes(ring.length - 1)
     expect(add.mock.calls.every((call) => call[0].polygon?.perPositionHeight === true)).toBe(true)
     expect(add.mock.calls.every((call) => call[0].polygon?.height === undefined)).toBe(true)
+    expect(add.mock.calls.every((call) => call[0].show === false)).toBe(true)
   })
 
   it('builds each radial_cone_surface triangle as center, current ring point, next ring point, center', () => {
@@ -811,7 +819,7 @@ describe('syncAnalysisLayer', () => {
       : null
     const expectedHeights = buildExpectedRadialConeHeights(ring, region.vertical as Extract<PolygonObstacleAnalysisState['visibleProtectionZones'][number]['vertical'], { mode: 'analytic_surface' }>)
 
-    syncAnalysisLayer(viewer as never, [region])
+    rebuildAnalysisLayer(viewer as never, [region])
 
     expect(center).not.toBeNull()
 
@@ -832,7 +840,7 @@ describe('syncAnalysisLayer', () => {
       ? region.vertical.surface.distanceSource.point
       : null
 
-    syncAnalysisLayer(viewer as never, [region])
+    rebuildAnalysisLayer(viewer as never, [region])
 
     expect(center).not.toBeNull()
 
@@ -879,7 +887,7 @@ describe('syncAnalysisLayer', () => {
     const ring = region.geometry.coordinates[0][0]
     const expectedHeights = buildExpectedRadialConeHeights(ring, region.vertical as Extract<PolygonObstacleAnalysisState['visibleProtectionZones'][number]['vertical'], { mode: 'analytic_surface' }>)
 
-    syncAnalysisLayer(viewer as never, [region])
+    rebuildAnalysisLayer(viewer as never, [region])
 
     for (let index = 0; index < ring.length - 1; index += 1) {
       const positions = toHierarchyPoints(add.mock.calls[index][0].polygon?.hierarchy)
@@ -892,7 +900,7 @@ describe('syncAnalysisLayer', () => {
   it('uses region style fill as polygon material when provided', () => {
     const { viewer, add } = createViewer()
 
-    syncAnalysisLayer(viewer as never, [
+    rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion({
         style: {
           fill: 'rgba(255, 165, 0, 0.25)',
@@ -908,7 +916,7 @@ describe('syncAnalysisLayer', () => {
   it('falls back to the default material color when style fill is invalid', () => {
     const { viewer, add } = createViewer()
 
-    syncAnalysisLayer(viewer as never, [
+    rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion({
         style: {
           fill: 'not-a-color',
@@ -921,38 +929,10 @@ describe('syncAnalysisLayer', () => {
     expect(material.equals(Cesium.Color.fromCssColorString('#4db3ff').withAlpha(0.28))).toBe(true)
   })
 
-  it('rebuilds region entities when only fill color changes', () => {
-    const { viewer, add, removeById } = createViewer()
-
-    syncAnalysisLayer(viewer as never, [
-      createVisibleRegion({
-        style: {
-          fill: 'rgba(255, 165, 0, 0.25)',
-        },
-      }),
-    ])
-    add.mockClear()
-    removeById.mockClear()
-
-    syncAnalysisLayer(viewer as never, [
-      createVisibleRegion({
-        style: {
-          fill: 'rgba(255, 0, 0, 0.25)',
-        },
-      }),
-    ])
-
-    expect(removeById).toHaveBeenCalledTimes(1)
-    expect(removeById).toHaveBeenCalledWith('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
-    expect(add).toHaveBeenCalledTimes(1)
-    const material = add.mock.calls[0][0].polygon?.material as Cesium.Color
-    expect(material.equals(Cesium.Color.fromCssColorString('rgba(255, 0, 0, 0.25)'))).toBe(true)
-  })
-
   it('renders all polygons from a multipolygon region', () => {
     const { viewer, add, entitiesById } = createViewer()
 
-    const result = syncAnalysisLayer(viewer as never, [
+    rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion({
         geometry: {
           shapeType: 'multipolygon',
@@ -983,223 +963,210 @@ describe('syncAnalysisLayer', () => {
     expect(add).toHaveBeenCalledTimes(2)
     expect(add.mock.calls[0][0].id).toBe('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
     expect(add.mock.calls[1][0].id).toBe('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')
+    expect(add.mock.calls[0][0].show).toBe(false)
+    expect(add.mock.calls[1][0].show).toBe(false)
     expect(entitiesById.has('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')).toBe(true)
     expect(entitiesById.has('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')).toBe(true)
-    expect(result.addedKeys).toEqual(['airport-1:station-1:zone-a:rule-a:region-north'])
   })
 
-  it('rebuilds all cached entity ids for a region when its multipolygon changes', () => {
-    const { viewer, add, removeById } = createViewer()
-
-    syncAnalysisLayer(viewer as never, [
-      createVisibleRegion({
-        geometry: {
-          shapeType: 'multipolygon',
-          coordinates: [
-            [
-              [
-                [114.2, 30.7],
-                [114.21, 30.7],
-                [114.21, 30.69],
-                [114.2, 30.69],
-                [114.2, 30.7],
-              ],
-            ],
-            [
-              [
-                [114.22, 30.71],
-                [114.23, 30.71],
-                [114.23, 30.7],
-                [114.22, 30.7],
-                [114.22, 30.71],
-              ],
-            ],
-          ],
-        },
-      }),
-    ])
-    add.mockClear()
-    removeById.mockClear()
-
-    const result = syncAnalysisLayer(viewer as never, [
-      createVisibleRegion({
-        geometry: {
-          shapeType: 'multipolygon',
-          coordinates: [
-            [
-              createRing([
-                [114.2, 30.7],
-                [114.215, 30.7],
-                [114.215, 30.685],
-                [114.2, 30.685],
-                [114.2, 30.7],
-              ]),
-            ],
-            [
-              createRing([
-                [114.225, 30.715],
-                [114.235, 30.715],
-                [114.235, 30.705],
-                [114.225, 30.705],
-                [114.225, 30.715],
-              ]),
-            ],
-          ],
-        } satisfies ProtectionZoneMultipolygonGeometry,
-      }),
-    ])
-
-    expect(removeById).toHaveBeenCalledTimes(2)
-    expect(removeById).toHaveBeenNthCalledWith(1, 'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
-    expect(removeById).toHaveBeenNthCalledWith(2, 'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')
-    expect(add).toHaveBeenCalledTimes(2)
-    expect(add.mock.calls[0][0].id).toBe('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
-    expect(add.mock.calls[1][0].id).toBe('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')
-    expect(result.addedKeys).toEqual([])
-    expect(result.updatedKeys).toEqual(['airport-1:station-1:zone-a:rule-a:region-north'])
-  })
-
-  it('removes all stale entity ids when a region is no longer visible', () => {
+  it('clears all previous entities before rebuilding', () => {
     const { viewer, add, removeById, entitiesById } = createViewer()
 
-    syncAnalysisLayer(
-      viewer as never,
-      [
-        createVisibleRegion({
-          geometry: multiPolygonGeometry,
-        }),
-        createVisibleRegion({
-          key: 'airport-1:station-1:zone-a:rule-a:region-south',
-          id: 'airport-1-station-1-zone-a-rule-a-region-south',
-          regionCode: 'region-south',
-          regionName: '南侧区域',
-        }),
-      ],
-    )
+    rebuildAnalysisLayer(viewer as never, [
+      createVisibleRegion({ geometry: multiPolygonGeometry }),
+      createVisibleRegion({
+        key: 'airport-1:station-1:zone-a:rule-a:region-south',
+        id: 'airport-1-station-1-zone-a-rule-a-region-south',
+        regionCode: 'region-south',
+        regionName: '\u5357\u4fa7\u533a\u57df',
+      }),
+    ])
     add.mockClear()
     removeById.mockClear()
 
-    const result = syncAnalysisLayer(viewer as never, [createVisibleRegion({ geometry: multiPolygonGeometry })])
+    rebuildAnalysisLayer(viewer as never, [createVisibleRegion({ geometry: multiPolygonGeometry })])
 
-    expect(removeById).toHaveBeenCalledTimes(1)
+    expect(removeById).toHaveBeenCalledTimes(3)
+    expect(removeById).toHaveBeenCalledWith('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
+    expect(removeById).toHaveBeenCalledWith('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')
     expect(removeById).toHaveBeenCalledWith('analysis-zone-airport-1:station-1:zone-a:rule-a:region-south-0')
-    expect(add).not.toHaveBeenCalled()
-    expect(result.addedKeys).toEqual([])
-    expect(result.updatedKeys).toEqual([])
-    expect(result.removedKeys).toEqual(['airport-1:station-1:zone-a:rule-a:region-south'])
-    expect(result.message).toBe('分析保护区已同步到地图图层。')
+    expect(add).toHaveBeenCalledTimes(2)
     expect(entitiesById.has('analysis-zone-airport-1:station-1:zone-a:rule-a:region-south-0')).toBe(false)
     expect(entitiesById.has('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')).toBe(true)
   })
 
-  it('returns no-op when the same multipolygon region is synced twice', () => {
+  it('returns early when viewer is null or undefined', () => {
+    const { add, removeById } = createViewer()
+
+    rebuildAnalysisLayer(null as never, [createVisibleRegion()])
+    expect(add).not.toHaveBeenCalled()
+    expect(removeById).not.toHaveBeenCalled()
+
+    rebuildAnalysisLayer(undefined as never, [createVisibleRegion()])
+    expect(add).not.toHaveBeenCalled()
+    expect(removeById).not.toHaveBeenCalled()
+  })
+
+  it('handles empty zones array gracefully', () => {
     const { viewer, add, removeById } = createViewer()
 
-    syncAnalysisLayer(viewer as never, [createVisibleRegion()])
-    const firstEntity = viewer.entities.getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
-    add.mockClear()
-    removeById.mockClear()
-
-    const result = syncAnalysisLayer(viewer as never, [createVisibleRegion()])
-    const secondEntity = viewer.entities.getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
+    rebuildAnalysisLayer(viewer as never, [])
 
     expect(add).not.toHaveBeenCalled()
     expect(removeById).not.toHaveBeenCalled()
-    expect(secondEntity).toBe(firstEntity)
-    expect(result.addedKeys).toEqual([])
-    expect(result.updatedKeys).toEqual([])
-    expect(result.removedKeys).toEqual([])
-    expect(result.message).toBe('分析保护区无增量变化。')
   })
 
-  it('rebuilds changed regions in place while keeping stable entity ids', () => {
-    const { viewer, add, removeById } = createViewer()
-
-    syncAnalysisLayer(viewer as never, [createVisibleRegion()])
-    const originalEntity = viewer.entities.getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
-    add.mockClear()
-    removeById.mockClear()
-
-    const result = syncAnalysisLayer(viewer as never, [
-      createVisibleRegion({
-        vertical: {
-          mode: 'flat',
-          baseReference: 'station',
-          baseHeightMeters: 540,
-        },
-      }),
-    ])
-
-    const rebuiltEntity = viewer.entities.getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
-
-    expect(removeById).toHaveBeenCalledWith('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
-    expect(add).toHaveBeenCalledTimes(1)
-    expect(add.mock.calls[0][0].id).toBe('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
-    expect(rebuiltEntity).not.toBe(originalEntity)
-    expect(rebuiltEntity?.polygon?.height).toBe(540)
-    expect(result.addedKeys).toEqual([])
-    expect(result.updatedKeys).toEqual(['airport-1:station-1:zone-a:rule-a:region-north'])
-    expect(result.removedKeys).toEqual([])
-  })
-
-  it('rebuilds all cached triangle entity ids for loc_building_restriction_zone_region_3 updates', () => {
-    const { viewer, add, removeById } = createViewer()
-
-    syncAnalysisLayer(viewer as never, [createLocRegion3VisibleRegion()])
-    add.mockClear()
-    removeById.mockClear()
-
-    const result = syncAnalysisLayer(viewer as never, [
-      createLocRegion3VisibleRegion({
-        vertical: {
-          mode: 'analytic_surface',
-          baseReference: 'station',
-          baseHeightMeters: 500,
-          surface: {
-            type: 'loc_building_restriction_zone_region_3',
-            stationPoint: [103.938972, 30.561306],
-            apexPoint: [103.95397513931144, 30.593665083709087],
-            rootLeftPoint: [103.949136618227, 30.59534448405252],
-            rootRightPoint: [103.95881349354343, 30.591985503088146],
-            arcRadiusMeters: 9865.303478328966,
-            arcPoints: [
-              [103.95117724149101, 30.649664183802024],
-              [103.956, 30.6492],
-              [103.96003752578038, 30.64840710649382],
-            ],
-            arcHeightMeters: 570,
-            alphaDegrees: 15.04,
-          },
-        },
-      }),
-    ])
-
-    expect(removeById).toHaveBeenCalledTimes(4)
-    expect(removeById).toHaveBeenNthCalledWith(1, 'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
-    expect(removeById).toHaveBeenNthCalledWith(2, 'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')
-    expect(removeById).toHaveBeenNthCalledWith(3, 'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-2')
-    expect(removeById).toHaveBeenNthCalledWith(4, 'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-3')
-    expect(add).toHaveBeenCalledTimes(4)
-    expect(add.mock.calls.map((call) => call[0].id)).toEqual([
-      'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0',
-      'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1',
-      'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-2',
-      'analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-3',
-    ])
-    expect(result.addedKeys).toEqual([])
-    expect(result.updatedKeys).toEqual(['airport-1:station-1:zone-a:rule-a:region-north'])
-    expect(result.removedKeys).toEqual([])
-  })
-
-  it('fails fast when an unexpected vertical mode reaches the analytic layer', () => {
+  it('fails fast when an unexpected vertical mode reaches the layer', () => {
     const { viewer } = createViewer()
 
-    expect(() => syncAnalysisLayer(viewer as never, [
+    expect(() => rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion({
         vertical: {
           mode: 'unexpected-mode',
         } as never,
       }),
     ])).toThrow('Unsupported protection zone vertical mode: unexpected-mode')
+  })
+})
+
+describe('applyAnalysisVisibility', () => {
+  it('sets show to true for entities whose key is in the visible set', () => {
+    const { viewer, getById } = createViewer()
+
+    rebuildAnalysisLayer(viewer as never, [createVisibleRegion()])
+    const entityBefore = getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
+    expect(entityBefore?.show).toBe(false)
+
+    applyAnalysisVisibility(viewer as never, new Set(['airport-1:station-1:zone-a:rule-a:region-north']))
+    const entityAfter = getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
+    expect(entityAfter?.show).toBe(true)
+  })
+
+  it('sets show to false for entities whose key is not in the visible set', () => {
+    const { viewer, getById } = createViewer()
+
+    rebuildAnalysisLayer(viewer as never, [createVisibleRegion()])
+
+    // First make it visible
+    applyAnalysisVisibility(viewer as never, new Set(['airport-1:station-1:zone-a:rule-a:region-north']))
+    expect(getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')?.show).toBe(true)
+
+    // Then hide it
+    applyAnalysisVisibility(viewer as never, new Set([]))
+    expect(getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')?.show).toBe(false)
+  })
+
+  it('does not add or remove entities', () => {
+    const { viewer, add, removeById } = createViewer()
+
+    rebuildAnalysisLayer(viewer as never, [
+      createVisibleRegion(),
+      createVisibleRegion({
+        key: 'airport-1:station-1:zone-a:rule-a:region-south',
+        id: 'airport-1-station-1-zone-a-rule-a-region-south',
+        regionCode: 'region-south',
+        regionName: '\u5357\u4fa7\u533a\u57df',
+      }),
+    ])
+    add.mockClear()
+    removeById.mockClear()
+
+    applyAnalysisVisibility(viewer as never, new Set(['airport-1:station-1:zone-a:rule-a:region-north']))
+
+    expect(add).not.toHaveBeenCalled()
+    expect(removeById).not.toHaveBeenCalled()
+  })
+
+  it('handles multiple entities per key correctly', () => {
+    const { viewer, getById } = createViewer()
+
+    rebuildAnalysisLayer(viewer as never, [
+      createVisibleRegion({
+        geometry: {
+          shapeType: 'multipolygon' as const,
+          coordinates: [
+            [
+              createRing([
+                [114.2, 30.7],
+                [114.21, 30.7],
+                [114.21, 30.69],
+                [114.2, 30.69],
+                [114.2, 30.7],
+              ]),
+            ],
+            [
+              createRing([
+                [114.22, 30.71],
+                [114.23, 30.71],
+                [114.23, 30.7],
+                [114.22, 30.7],
+                [114.22, 30.71],
+              ]),
+            ],
+          ],
+        },
+      }),
+    ])
+
+    applyAnalysisVisibility(viewer as never, new Set(['airport-1:station-1:zone-a:rule-a:region-north']))
+
+    expect(getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')?.show).toBe(true)
+    expect(getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')?.show).toBe(true)
+  })
+
+  it('handles mixed visibility across multiple keys', () => {
+    const { viewer, getById } = createViewer()
+
+    rebuildAnalysisLayer(viewer as never, [
+      createVisibleRegion(),
+      createVisibleRegion({
+        key: 'airport-1:station-1:zone-a:rule-a:region-south',
+        id: 'airport-1-station-1-zone-a-rule-a-region-south',
+        regionCode: 'region-south',
+        regionName: '\u5357\u4fa7\u533a\u57df',
+      }),
+    ])
+
+    applyAnalysisVisibility(viewer as never, new Set(['airport-1:station-1:zone-a:rule-a:region-north']))
+
+    expect(getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')?.show).toBe(true)
+    expect(getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-south-0')?.show).toBe(false)
+  })
+
+  it('returns early when viewer is null or undefined', () => {
+    const { add, removeById } = createViewer()
+
+    applyAnalysisVisibility(null as never, new Set(['some-key']))
+    expect(add).not.toHaveBeenCalled()
+    expect(removeById).not.toHaveBeenCalled()
+
+    applyAnalysisVisibility(undefined as never, new Set(['some-key']))
+    expect(add).not.toHaveBeenCalled()
+    expect(removeById).not.toHaveBeenCalled()
+  })
+
+  it('safely ignores keys in the visible set that are not in the registry', () => {
+    const { viewer, add, removeById } = createViewer()
+
+    rebuildAnalysisLayer(viewer as never, [createVisibleRegion()])
+    add.mockClear()
+    removeById.mockClear()
+
+    applyAnalysisVisibility(viewer as never, new Set(['non-existent-key']))
+
+    expect(add).not.toHaveBeenCalled()
+    expect(removeById).not.toHaveBeenCalled()
+  })
+
+  it('entity stays in registry after visibility toggle (not removed)', () => {
+    const { viewer, entitiesById } = createViewer()
+
+    rebuildAnalysisLayer(viewer as never, [createVisibleRegion()])
+
+    applyAnalysisVisibility(viewer as never, new Set([]))
+    expect(entitiesById.has('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')).toBe(true)
+
+    applyAnalysisVisibility(viewer as never, new Set(['airport-1:station-1:zone-a:rule-a:region-north']))
+    expect(entitiesById.has('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')).toBe(true)
   })
 })

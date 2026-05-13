@@ -77,6 +77,7 @@ function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): Pol
     exportErrorMessage: '',
     renderedObstacles: [],
     protectionZoneTree: createProtectionZoneTree(),
+    loadedProtectionZones: [],
     visibleProtectionZones: [],
     flyToTargetTick: 0,
     flyToTargetPayload: null,

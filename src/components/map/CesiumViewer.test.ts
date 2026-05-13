@@ -4,15 +4,16 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as Cesium from 'cesium'
 import CesiumViewer from './CesiumViewer.vue'
-import { syncAnalysisLayer } from '../../map/layers/AnalysisLayer'
+import { rebuildAnalysisLayer, applyAnalysisVisibility } from '../../map/layers/AnalysisLayer'
 import { buildCameraFlyToOptions, getInitialCameraKey, resolveResetCameraTarget } from './camera'
 import { getObstacleFlyToOptions, type ObstacleLayerSyncResult } from '../../map/layers/ObstacleLayer'
 import { syncStationLayer } from '../../map/layers/StationLayer'
 import type { InitialCameraTarget, PolygonObstacleAnalysisState, RenderedObstacle, RenderedStation } from '../../types/tool'
 
-const { syncObstacleLayerMock, syncAnalysisLayerMock, syncStationLayerMock, flyToMock, flyToBoundingSphereMock, addImageryProviderMock, destroyMock } = vi.hoisted(() => ({
+const { syncObstacleLayerMock, rebuildAnalysisLayerMock, applyAnalysisVisibilityMock, syncStationLayerMock, flyToMock, flyToBoundingSphereMock, addImageryProviderMock, destroyMock } = vi.hoisted(() => ({
   syncObstacleLayerMock: vi.fn(),
-  syncAnalysisLayerMock: vi.fn(),
+  rebuildAnalysisLayerMock: vi.fn(),
+  applyAnalysisVisibilityMock: vi.fn(),
   syncStationLayerMock: vi.fn(),
   flyToMock: vi.fn(),
   flyToBoundingSphereMock: vi.fn(),
@@ -66,7 +67,8 @@ vi.mock('../../map/layers/AnalysisLayer', async () => {
 
   return {
     ...actual,
-    syncAnalysisLayer: syncAnalysisLayerMock,
+    rebuildAnalysisLayer: rebuildAnalysisLayerMock,
+    applyAnalysisVisibility: applyAnalysisVisibilityMock,
   }
 })
 
@@ -336,17 +338,13 @@ describe('getObstacleFlyToOptions', () => {
 describe('CesiumViewer camera rules', () => {
   beforeEach(() => {
     syncObstacleLayerMock.mockReset()
-    syncAnalysisLayerMock.mockReset()
+    rebuildAnalysisLayerMock.mockReset()
+    applyAnalysisVisibilityMock.mockReset()
     syncStationLayerMock.mockReset()
     flyToMock.mockReset()
     flyToBoundingSphereMock.mockReset()
     addImageryProviderMock.mockReset()
     destroyMock.mockReset()
-    syncAnalysisLayerMock.mockReturnValue({
-      message: '分析保护区无增量变化。',
-      addedKeys: [],
-      updatedKeys: [],
-    })
     syncStationLayerMock.mockReturnValue({
       message: '台站已同步到地图图层。',
       addedEntityIds: [],
@@ -360,15 +358,12 @@ describe('CesiumViewer camera rules', () => {
     )
     const add = vi.fn()
     const removeById = vi.fn()
+    const getById = vi.fn()
+    const suspendEvents = vi.fn()
+    const resumeEvents = vi.fn()
     const zone = createVisibleProtectionZoneRegion()
 
     syncObstacleLayerMock.mockReturnValue(createSyncResult())
-    syncAnalysisLayerMock.mockReturnValue({
-      message: '分析保护区无增量变化。',
-      addedKeys: [],
-      updatedKeys: [],
-      removedKeys: [],
-    })
 
     const wrapper = mount(CesiumViewer, {
       props: {
@@ -376,6 +371,7 @@ describe('CesiumViewer camera rules', () => {
         obstacles: [],
         visibleStations: [],
         initialCameraTarget: null,
+        loadedProtectionZones: [zone],
         visibleProtectionZones: [zone],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
@@ -384,16 +380,24 @@ describe('CesiumViewer camera rules', () => {
 
     await flushPromises()
 
-    expect(syncAnalysisLayer).toHaveBeenCalledWith(
+    expect(rebuildAnalysisLayer).toHaveBeenCalledWith(
       expect.objectContaining({ camera: expect.anything() }),
       [zone],
     )
 
-    const result = actualAnalysisLayer.syncAnalysisLayer(
+    expect(applyAnalysisVisibility).toHaveBeenCalledWith(
+      expect.objectContaining({ camera: expect.anything() }),
+      new Set([zone.key]),
+    )
+
+    actualAnalysisLayer.rebuildAnalysisLayer(
       {
         entities: {
           add,
           removeById,
+          getById,
+          suspendEvents,
+          resumeEvents,
         },
       } as unknown as Cesium.Viewer,
       [zone],
@@ -401,21 +405,16 @@ describe('CesiumViewer camera rules', () => {
 
     expect(add).toHaveBeenCalledTimes(8)
     expect(removeById).not.toHaveBeenCalled()
+    expect(add.mock.calls.every((call) => call[0].show === false)).toBe(true)
     expect(add.mock.calls.every((call) => call[0].polygon?.perPositionHeight === true)).toBe(true)
     expect(add.mock.calls.every((call) => call[0].polygon?.height === undefined)).toBe(true)
     expect(add.mock.calls.every((call) => call[0].polygon?.extrudedHeight === undefined)).toBe(true)
     expect(add.mock.calls[0]?.[0].id).toBe('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
-    expect(result).toEqual({
-      message: '分析保护区已同步到地图图层。',
-      addedKeys: [zone.key],
-      updatedKeys: [],
-      removedKeys: [],
-    })
 
     wrapper.unmount()
   })
 
-  it('forwards loc_building_restriction_zone_region_3 zones unchanged to syncAnalysisLayer', async () => {
+  it('forwards loc_building_restriction_zone_region_3 zones unchanged to rebuildAnalysisLayer', async () => {
     syncObstacleLayerMock.mockReturnValue(createSyncResult())
 
     const zone = createLocRegion3VisibleProtectionZoneRegion()
@@ -425,6 +424,7 @@ describe('CesiumViewer camera rules', () => {
         obstacles: [],
         visibleStations: [],
         initialCameraTarget: null,
+        loadedProtectionZones: [zone],
         visibleProtectionZones: [zone],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
@@ -433,7 +433,7 @@ describe('CesiumViewer camera rules', () => {
 
     await flushPromises()
 
-    expect(syncAnalysisLayerMock).toHaveBeenCalledWith(
+    expect(rebuildAnalysisLayerMock).toHaveBeenCalledWith(
       expect.objectContaining({ camera: expect.anything() }),
       [zone],
     )
@@ -455,6 +455,7 @@ describe('CesiumViewer camera rules', () => {
         obstacles: [],
         visibleStations: [],
         initialCameraTarget: null,
+        loadedProtectionZones: [],
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
@@ -495,6 +496,7 @@ describe('CesiumViewer camera rules', () => {
         obstacles: [createObstacle('history-1')],
         visibleStations: [],
         initialCameraTarget: null,
+        loadedProtectionZones: [],
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
@@ -546,6 +548,7 @@ describe('CesiumViewer camera rules', () => {
         obstacles: [createObstacle('history-1')],
         visibleStations: [],
         initialCameraTarget: createBootstrapTarget(),
+        loadedProtectionZones: [],
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
@@ -582,6 +585,7 @@ describe('CesiumViewer camera rules', () => {
         obstacles: [],
         visibleStations: [],
         initialCameraTarget: target,
+        loadedProtectionZones: [],
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
@@ -613,6 +617,7 @@ describe('CesiumViewer camera rules', () => {
         obstacles: [createObstacle('history-1')],
         visibleStations: [],
         initialCameraTarget: null,
+        loadedProtectionZones: [],
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
@@ -644,6 +649,7 @@ describe('CesiumViewer camera rules', () => {
         obstacles: [],
         visibleStations: [],
         initialCameraTarget: null,
+        loadedProtectionZones: [],
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
@@ -678,6 +684,7 @@ describe('CesiumViewer camera rules', () => {
         obstacles: [createObstacle('history-1')],
         visibleStations: [],
         initialCameraTarget: null,
+        loadedProtectionZones: [],
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
@@ -727,6 +734,7 @@ describe('CesiumViewer camera rules', () => {
         obstacles: [],
         visibleStations: [],
         initialCameraTarget: null,
+        loadedProtectionZones: [initialZone],
         visibleProtectionZones: [initialZone],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
@@ -735,9 +743,14 @@ describe('CesiumViewer camera rules', () => {
 
     await flushPromises()
 
-    expect(syncAnalysisLayer).toHaveBeenCalledWith(
+    expect(rebuildAnalysisLayer).toHaveBeenCalledWith(
       expect.objectContaining({ camera: expect.anything() }),
       [initialZone],
+    )
+
+    expect(applyAnalysisVisibility).toHaveBeenCalledWith(
+      expect.objectContaining({ camera: expect.anything() }),
+      new Set([initialZone.key]),
     )
 
     await wrapper.setProps({
@@ -746,9 +759,10 @@ describe('CesiumViewer camera rules', () => {
 
     await flushPromises()
 
-    expect(syncAnalysisLayer).toHaveBeenLastCalledWith(
+    expect(applyAnalysisVisibility).toHaveBeenCalledTimes(2)
+    expect(applyAnalysisVisibility).toHaveBeenLastCalledWith(
       expect.objectContaining({ camera: expect.anything() }),
-      [nextZone],
+      new Set([nextZone.key]),
     )
 
     expect(flyToMock).toHaveBeenCalledTimes(1)
@@ -766,6 +780,7 @@ describe('CesiumViewer camera rules', () => {
         obstacles: [],
         visibleStations: [createStation('station-1')],
         initialCameraTarget: createBootstrapTarget(),
+        loadedProtectionZones: [],
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
@@ -825,6 +840,7 @@ describe('CesiumViewer camera rules', () => {
         obstacles: [],
         visibleStations: [],
         initialCameraTarget: null,
+        loadedProtectionZones: [],
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
