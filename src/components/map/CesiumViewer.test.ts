@@ -46,6 +46,7 @@ vi.mock('cesium', async () => {
           destroy: destroyMock,
         }) as unknown as Cesium.Viewer,
     ),
+    CustomDataSource: vi.fn(),
   }
 })
 
@@ -356,11 +357,10 @@ describe('CesiumViewer camera rules', () => {
     const actualAnalysisLayer = await vi.importActual<typeof import('../../map/layers/AnalysisLayer')>(
       '../../map/layers/AnalysisLayer',
     )
-    const add = vi.fn()
-    const removeById = vi.fn()
-    const getById = vi.fn()
-    const suspendEvents = vi.fn()
-    const resumeEvents = vi.fn()
+    const entitiesAdd = vi.fn()
+    const dataSource = { entities: { add: entitiesAdd, values: [] } }
+    vi.mocked(Cesium.CustomDataSource).mockImplementation(() => dataSource as unknown as Cesium.CustomDataSource)
+
     const zone = createVisibleProtectionZoneRegion()
 
     syncObstacleLayerMock.mockReturnValue(createSyncResult())
@@ -392,24 +392,20 @@ describe('CesiumViewer camera rules', () => {
 
     actualAnalysisLayer.rebuildAnalysisLayer(
       {
-        entities: {
-          add,
-          removeById,
-          getById,
-          suspendEvents,
-          resumeEvents,
+        dataSources: {
+          add: vi.fn(),
+          remove: vi.fn(),
         },
       } as unknown as Cesium.Viewer,
       [zone],
     )
 
-    expect(add).toHaveBeenCalledTimes(8)
-    expect(removeById).not.toHaveBeenCalled()
-    expect(add.mock.calls.every((call) => call[0].show === false)).toBe(true)
-    expect(add.mock.calls.every((call) => call[0].polygon?.perPositionHeight === true)).toBe(true)
-    expect(add.mock.calls.every((call) => call[0].polygon?.height === undefined)).toBe(true)
-    expect(add.mock.calls.every((call) => call[0].polygon?.extrudedHeight === undefined)).toBe(true)
-    expect(add.mock.calls[0]?.[0].id).toBe('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
+    expect(entitiesAdd).toHaveBeenCalledTimes(8)
+    expect(entitiesAdd.mock.calls.every((call) => call[0].show === false)).toBe(true)
+    expect(entitiesAdd.mock.calls.every((call) => call[0].polygon?.perPositionHeight === true)).toBe(true)
+    expect(entitiesAdd.mock.calls.every((call) => call[0].polygon?.height === undefined)).toBe(true)
+    expect(entitiesAdd.mock.calls.every((call) => call[0].polygon?.extrudedHeight === undefined)).toBe(true)
+    expect(entitiesAdd.mock.calls[0]?.[0].id).toBe('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
 
     wrapper.unmount()
   })

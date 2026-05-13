@@ -3,6 +3,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { rebuildAnalysisLayer, applyAnalysisVisibility } from './AnalysisLayer'
 import type { PolygonObstacleAnalysisState, ProtectionZoneMultipolygonGeometry, PositionCoordinate } from '../../types/tool'
 
+vi.mock('cesium', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('cesium')>()
+  return {
+    ...actual,
+    CustomDataSource: vi.fn(),
+  }
+})
+
 function createRing(points: PositionCoordinate[]): PositionCoordinate[] {
   return points
 }
@@ -328,26 +336,56 @@ function createRadialConeVisibleRegion(
 }
 
 function createViewer() {
-  const entitiesById = new Map<string, { id: string; show: boolean; polygon?: Record<string, unknown> }>()
-  const add = vi.fn((entity: { id: string; show?: boolean; polygon?: Record<string, unknown> }) => {
-    entitiesById.set(entity.id, entity as { id: string; show: boolean; polygon?: Record<string, unknown> })
-    return entity
+  const entitiesById = new Map<string, { id: string; show: boolean; polygon?: Record<string, unknown>; properties?: Record<string, unknown> }>()
+  const entitiesValues: Array<typeof entitiesById extends Map<string, infer V> ? V : never> = []
+
+  const entitiesAdd = vi.fn((entityDef: { id: string; show?: boolean; polygon?: Record<string, unknown>; properties?: Record<string, unknown> }) => {
+    // 将普通 properties 转换为类似 Cesium PropertyBag 的结构，使 applyAnalysisVisibility 可调用 .getValue()
+    const cesiumProperties: Record<string, { getValue: () => unknown }> = {}
+    if (entityDef.properties) {
+      for (const [key, value] of Object.entries(entityDef.properties)) {
+        cesiumProperties[key] = { getValue: () => value }
+      }
+    }
+    const stored = {
+      ...entityDef,
+      properties: cesiumProperties,
+      show: entityDef.show ?? false,
+    } as typeof entitiesValues[number]
+    entitiesById.set(entityDef.id, stored)
+    entitiesValues.push(stored)
+    return stored
   })
-  const removeById = vi.fn((id: string) => entitiesById.delete(id))
-  const getById = vi.fn((id: string) => entitiesById.get(id) ?? undefined)
+
+  const dataSourceRemove = vi.fn()
+
+  const mockDataSource = {
+    entities: {
+      add: entitiesAdd,
+      values: entitiesValues,
+    },
+  }
+
+  // 模拟 CustomDataSource 构造函数，每次调用重置追踪状态
+  const ctorImpl = (_name: string) => {
+    entitiesById.clear()
+    entitiesValues.length = 0
+    entitiesAdd.mockClear()
+    return mockDataSource
+  }
+  vi.mocked(Cesium.CustomDataSource).mockImplementation(ctorImpl as never)
 
   return {
     viewer: {
-      entities: {
-        add,
-        removeById,
-        getById,
+      dataSources: {
+        add: vi.fn(),
+        remove: dataSourceRemove,
       },
-    },
-    add,
-    removeById,
-    getById,
+    } as unknown as Cesium.Viewer,
+    add: entitiesAdd,
+    dataSourceRemove,
     entitiesById,
+    mockDataSource,
   }
 }
 
@@ -399,7 +437,7 @@ describe('rebuildAnalysisLayer', () => {
   } satisfies ProtectionZoneMultipolygonGeometry
 
   it('adds one entity for a single multipolygon region', () => {
-    const { viewer, add, removeById, entitiesById, getById } = createViewer()
+    const { viewer, add, dataSourceRemove, entitiesById } = createViewer()
 
     rebuildAnalysisLayer(viewer as never, [createVisibleRegion()])
     const hierarchy = add.mock.calls[0][0].polygon?.hierarchy
@@ -416,9 +454,9 @@ describe('rebuildAnalysisLayer', () => {
       createVisibleRegion().geometry.coordinates[0][0],
       [500, 500, 500, 500, 500],
     )
-    expect(removeById).not.toHaveBeenCalled()
+    expect(dataSourceRemove).not.toHaveBeenCalled()
     expect(entitiesById.has('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')).toBe(true)
-    const entity = getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
+    const entity = entitiesById.get('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
     expect(entity?.show).toBe(false)
   })
 
@@ -970,7 +1008,7 @@ describe('rebuildAnalysisLayer', () => {
   })
 
   it('clears all previous entities before rebuilding', () => {
-    const { viewer, add, removeById, entitiesById } = createViewer()
+    const { viewer, add, dataSourceRemove, entitiesById, mockDataSource } = createViewer()
 
     rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion({ geometry: multiPolygonGeometry }),
@@ -982,38 +1020,36 @@ describe('rebuildAnalysisLayer', () => {
       }),
     ])
     add.mockClear()
-    removeById.mockClear()
+    dataSourceRemove.mockClear()
 
     rebuildAnalysisLayer(viewer as never, [createVisibleRegion({ geometry: multiPolygonGeometry })])
 
-    expect(removeById).toHaveBeenCalledTimes(3)
-    expect(removeById).toHaveBeenCalledWith('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
-    expect(removeById).toHaveBeenCalledWith('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')
-    expect(removeById).toHaveBeenCalledWith('analysis-zone-airport-1:station-1:zone-a:rule-a:region-south-0')
+    expect(dataSourceRemove).toHaveBeenCalledTimes(1)
+    expect(dataSourceRemove).toHaveBeenCalledWith(mockDataSource, true)
     expect(add).toHaveBeenCalledTimes(2)
     expect(entitiesById.has('analysis-zone-airport-1:station-1:zone-a:rule-a:region-south-0')).toBe(false)
     expect(entitiesById.has('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')).toBe(true)
   })
 
   it('returns early when viewer is null or undefined', () => {
-    const { add, removeById } = createViewer()
+    const { add, dataSourceRemove } = createViewer()
 
     rebuildAnalysisLayer(null as never, [createVisibleRegion()])
     expect(add).not.toHaveBeenCalled()
-    expect(removeById).not.toHaveBeenCalled()
+    expect(dataSourceRemove).not.toHaveBeenCalled()
 
     rebuildAnalysisLayer(undefined as never, [createVisibleRegion()])
     expect(add).not.toHaveBeenCalled()
-    expect(removeById).not.toHaveBeenCalled()
+    expect(dataSourceRemove).not.toHaveBeenCalled()
   })
 
   it('handles empty zones array gracefully', () => {
-    const { viewer, add, removeById } = createViewer()
+    const { viewer, add, dataSourceRemove } = createViewer()
 
     rebuildAnalysisLayer(viewer as never, [])
 
     expect(add).not.toHaveBeenCalled()
-    expect(removeById).not.toHaveBeenCalled()
+    expect(dataSourceRemove).not.toHaveBeenCalled()
   })
 
   it('fails fast when an unexpected vertical mode reaches the layer', () => {
@@ -1031,33 +1067,33 @@ describe('rebuildAnalysisLayer', () => {
 
 describe('applyAnalysisVisibility', () => {
   it('sets show to true for entities whose key is in the visible set', () => {
-    const { viewer, getById } = createViewer()
+    const { viewer, entitiesById } = createViewer()
 
     rebuildAnalysisLayer(viewer as never, [createVisibleRegion()])
-    const entityBefore = getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
+    const entityBefore = entitiesById.get('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
     expect(entityBefore?.show).toBe(false)
 
     applyAnalysisVisibility(viewer as never, new Set(['airport-1:station-1:zone-a:rule-a:region-north']))
-    const entityAfter = getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
+    const entityAfter = entitiesById.get('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')
     expect(entityAfter?.show).toBe(true)
   })
 
   it('sets show to false for entities whose key is not in the visible set', () => {
-    const { viewer, getById } = createViewer()
+    const { viewer, entitiesById } = createViewer()
 
     rebuildAnalysisLayer(viewer as never, [createVisibleRegion()])
 
     // First make it visible
     applyAnalysisVisibility(viewer as never, new Set(['airport-1:station-1:zone-a:rule-a:region-north']))
-    expect(getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')?.show).toBe(true)
+    expect(entitiesById.get('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')?.show).toBe(true)
 
     // Then hide it
     applyAnalysisVisibility(viewer as never, new Set([]))
-    expect(getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')?.show).toBe(false)
+    expect(entitiesById.get('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')?.show).toBe(false)
   })
 
   it('does not add or remove entities', () => {
-    const { viewer, add, removeById } = createViewer()
+    const { viewer, add, dataSourceRemove } = createViewer()
 
     rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion(),
@@ -1069,16 +1105,16 @@ describe('applyAnalysisVisibility', () => {
       }),
     ])
     add.mockClear()
-    removeById.mockClear()
+    dataSourceRemove.mockClear()
 
     applyAnalysisVisibility(viewer as never, new Set(['airport-1:station-1:zone-a:rule-a:region-north']))
 
     expect(add).not.toHaveBeenCalled()
-    expect(removeById).not.toHaveBeenCalled()
+    expect(dataSourceRemove).not.toHaveBeenCalled()
   })
 
   it('handles multiple entities per key correctly', () => {
-    const { viewer, getById } = createViewer()
+    const { viewer, entitiesById } = createViewer()
 
     rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion({
@@ -1110,12 +1146,12 @@ describe('applyAnalysisVisibility', () => {
 
     applyAnalysisVisibility(viewer as never, new Set(['airport-1:station-1:zone-a:rule-a:region-north']))
 
-    expect(getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')?.show).toBe(true)
-    expect(getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')?.show).toBe(true)
+    expect(entitiesById.get('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')?.show).toBe(true)
+    expect(entitiesById.get('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-1')?.show).toBe(true)
   })
 
   it('handles mixed visibility across multiple keys', () => {
-    const { viewer, getById } = createViewer()
+    const { viewer, entitiesById } = createViewer()
 
     rebuildAnalysisLayer(viewer as never, [
       createVisibleRegion(),
@@ -1129,33 +1165,33 @@ describe('applyAnalysisVisibility', () => {
 
     applyAnalysisVisibility(viewer as never, new Set(['airport-1:station-1:zone-a:rule-a:region-north']))
 
-    expect(getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')?.show).toBe(true)
-    expect(getById('analysis-zone-airport-1:station-1:zone-a:rule-a:region-south-0')?.show).toBe(false)
+    expect(entitiesById.get('analysis-zone-airport-1:station-1:zone-a:rule-a:region-north-0')?.show).toBe(true)
+    expect(entitiesById.get('analysis-zone-airport-1:station-1:zone-a:rule-a:region-south-0')?.show).toBe(false)
   })
 
   it('returns early when viewer is null or undefined', () => {
-    const { add, removeById } = createViewer()
+    const { add, dataSourceRemove } = createViewer()
 
     applyAnalysisVisibility(null as never, new Set(['some-key']))
     expect(add).not.toHaveBeenCalled()
-    expect(removeById).not.toHaveBeenCalled()
+    expect(dataSourceRemove).not.toHaveBeenCalled()
 
     applyAnalysisVisibility(undefined as never, new Set(['some-key']))
     expect(add).not.toHaveBeenCalled()
-    expect(removeById).not.toHaveBeenCalled()
+    expect(dataSourceRemove).not.toHaveBeenCalled()
   })
 
   it('safely ignores keys in the visible set that are not in the registry', () => {
-    const { viewer, add, removeById } = createViewer()
+    const { viewer, add, dataSourceRemove } = createViewer()
 
     rebuildAnalysisLayer(viewer as never, [createVisibleRegion()])
     add.mockClear()
-    removeById.mockClear()
+    dataSourceRemove.mockClear()
 
     applyAnalysisVisibility(viewer as never, new Set(['non-existent-key']))
 
     expect(add).not.toHaveBeenCalled()
-    expect(removeById).not.toHaveBeenCalled()
+    expect(dataSourceRemove).not.toHaveBeenCalled()
   })
 
   it('entity stays in registry after visibility toggle (not removed)', () => {

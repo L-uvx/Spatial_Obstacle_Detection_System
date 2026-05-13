@@ -7,20 +7,7 @@ import { buildVerticalProfile } from './analysis/vertical'
 const ENTITY_ID_PREFIX = 'analysis-zone-'
 const DEFAULT_ZONE_MATERIAL = Cesium.Color.fromCssColorString('#4db3ff').withAlpha(0.28)
 
-const registryByViewer = new WeakMap<object, Map<string, string[]>>()
-
-function getRegistry(viewer: Cesium.Viewer): Map<string, string[]> {
-  const existing = registryByViewer.get(viewer)
-
-  if (existing) {
-    return existing
-  }
-
-  const next = new Map<string, string[]>()
-  registryByViewer.set(viewer, next)
-
-  return next
-}
+const dataSourceByViewer = new WeakMap<object, Cesium.CustomDataSource>()
 
 // 为保护区实体生成稳定 id。
 function createEntityId(regionKey: string, polygonIndex: number) {
@@ -319,6 +306,7 @@ function createEntity(
       ruleCode: region.ruleCode,
       regionCode: region.regionCode,
       regionId: region.id,
+      regionKey: region.key,
     },
     polygon: {
       hierarchy,
@@ -402,7 +390,7 @@ function createEntities(
   }
 }
 
-// 全量重建保护区实体并写入注册表。所有实体初始 show = false。
+// 全量重建保护区实体。每次调用会销毁旧的 CustomDataSource 并创建新的，所有实体初始 show = false。
 export function rebuildAnalysisLayer(
   viewer: Cesium.Viewer | null | undefined,
   zones: PolygonObstacleAnalysisState['visibleProtectionZones'] = [],
@@ -411,24 +399,25 @@ export function rebuildAnalysisLayer(
     return
   }
 
-  const registry = getRegistry(viewer)
-
-  for (const entityIds of registry.values()) {
-    for (const entityId of entityIds) {
-      viewer.entities.removeById(entityId)
-    }
+  // 销毁旧的 dataSource
+  const oldDataSource = dataSourceByViewer.get(viewer)
+  if (oldDataSource) {
+    viewer.dataSources.remove(oldDataSource, true)
+    dataSourceByViewer.delete(viewer)
   }
 
-  registry.clear()
+  if (zones.length === 0) return
+
+  // 创建新的 dataSource
+  const dataSource = new Cesium.CustomDataSource('protection-zones')
+  viewer.dataSources.add(dataSource)
+  dataSourceByViewer.set(viewer, dataSource)
 
   for (const region of zones) {
-    const entityIds = createEntities(region).map((entityDef) => {
+    for (const entityDef of createEntities(region)) {
       entityDef.show = false
-      viewer.entities.add(entityDef)
-      return entityDef.id
-    })
-
-    registry.set(region.key, entityIds)
+      dataSource.entities.add(entityDef)
+    }
   }
 }
 
@@ -441,16 +430,14 @@ export function applyAnalysisVisibility(
     return
   }
 
-  const registry = getRegistry(viewer)
+  const dataSource = dataSourceByViewer.get(viewer)
+  if (!dataSource) return
 
-  for (const [key, entityIds] of registry.entries()) {
-    const show = visibleKeys.has(key)
-
-    for (const entityId of entityIds) {
-      const entity = viewer.entities.getById(entityId)
-      if (entity) {
-        entity.show = show
-      }
-    }
+  for (let i = 0; i < dataSource.entities.values.length; i++) {
+    const entity = dataSource.entities.values[i]
+    if (!entity) continue
+    const regionKey = entity.properties?.regionKey?.getValue()
+    if (typeof regionKey !== 'string') continue
+    entity.show = visibleKeys.has(regionKey)
   }
 }
