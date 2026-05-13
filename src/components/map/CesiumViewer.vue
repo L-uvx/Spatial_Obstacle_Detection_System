@@ -193,7 +193,7 @@ async function initViewer() {
     if (props.initialCameraTarget) {
       flyToTarget(props.initialCameraTarget)
       appliedInitialCameraKeyRef.value = getInitialCameraKey(props.initialCameraTarget)
-    } else if (props.obstacles.length === 0) {
+    } else {
       flyToTarget(resolveResetCameraTarget(props.initialCameraTarget))
     }
   } catch (error) {

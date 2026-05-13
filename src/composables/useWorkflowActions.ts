@@ -168,6 +168,11 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
 
       if (defaultAirport?.id) {
         await loadProtectionZones(defaultAirport.id)
+      } else {
+        state.protectionZoneTree = []
+        state.loadedProtectionZones = []
+        state.visibleProtectionZones = []
+        state.protectionZonePanelOpen = false
       }
 
       state.bootstrapStatus = 'success'
@@ -180,6 +185,10 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       state.bootstrapMessage =
         error instanceof Error ? `${error.message} 已降级到默认视角。` : '系统初始化失败，已降级到默认视角。'
       state.initialCameraTarget = null
+      state.protectionZoneTree = []
+      state.loadedProtectionZones = []
+      state.visibleProtectionZones = []
+      state.protectionZonePanelOpen = false
     }
   }
 

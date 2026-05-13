@@ -295,6 +295,43 @@ describe('useWorkflowActions', () => {
     expect(state.loadedProtectionZones).toEqual([])
   })
 
+  it('clears protection zone state when bootstrap returns no airports', async () => {
+    vi.mocked(getBootstrapData).mockResolvedValueOnce({
+      initialCameraTarget: null,
+      airports: [],
+      historicalObstacles: [
+        {
+          id: 'history-1',
+          name: '历史障碍物',
+          obstacleType: '建筑物/构建物',
+          topElevation: 100,
+          geometry: {
+            type: 'MultiPolygon',
+            coordinates: [[[[103.0, 30.0], [103.1, 30.0], [103.1, 30.1], [103.0, 30.1], [103.0, 30.0]]]],
+          },
+        },
+      ],
+    })
+
+    vi.mocked(getAirportProtectionZones).mockResolvedValue([])
+
+    const { state, bootstrap } = useWorkflowActions()
+
+    await bootstrap()
+
+    expect(state.bootstrapStatus).toBe('success')
+    expect(state.airports).toEqual([])
+    expect(state.selectedAirportId).toBe('')
+    expect(state.visibleStations).toEqual([])
+    expect(state.initialCameraTarget).toBeNull()
+    expect(state.renderedObstacles.map((item) => item.id)).toEqual(['history-1'])
+    expect(state.protectionZoneTree).toEqual([])
+    expect(state.visibleProtectionZones).toEqual([])
+    expect(state.loadedProtectionZones).toEqual([])
+    expect(state.protectionZonePanelOpen).toBe(false)
+    expect(getAirportProtectionZones).not.toHaveBeenCalled()
+  })
+
   it('keeps the app usable when bootstrap fails', async () => {
     vi.mocked(getBootstrapData).mockRejectedValueOnce(new Error('初始化接口请求失败：500'))
 
@@ -310,6 +347,7 @@ describe('useWorkflowActions', () => {
     expect(state.protectionZoneTree).toEqual([])
     expect(state.visibleProtectionZones).toEqual([])
     expect(state.loadedProtectionZones).toEqual([])
+    expect(state.protectionZonePanelOpen).toBe(false)
   })
 
   it('preserves bootstrap state when closing the modal', async () => {

@@ -506,7 +506,7 @@ describe('CesiumViewer camera rules', () => {
     await flushPromises()
 
     expect(flyToBoundingSphereMock).toHaveBeenCalledTimes(0)
-    expect(flyToMock).toHaveBeenCalledTimes(0)
+    expect(flyToMock).toHaveBeenCalledTimes(1)
 
     await wrapper.setProps({
       initialCameraTarget: createBootstrapTarget(),
@@ -515,7 +515,7 @@ describe('CesiumViewer camera rules', () => {
     await flushPromises()
 
     expect(flyToBoundingSphereMock).toHaveBeenCalledTimes(0)
-    expect(flyToMock).toHaveBeenCalledTimes(1)
+    expect(flyToMock).toHaveBeenCalledTimes(2)
 
     await wrapper.setProps({
       initialCameraTarget: createBootstrapTarget(),
@@ -523,7 +523,7 @@ describe('CesiumViewer camera rules', () => {
 
     await flushPromises()
 
-    expect(flyToMock).toHaveBeenCalledTimes(1)
+    expect(flyToMock).toHaveBeenCalledTimes(2)
 
     wrapper.unmount()
   })
