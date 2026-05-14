@@ -6,6 +6,7 @@ const emit = defineEmits<{
   openAnalysis: [mode: ObstacleAnalysisMode]
   openDataManagement: []
   reset: []
+  topDown: []
 }>()
 
 // 根据工具项类型派发打开分析或地图复位事件。
@@ -17,6 +18,11 @@ function handleClick(item: ToolbarItem) {
 
   if (item.action === 'open-data-management') {
     emit('openDataManagement')
+    return
+  }
+
+  if (item.action === 'top-down-view') {
+    emit('topDown')
     return
   }
 

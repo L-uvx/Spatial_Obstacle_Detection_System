@@ -11,7 +11,7 @@ import type {
   RenderedObstacle,
   RenderedStation,
 } from '../../types/tool'
-import { buildCameraFlyToOptions, getInitialCameraKey, resolveResetCameraTarget } from './camera'
+import { buildCameraFlyToOptions, buildTopDownView, getInitialCameraKey, resolveResetCameraTarget } from './camera'
 
 const props = defineProps<{
   resetTick: number
@@ -24,6 +24,7 @@ const props = defineProps<{
   flyToTargetPayload: InitialCameraTarget | null
   obstacleRebuildTick: number
   selectedAirportId: string
+  topDownTick?: number
 }>()
 
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -279,6 +280,19 @@ watch(
   () => props.obstacleRebuildTick,
   () => {
     rebuildObstacleLayer(viewerRef.value, props.obstacles)
+  },
+)
+
+watch(
+  () => props.topDownTick,
+  () => {
+    if (!viewerRef.value) {
+      return
+    }
+
+    const position = viewerRef.value.camera.positionCartographic
+
+    flyToTarget(buildTopDownView(position))
   },
 )
 

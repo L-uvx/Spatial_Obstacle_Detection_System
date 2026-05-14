@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as Cesium from 'cesium'
 import CesiumViewer from './CesiumViewer.vue'
 import { rebuildAnalysisLayer, applyAnalysisVisibility } from '../../map/layers/AnalysisLayer'
-import { buildCameraFlyToOptions, getInitialCameraKey, resolveResetCameraTarget } from './camera'
+import { buildCameraFlyToOptions, buildTopDownView, getInitialCameraKey, resolveResetCameraTarget } from './camera'
 import { getObstacleFlyToOptions, type ObstacleLayerSyncResult } from '../../map/layers/ObstacleLayer'
 import { syncStationLayer } from '../../map/layers/StationLayer'
 import type { InitialCameraTarget, PolygonObstacleAnalysisState, RenderedObstacle, RenderedStation } from '../../types/tool'
@@ -36,6 +36,9 @@ vi.mock('cesium', async () => {
           camera: {
             flyTo: flyToMock,
             flyToBoundingSphere: flyToBoundingSphereMock,
+            get positionCartographic() {
+              return Cesium.Cartographic.fromDegrees(114.21, 30.77, 5000)
+            },
           },
           imageryLayers: {
             addImageryProvider: addImageryProviderMock,
@@ -682,6 +685,44 @@ describe('CesiumViewer camera rules', () => {
 
     expect(flyToMock).toHaveBeenCalledTimes(1)
     expect(flyToMock).toHaveBeenCalledWith(buildCameraFlyToOptions(resolveResetCameraTarget(null)))
+
+    wrapper.unmount()
+  })
+
+  it('flies to top-down view from current position when topDownTick changes', async () => {
+    syncObstacleLayerMock.mockReturnValue(createSyncResult())
+
+    const wrapper = mount(CesiumViewer, {
+      props: {
+        resetTick: 0,
+        obstacles: [],
+        visibleStations: [],
+        initialCameraTarget: null,
+        loadedProtectionZones: [],
+        visibleProtectionZones: [],
+        flyToTargetTick: 0,
+        flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
+        topDownTick: 0,
+      },
+    })
+
+    await flushPromises()
+
+    flyToMock.mockClear()
+
+    await wrapper.setProps({
+      topDownTick: 1,
+    })
+
+    await flushPromises()
+
+    const expectedPosition = Cesium.Cartographic.fromDegrees(114.21, 30.77, 5000)
+    const target = buildTopDownView(expectedPosition)
+
+    expect(flyToMock).toHaveBeenCalledTimes(1)
+    expect(flyToMock).toHaveBeenCalledWith(buildCameraFlyToOptions(target))
 
     wrapper.unmount()
   })

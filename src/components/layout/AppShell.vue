@@ -19,6 +19,7 @@ const props = defineProps<{
   analysisState: PolygonObstacleAnalysisState
   dataManagementState: DataManagementState
   resetTick: number
+  topDownTick?: number
   renderedObstacles: RenderedObstacle[]
   initialCameraTarget: InitialCameraTarget | null
 }>()
@@ -28,6 +29,7 @@ const emit = defineEmits<{
   openDataManagement: []
   switchDataManagementTab: [tab: DataManagementState['activeTab']]
   reset: []
+  topDown: []
   closeAnalysis: []
   closeDataManagement: []
   setAirportKeyword: [keyword: string]
@@ -160,6 +162,7 @@ function handleSelectAirport(event: Event) {
       @open-analysis="emit('openAnalysis', $event)"
       @open-data-management="emit('openDataManagement')"
       @reset="emit('reset')"
+      @top-down="emit('topDown')"
     />
     <div class="app-shell__top-right-controls">
       <div class="app-shell__station-selector">
@@ -278,6 +281,7 @@ function handleSelectAirport(event: Event) {
         :fly-to-target-payload="analysisState.flyToTargetPayload"
         :selected-airport-id="analysisState.selectedAirportId"
         :obstacle-rebuild-tick="analysisState.obstacleRebuildTick"
+        :top-down-tick="topDownTick"
         class="app-shell__map"
       />
       <SidePanel

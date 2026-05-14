@@ -13,4 +13,13 @@ describe('TopToolbar', () => {
     expect(wrapper.emitted('openDataManagement')).toEqual([[]])
     expect(wrapper.emitted('openAnalysis')).toBeUndefined()
   })
+
+  it('emits topDown when clicking the top-down button', async () => {
+    const wrapper = mount(TopToolbar)
+
+    await wrapper.get('[data-toolbar-key="top-down"]').trigger('click')
+
+    expect(wrapper.emitted('topDown')).toEqual([[]])
+    expect(wrapper.emitted('openAnalysis')).toBeUndefined()
+  })
 })

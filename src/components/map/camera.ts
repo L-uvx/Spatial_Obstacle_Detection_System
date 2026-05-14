@@ -115,6 +115,16 @@ export function resolveResetCameraTarget(initialCameraTarget: InitialCameraTarge
   )
 }
 
+export function buildTopDownView(position: Cesium.Cartographic): InitialCameraTarget {
+  return {
+    longitude: Cesium.Math.toDegrees(position.longitude),
+    latitude: Cesium.Math.toDegrees(position.latitude),
+    height: 10000,
+    heading: 0,
+    pitch: -90,
+  }
+}
+
 export function computeMultiPolygonFlightTarget(
   coordinates: MultiPolygonCoordinates,
 ): { target: InitialCameraTarget; area: number } | null {

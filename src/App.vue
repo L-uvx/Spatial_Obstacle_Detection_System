@@ -8,6 +8,7 @@ import type { AirportFormValue } from './composables/useDataManagement'
 import type { AirportListItem, RunwayListItem, RunwayPayload, StationListItem, StationPayload } from './types/dataManagement'
 
 const resetTick = ref(0)
+const topDownTick = ref(0)
 const {
   state,
   bootstrap,
@@ -92,6 +93,10 @@ function handleOpenAnalysis(mode: ObstacleAnalysisMode) {
 // 递增复位计数，通知地图执行一次复位飞行。
 function handleReset() {
   resetTick.value += 1
+}
+
+function handleTopDown() {
+  topDownTick.value += 1
 }
 
 // 关闭单入口分析弹窗。
@@ -365,6 +370,7 @@ function handleFlyToProtectionZone(zone: ProtectionZoneNode) {
     :analysis-state="state"
     :data-management-state="dataManagementState"
     :reset-tick="resetTick"
+    :top-down-tick="topDownTick"
     :rendered-obstacles="state.renderedObstacles"
     :initial-camera-target="state.initialCameraTarget"
     @open-analysis="handleOpenAnalysis"
@@ -411,6 +417,7 @@ function handleFlyToProtectionZone(zone: ProtectionZoneNode) {
     @confirm-airport-delete="handleConfirmAirportDelete"
     @import-airports="handleImportAirports"
     @reset="handleReset"
+    @top-down="handleTopDown"
     @close-analysis="handleCloseAnalysis"
     @close-data-management="handleCloseDataManagement"
     @open-station-panel="handleOpenStationPanel"
