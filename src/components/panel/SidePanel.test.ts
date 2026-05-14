@@ -81,6 +81,7 @@ function createState(overrides: Partial<PolygonObstacleAnalysisState> = {}): Pol
     visibleProtectionZones: [],
     flyToTargetTick: 0,
     flyToTargetPayload: null,
+    obstacleRebuildTick: 0,
     ...overrides,
   }
 }

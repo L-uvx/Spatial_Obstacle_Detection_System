@@ -276,6 +276,8 @@ function handleSelectAirport(event: Event) {
         :visible-protection-zones="analysisState.visibleProtectionZones"
         :fly-to-target-tick="analysisState.flyToTargetTick"
         :fly-to-target-payload="analysisState.flyToTargetPayload"
+        :selected-airport-id="analysisState.selectedAirportId"
+        :obstacle-rebuild-tick="analysisState.obstacleRebuildTick"
         class="app-shell__map"
       />
       <SidePanel

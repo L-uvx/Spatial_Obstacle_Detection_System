@@ -90,6 +90,7 @@ function createImportFormState(): PolygonObstacleAnalysisState {
     visibleProtectionZones: [createVisibleProtectionZoneRegion()],
     flyToTargetTick: 0,
     flyToTargetPayload: null,
+    obstacleRebuildTick: 0,
   }
 }
 

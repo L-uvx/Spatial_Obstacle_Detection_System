@@ -10,14 +10,17 @@ import { getObstacleFlyToOptions, type ObstacleLayerSyncResult } from '../../map
 import { syncStationLayer } from '../../map/layers/StationLayer'
 import type { InitialCameraTarget, PolygonObstacleAnalysisState, RenderedObstacle, RenderedStation } from '../../types/tool'
 
-const { syncObstacleLayerMock, rebuildAnalysisLayerMock, applyAnalysisVisibilityMock, syncStationLayerMock, flyToMock, flyToBoundingSphereMock, addImageryProviderMock, destroyMock } = vi.hoisted(() => ({
+const { syncObstacleLayerMock, rebuildObstacleLayerMock, rebuildAnalysisLayerMock, applyAnalysisVisibilityMock, syncStationLayerMock, flyToMock, flyToBoundingSphereMock, addImageryProviderMock, dataSourcesAddMock, dataSourcesRemoveMock, destroyMock } = vi.hoisted(() => ({
   syncObstacleLayerMock: vi.fn(),
+  rebuildObstacleLayerMock: vi.fn(),
   rebuildAnalysisLayerMock: vi.fn(),
   applyAnalysisVisibilityMock: vi.fn(),
   syncStationLayerMock: vi.fn(),
   flyToMock: vi.fn(),
   flyToBoundingSphereMock: vi.fn(),
   addImageryProviderMock: vi.fn(),
+  dataSourcesAddMock: vi.fn(),
+  dataSourcesRemoveMock: vi.fn(),
   destroyMock: vi.fn(),
 }))
 
@@ -36,6 +39,10 @@ vi.mock('cesium', async () => {
           },
           imageryLayers: {
             addImageryProvider: addImageryProviderMock,
+          },
+          dataSources: {
+            add: dataSourcesAddMock,
+            remove: dataSourcesRemoveMock,
           },
           scene: {
             globe: {
@@ -58,6 +65,7 @@ vi.mock('../../map/layers/ObstacleLayer', async () => {
   return {
     ...actual,
     syncObstacleLayer: syncObstacleLayerMock,
+    rebuildObstacleLayer: rebuildObstacleLayerMock,
   }
 })
 
@@ -339,12 +347,15 @@ describe('getObstacleFlyToOptions', () => {
 describe('CesiumViewer camera rules', () => {
   beforeEach(() => {
     syncObstacleLayerMock.mockReset()
+    rebuildObstacleLayerMock.mockReset()
     rebuildAnalysisLayerMock.mockReset()
     applyAnalysisVisibilityMock.mockReset()
     syncStationLayerMock.mockReset()
     flyToMock.mockReset()
     flyToBoundingSphereMock.mockReset()
     addImageryProviderMock.mockReset()
+    dataSourcesAddMock.mockReset()
+    dataSourcesRemoveMock.mockReset()
     destroyMock.mockReset()
     syncStationLayerMock.mockReturnValue({
       message: '台站已同步到地图图层。',
@@ -375,6 +386,8 @@ describe('CesiumViewer camera rules', () => {
         visibleProtectionZones: [zone],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
       },
     })
 
@@ -424,6 +437,8 @@ describe('CesiumViewer camera rules', () => {
         visibleProtectionZones: [zone],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
       },
     })
 
@@ -455,6 +470,8 @@ describe('CesiumViewer camera rules', () => {
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
       },
     })
 
@@ -496,6 +513,8 @@ describe('CesiumViewer camera rules', () => {
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
       },
     })
 
@@ -529,7 +548,6 @@ describe('CesiumViewer camera rules', () => {
     const offset = new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 1800)
 
     syncObstacleLayerMock
-      .mockReturnValueOnce(createSyncResult())
       .mockReturnValueOnce(
         createSyncResult({
           addedEntityIds: ['polygon-obstacle-import-1-0'],
@@ -548,6 +566,8 @@ describe('CesiumViewer camera rules', () => {
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
       },
     })
 
@@ -585,6 +605,8 @@ describe('CesiumViewer camera rules', () => {
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
       },
     })
 
@@ -617,6 +639,8 @@ describe('CesiumViewer camera rules', () => {
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
       },
     })
 
@@ -649,6 +673,8 @@ describe('CesiumViewer camera rules', () => {
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
       },
     })
 
@@ -665,7 +691,6 @@ describe('CesiumViewer camera rules', () => {
     const offset = new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 1800)
 
     syncObstacleLayerMock
-      .mockReturnValueOnce(createSyncResult())
       .mockReturnValueOnce(
         createSyncResult({
           addedEntityIds: ['polygon-obstacle-import-1-0'],
@@ -684,6 +709,8 @@ describe('CesiumViewer camera rules', () => {
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
       },
     })
 
@@ -734,6 +761,8 @@ describe('CesiumViewer camera rules', () => {
         visibleProtectionZones: [initialZone],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
       },
     })
 
@@ -780,6 +809,8 @@ describe('CesiumViewer camera rules', () => {
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
       },
     })
 
@@ -788,6 +819,7 @@ describe('CesiumViewer camera rules', () => {
     expect(syncStationLayer).toHaveBeenCalledWith(
       expect.objectContaining({ camera: expect.anything() }),
       [createStation('station-1')],
+      '',
     )
 
     await wrapper.setProps({
@@ -821,6 +853,7 @@ describe('CesiumViewer camera rules', () => {
           altitude: 600,
         }),
       ],
+      '',
     )
     expect(flyToMock).toHaveBeenCalledTimes(2)
 
@@ -840,6 +873,8 @@ describe('CesiumViewer camera rules', () => {
         visibleProtectionZones: [],
         flyToTargetTick: 0,
         flyToTargetPayload: null,
+        obstacleRebuildTick: 0,
+        selectedAirportId: '',
       },
     })
 

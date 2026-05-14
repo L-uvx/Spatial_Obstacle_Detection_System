@@ -3,28 +3,22 @@ import type { RenderedStation } from '../../types/tool'
 
 const ENTITY_ID_PREFIX = 'station-layer'
 
+const airportEntityIds = new Map<string, Set<string>>()
+
 export interface StationLayerSyncResult {
   message: string
   addedEntityIds: string[]
   removedEntityIds: string[]
 }
 
-// 为台站实体生成稳定 id。
 function createEntityId(stationId: string) {
   return `${ENTITY_ID_PREFIX}-${stationId}`
 }
 
-// 收集本轮期望保留的台站实体 id 集合。
-function getStationEntityIds(stations: RenderedStation[]) {
-  return new Set(stations.map((station) => createEntityId(station.id)))
-}
-
-// 判断实体是否属于台站图层。
 function isStationLayerEntity(entity: Cesium.Entity) {
   return typeof entity.id === 'string' && entity.id.startsWith(`${ENTITY_ID_PREFIX}-`)
 }
 
-// 构造挂载到台站实体上的业务属性。
 function createEntityProperties(station: RenderedStation) {
   return {
     stationId: station.id,
@@ -34,7 +28,6 @@ function createEntityProperties(station: RenderedStation) {
   }
 }
 
-// 构造台站点位的统一样式。
 function createStationPointGraphics() {
   return {
     pixelSize: 8,
@@ -45,7 +38,6 @@ function createStationPointGraphics() {
   }
 }
 
-// 构造台站名称标签的统一样式。
 function createStationLabelGraphics(station: RenderedStation) {
   return {
     text: station.name,
@@ -60,7 +52,6 @@ function createStationLabelGraphics(station: RenderedStation) {
   }
 }
 
-// 更新台站实体的地理位置。
 function setEntityPosition(entity: Cesium.Entity, station: RenderedStation) {
   ;(entity as unknown as { position: Cesium.Cartesian3 }).position = Cesium.Cartesian3.fromDegrees(
     station.longitude,
@@ -69,7 +60,6 @@ function setEntityPosition(entity: Cesium.Entity, station: RenderedStation) {
   )
 }
 
-// 复用统一样式和属性更新已有台站实体。
 function updateStationEntity(entity: Cesium.Entity, station: RenderedStation) {
   ;(entity as unknown as { name: string }).name = station.name
   setEntityPosition(entity, station)
@@ -81,26 +71,10 @@ function updateStationEntity(entity: Cesium.Entity, station: RenderedStation) {
     createStationLabelGraphics(station)
 }
 
-// 从当前实体集合中找出已经不再可见的旧台站实体。
-function collectStaleStationEntities(
-  entities: Cesium.Entity[],
-  expectedEntityIds: Set<string>,
-) {
-  return entities.filter((entity) => {
-    if (!isStationLayerEntity(entity)) {
-      return false
-    }
-
-    const entityId = typeof entity.id === 'string' ? entity.id : null
-
-    return Boolean(entityId && !expectedEntityIds.has(entityId))
-  })
-}
-
-// 将当前机场的台站同步到地图，并清理过期实体。
 export function syncStationLayer(
   viewer: Cesium.Viewer | null | undefined,
   stations: RenderedStation[] = [],
+  airportId: string,
 ): StationLayerSyncResult {
   if (!viewer) {
     return {
@@ -110,18 +84,14 @@ export function syncStationLayer(
     }
   }
 
-  const expectedEntityIds = getStationEntityIds(stations)
-  const addedEntityIds: string[] = []
-  const removedEntityIds: string[] = []
-  const staleEntities = collectStaleStationEntities([...viewer.entities.values], expectedEntityIds)
-
-  for (const entity of staleEntities) {
-    const entityId = entity.id
-    viewer.entities.remove(entity)
-    if (typeof entityId === 'string') {
-      removedEntityIds.push(entityId)
-    }
+  let trackedIds = airportEntityIds.get(airportId)
+  if (!trackedIds) {
+    trackedIds = new Set<string>()
+    airportEntityIds.set(airportId, trackedIds)
   }
+
+  const currentStationEntityIds = new Set(stations.map((s) => createEntityId(s.id)))
+  const addedEntityIds: string[] = []
 
   for (const station of stations) {
     const entityId = createEntityId(station.id)
@@ -129,27 +99,53 @@ export function syncStationLayer(
 
     if (existingEntity) {
       updateStationEntity(existingEntity, station)
-      continue
+      ;(existingEntity as unknown as { show: boolean }).show = true
+    } else {
+      viewer.entities.add({
+        id: entityId,
+        name: station.name,
+        show: true,
+        position: Cesium.Cartesian3.fromDegrees(station.longitude, station.latitude, station.altitude),
+        properties: createEntityProperties(station),
+        point: createStationPointGraphics(),
+        label: createStationLabelGraphics(station),
+      })
+
+      addedEntityIds.push(entityId)
     }
 
-    viewer.entities.add({
-      id: entityId,
-      name: station.name,
-      position: Cesium.Cartesian3.fromDegrees(station.longitude, station.latitude, station.altitude),
-      properties: createEntityProperties(station),
-      point: createStationPointGraphics(),
-      label: createStationLabelGraphics(station),
-    })
+    trackedIds.add(entityId)
+  }
 
-    addedEntityIds.push(entityId)
+  for (const entityId of trackedIds) {
+    if (!currentStationEntityIds.has(entityId)) {
+      trackedIds.delete(entityId)
+    }
+  }
+
+  for (const entity of viewer.entities.values) {
+    if (!isStationLayerEntity(entity)) continue
+    const entityId = entity.id as string
+
+    const rawAirportId = (entity as unknown as { properties?: { airportId?: unknown } }).properties?.airportId
+    const entityAirportId: unknown =
+      rawAirportId != null && typeof (rawAirportId as { getValue?: () => unknown }).getValue === 'function'
+        ? (rawAirportId as { getValue: () => unknown }).getValue()
+        : rawAirportId
+
+    if (entityAirportId !== airportId) {
+      ;(entity as unknown as { show: boolean }).show = false
+    } else if (!currentStationEntityIds.has(entityId)) {
+      ;(entity as unknown as { show: boolean }).show = false
+    }
   }
 
   return {
     message:
-      addedEntityIds.length > 0 || removedEntityIds.length > 0
+      addedEntityIds.length > 0
         ? '台站已同步到地图图层。'
         : '台站图层无增量变化。',
     addedEntityIds,
-    removedEntityIds,
+    removedEntityIds: [],
   }
 }

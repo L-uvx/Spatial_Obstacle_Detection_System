@@ -7,9 +7,16 @@ import type {
   RenderedObstacle,
 } from '../../types/tool'
 
+const OBSTACLE_DATASOURCE_NAME = 'obstacles'
 const POLYGON_ENTITY_ID_PREFIX = 'polygon-obstacle'
 const POINT_ENTITY_ID_PREFIX = 'obstacle'
 const OBSTACLE_LABEL_EYE_OFFSET = new Cesium.Cartesian3(0, 0, -30)
+
+const dataSourceByViewer = new WeakMap<object, Cesium.CustomDataSource>()
+
+interface CreateObstacleEntitiesOptions {
+  showLabel: boolean
+}
 
 export interface ObstacleLayerSyncResult {
   message: string
@@ -138,22 +145,23 @@ function createBoundingSphere(obstacles: RenderedObstacle[]) {
   return Cesium.BoundingSphere.fromPoints(points)
 }
 
-// 将障碍物增量同步到 Viewer，并返回新增结果摘要。
-export function syncObstacleLayer(
-  viewer: Cesium.Viewer | null | undefined,
-  obstacles: RenderedObstacle[] = [],
-  options: SyncObstacleLayerOptions = {},
-): ObstacleLayerSyncResult {
-  if (!viewer || obstacles.length === 0) {
-    return {
-      message: '未返回可渲染的障碍物。',
-      addedEntityIds: [],
-    }
+function getOrCreateDataSource(viewer: Cesium.Viewer): Cesium.CustomDataSource {
+  let ds = dataSourceByViewer.get(viewer)
+  if (!ds) {
+    ds = new Cesium.CustomDataSource(OBSTACLE_DATASOURCE_NAME)
+    viewer.dataSources.add(ds)
+    dataSourceByViewer.set(viewer, ds)
   }
+  return ds
+}
 
+function createObstacleEntities(
+  ds: Cesium.CustomDataSource,
+  obstacles: RenderedObstacle[],
+  options: CreateObstacleEntitiesOptions,
+) {
   const addedObstacles: RenderedObstacle[] = []
   const addedEntityIds: string[] = []
-  const flyToNewlyAdded = options.flyToNewlyAdded ?? true
 
   for (const obstacle of obstacles) {
     let obstacleWasAdded = false
@@ -161,8 +169,8 @@ export function syncObstacleLayer(
     if (obstacle.geometry.type === 'Point') {
       const entityId = createPointEntityId(obstacle.id)
 
-      if (!viewer.entities.getById(entityId)) {
-        viewer.entities.add({
+      if (!ds.entities.getById(entityId)) {
+        ds.entities.add({
           id: entityId,
           name: obstacle.name,
           position: createPointCartesian(obstacle.geometry.coordinates, obstacle.topElevation),
@@ -183,25 +191,29 @@ export function syncObstacleLayer(
         obstacleWasAdded = true
       }
 
-      const labelEntityId = createLabelEntityId(obstacle.id, 'Point')
+      if (options.showLabel) {
+        const labelEntityId = createLabelEntityId(obstacle.id, 'Point')
 
-      if (!viewer.entities.getById(labelEntityId)) {
-        viewer.entities.add({
-          id: labelEntityId,
-          name: obstacle.name,
-          position: createPointCartesian(obstacle.geometry.coordinates, obstacle.topElevation),
-          label: createObstacleLabel(obstacle.name),
-        })
+        if (!ds.entities.getById(labelEntityId)) {
+          ds.entities.add({
+            id: labelEntityId,
+            name: obstacle.name,
+            position: createPointCartesian(obstacle.geometry.coordinates, obstacle.topElevation),
+            label: createObstacleLabel(obstacle.name),
+          })
+        }
       }
     } else if (obstacle.geometry.type === 'MultiPolygon') {
       obstacle.geometry.coordinates.forEach((polygon, polygonIndex) => {
         const entityId = createEntityId(obstacle.id, polygonIndex)
 
-        if (viewer.entities.getById(entityId)) {
+        if (ds.entities.getById(entityId)) {
           return
         }
 
-        viewer.entities.add({
+        const showLabel = options.showLabel && polygonIndex === 0
+
+        ds.entities.add({
           id: entityId,
           name: obstacle.name,
           properties: {
@@ -218,8 +230,8 @@ export function syncObstacleLayer(
             outline: true,
             outlineColor: Cesium.Color.fromCssColorString('#ffb26b'),
           },
-          label: polygonIndex === 0 ? createObstacleLabel(obstacle.name) : undefined,
-          position: polygonIndex === 0 ? createPolygonLabelPosition(obstacle) : undefined,
+          label: showLabel ? createObstacleLabel(obstacle.name) : undefined,
+          position: showLabel ? createPolygonLabelPosition(obstacle) : undefined,
         })
 
         obstacleWasAdded = true
@@ -234,6 +246,26 @@ export function syncObstacleLayer(
     }
   }
 
+  return { addedEntityIds, addedObstacles }
+}
+
+// 将障碍物增量同步到 Viewer，并返回新增结果摘要。
+export function syncObstacleLayer(
+  viewer: Cesium.Viewer | null | undefined,
+  obstacles: RenderedObstacle[] = [],
+  options: SyncObstacleLayerOptions = {},
+): ObstacleLayerSyncResult {
+  if (!viewer || obstacles.length === 0) {
+    return {
+      message: '未返回可渲染的障碍物。',
+      addedEntityIds: [],
+    }
+  }
+
+  const flyToNewlyAdded = options.flyToNewlyAdded ?? true
+  const ds = getOrCreateDataSource(viewer)
+  const { addedEntityIds, addedObstacles } = createObstacleEntities(ds, obstacles, { showLabel: true })
+
   const flyToBoundingSphere = flyToNewlyAdded ? createBoundingSphere(addedObstacles) : undefined
 
   return {
@@ -242,4 +274,29 @@ export function syncObstacleLayer(
     flyToBoundingSphere,
     flyToOffset: flyToBoundingSphere ? createFlyToOffset(flyToBoundingSphere) : undefined,
   }
+}
+
+export function rebuildObstacleLayer(
+  viewer: Cesium.Viewer | null | undefined,
+  obstacles: RenderedObstacle[] = [],
+): void {
+  if (!viewer) return
+
+  const oldDs = dataSourceByViewer.get(viewer)
+  if (oldDs) {
+    viewer.dataSources.remove(oldDs, true)
+    dataSourceByViewer.delete(viewer)
+  }
+
+  if (obstacles.length === 0) return
+
+  const ds = new Cesium.CustomDataSource(OBSTACLE_DATASOURCE_NAME)
+  viewer.dataSources.add(ds)
+  dataSourceByViewer.set(viewer, ds)
+
+  createObstacleEntities(ds, obstacles, { showLabel: false })
+}
+
+export function _resetDataSourceForTest(viewer: object): void {
+  dataSourceByViewer.delete(viewer)
 }

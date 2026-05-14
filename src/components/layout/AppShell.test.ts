@@ -170,6 +170,7 @@ loadedProtectionZones: [],
 visibleProtectionZones: [],
     flyToTargetTick: 0,
     flyToTargetPayload: null,
+    obstacleRebuildTick: 0,
     ...overrides,
   }
 }

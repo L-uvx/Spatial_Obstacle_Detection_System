@@ -131,6 +131,7 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
     visibleProtectionZones: [],
     flyToTargetTick: 0,
     flyToTargetPayload: null,
+    obstacleRebuildTick: 0,
   }
 }
 
@@ -164,7 +165,8 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       state.selectedAirportId = defaultAirport?.id ?? ''
       state.visibleStations = defaultAirport ? [...defaultAirport.stations] : []
       state.initialCameraTarget = defaultAirport ? buildAirportCameraTarget(defaultAirport) : null
-      state.renderedObstacles = appendRenderedObstacles(state.renderedObstacles, result.historicalObstacles)
+      state.renderedObstacles = result.historicalObstacles
+      state.obstacleRebuildTick += 1
 
       if (defaultAirport?.id) {
         await loadProtectionZones(defaultAirport.id)
@@ -213,6 +215,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     const preservedProtectionZoneTree = state.protectionZoneTree
     const preservedProtectionZonePanelOpen = state.protectionZonePanelOpen
     const preservedLoadedProtectionZones = state.loadedProtectionZones
+    const preservedObstacleRebuildTick = state.obstacleRebuildTick
     const nextVisibleProtectionZones = flattenVisibleProtectionZones(preservedProtectionZoneTree)
 
     Object.assign(state, {
@@ -228,6 +231,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       protectionZoneTree: preservedProtectionZoneTree,
       loadedProtectionZones: preservedLoadedProtectionZones,
       visibleProtectionZones: nextVisibleProtectionZones,
+      obstacleRebuildTick: preservedObstacleRebuildTick,
     })
   }
 

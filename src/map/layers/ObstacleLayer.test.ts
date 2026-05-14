@@ -1,8 +1,17 @@
+import * as Cesium from 'cesium'
 import { describe, expect, it, vi } from 'vitest'
-import { syncObstacleLayer } from './ObstacleLayer'
+import { rebuildObstacleLayer, syncObstacleLayer } from './ObstacleLayer'
 import type { RenderedObstacle } from '../../types/tool'
 
-function createObstacle(id: string, topElevation = 549.9): RenderedObstacle {
+vi.mock('cesium', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('cesium')>()
+  return {
+    ...actual,
+    CustomDataSource: vi.fn(),
+  }
+})
+
+function createMultiPolygonObstacle(id: string, topElevation = 549.9): RenderedObstacle {
   return {
     id,
     name: `障碍物-${id}`,
@@ -39,26 +48,78 @@ function createPointObstacle(id: string, topElevation = 549.9): RenderedObstacle
   }
 }
 
+interface MockEntity {
+  id: string
+  name?: string
+  point?: Record<string, unknown>
+  polygon?: Record<string, unknown>
+  position?: unknown
+  label?: Record<string, unknown>
+  properties?: Record<string, unknown>
+  show?: boolean
+}
+
+function createViewerWithDs() {
+  const entitiesById = new Map<string, MockEntity>()
+  const entitiesValues: MockEntity[] = []
+
+  const entitiesAdd = vi.fn((entityDef: MockEntity) => {
+    entitiesById.set(entityDef.id, entityDef)
+    entitiesValues.push(entityDef)
+    return entityDef
+  })
+
+  const entitiesGetById = vi.fn((id: string) => {
+    return entitiesById.get(id) ?? null
+  })
+
+  const mockDataSource = {
+    name: 'obstacles',
+    entities: {
+      add: entitiesAdd,
+      getById: entitiesGetById,
+      values: entitiesValues,
+    },
+  }
+
+  const ctorImpl = (_name: string) => {
+    entitiesById.clear()
+    entitiesValues.length = 0
+    return mockDataSource
+  }
+  vi.mocked(Cesium.CustomDataSource).mockImplementation(ctorImpl as never)
+
+  const dataSourceAdd = vi.fn((ds: unknown) => ds)
+  const dataSourceRemove = vi.fn()
+
+  return {
+    viewer: {
+      dataSources: {
+        add: dataSourceAdd,
+        remove: dataSourceRemove,
+      },
+    } as unknown as Cesium.Viewer,
+    add: entitiesAdd,
+    getById: entitiesGetById,
+    dataSourceRemove,
+    entitiesById,
+    mockDataSource,
+  }
+}
+
 describe('syncObstacleLayer', () => {
   it('adds only missing obstacle entities and returns a fly-to bounding sphere for new obstacles', () => {
-    const existingEntityIds = new Set<string>(['polygon-obstacle-history-1-0'])
-    const add = vi.fn((entity: { id: string; polygon: { perPositionHeight?: boolean } }) => {
-      existingEntityIds.add(entity.id)
-      return entity
+    const { viewer, add, getById } = createViewerWithDs()
+    getById.mockImplementation((id: string) => {
+      if (id === 'polygon-obstacle-history-1-0') return { id }
+      return null
     })
 
-    const viewer = {
-      entities: {
-        getById: vi.fn((id: string) => (existingEntityIds.has(id) ? { id } : undefined)),
-        add,
-      },
-    }
-
-    const result = syncObstacleLayer(viewer as never, [createObstacle('history-1'), createObstacle('import-1')])
+    const result = syncObstacleLayer(viewer as never, [createMultiPolygonObstacle('history-1'), createMultiPolygonObstacle('import-1')])
 
     expect(add).toHaveBeenCalledTimes(1)
     expect(add.mock.calls[0][0].id).toBe('polygon-obstacle-import-1-0')
-    expect(add.mock.calls[0][0].polygon.perPositionHeight).toBe(false)
+    expect(add.mock.calls[0][0].polygon!.perPositionHeight).toBe(false)
     expect(result.addedEntityIds).toEqual(['polygon-obstacle-import-1-0'])
     expect(result.flyToBoundingSphere).toBeDefined()
     expect(result.flyToOffset).toBeDefined()
@@ -68,16 +129,9 @@ describe('syncObstacleLayer', () => {
   })
 
   it('adds entities without fly-to output when newly added fly-to is disabled', () => {
-    const add = vi.fn((entity: { id: string; polygon: { perPositionHeight?: boolean } }) => entity)
+    const { viewer, add } = createViewerWithDs()
 
-    const viewer = {
-      entities: {
-        getById: vi.fn(() => undefined),
-        add,
-      },
-    }
-
-    const result = syncObstacleLayer(viewer as never, [createObstacle('import-2')], {
+    const result = syncObstacleLayer(viewer as never, [createMultiPolygonObstacle('import-2')], {
       flyToNewlyAdded: false,
     })
 
@@ -88,17 +142,13 @@ describe('syncObstacleLayer', () => {
   })
 
   it('returns no new entities when all obstacle polygons already exist', () => {
-    const existingEntityIds = new Set<string>(['polygon-obstacle-history-1-0'])
-    const add = vi.fn()
+    const { viewer, add, getById } = createViewerWithDs()
+    getById.mockImplementation((id: string) => {
+      if (id === 'polygon-obstacle-history-1-0') return { id }
+      return null
+    })
 
-    const viewer = {
-      entities: {
-        getById: vi.fn((id: string) => (existingEntityIds.has(id) ? { id } : undefined)),
-        add,
-      },
-    }
-
-    const result = syncObstacleLayer(viewer as never, [createObstacle('history-1')])
+    const result = syncObstacleLayer(viewer as never, [createMultiPolygonObstacle('history-1')])
 
     expect(add).not.toHaveBeenCalled()
     expect(result.addedEntityIds).toEqual([])
@@ -107,14 +157,7 @@ describe('syncObstacleLayer', () => {
   })
 
   it('renders point obstacles with a point graphic and name label', () => {
-    const add = vi.fn((entity: { id: string; point?: object; label?: { text: string } }) => entity)
-
-    const viewer = {
-      entities: {
-        getById: vi.fn(() => undefined),
-        add,
-      },
-    }
+    const { viewer, add } = createViewerWithDs()
 
     const result = syncObstacleLayer(viewer as never, [createPointObstacle('point-1')])
 
@@ -127,16 +170,9 @@ describe('syncObstacleLayer', () => {
   })
 
   it('renders multipolygon obstacles with a polygon and name label', () => {
-    const add = vi.fn((entity: { id: string; polygon?: object; label?: { text: string } }) => entity)
+    const { viewer, add } = createViewerWithDs()
 
-    const viewer = {
-      entities: {
-        getById: vi.fn(() => undefined),
-        add,
-      },
-    }
-
-    syncObstacleLayer(viewer as never, [createObstacle('import-3')])
+    syncObstacleLayer(viewer as never, [createMultiPolygonObstacle('import-3')])
 
     expect(add).toHaveBeenCalledTimes(1)
     expect(add.mock.calls[0][0].polygon).toBeTruthy()
@@ -144,13 +180,7 @@ describe('syncObstacleLayer', () => {
   })
 
   it('ignores unsupported obstacle geometry without throwing', () => {
-    const add = vi.fn()
-    const viewer = {
-      entities: {
-        getById: vi.fn(() => undefined),
-        add,
-      },
-    }
+    const { viewer, add } = createViewerWithDs()
 
     const result = syncObstacleLayer(viewer as never, [
       {
@@ -167,5 +197,77 @@ describe('syncObstacleLayer', () => {
 
     expect(add).not.toHaveBeenCalled()
     expect(result.addedEntityIds).toEqual([])
+  })
+
+  it('returns empty result for null viewer', () => {
+    const result = syncObstacleLayer(null, [createMultiPolygonObstacle('obs-1')])
+
+    expect(result.message).toContain('未返回可渲染')
+    expect(result.addedEntityIds).toEqual([])
+  })
+
+  it('returns empty result for empty obstacles array', () => {
+    const { viewer } = createViewerWithDs()
+
+    const result = syncObstacleLayer(viewer as never, [])
+
+    expect(result.message).toContain('未返回可渲染')
+    expect(result.addedEntityIds).toEqual([])
+  })
+})
+
+describe('rebuildObstacleLayer', () => {
+  it('creates DataSource with obstacles but no labels', () => {
+    const { viewer, add } = createViewerWithDs()
+
+    rebuildObstacleLayer(viewer as never, [createMultiPolygonObstacle('obs-1')])
+
+    expect(viewer.dataSources.add).toHaveBeenCalledTimes(1)
+    expect(add).toHaveBeenCalledTimes(1)
+    // No label when showLabel is false
+    expect(add.mock.calls[0][0].label).toBeUndefined()
+    expect(add.mock.calls[0][0].position).toBeUndefined()
+  })
+
+  it('creates Point obstacle entities without labels', () => {
+    const { viewer, add } = createViewerWithDs()
+
+    rebuildObstacleLayer(viewer as never, [createPointObstacle('point-1')])
+
+    // Point entity added but no separate label entity
+    expect(add).toHaveBeenCalledTimes(1)
+    expect(add.mock.calls[0][0].id).toBe('obstacle-point-1-point')
+    expect(add.mock.calls[0][0].point).toBeTruthy()
+    expect(add.mock.calls[0][0].label).toBeUndefined()
+  })
+
+  it('destroys old DataSource before creating new one', () => {
+    const { viewer, add } = createViewerWithDs()
+
+    rebuildObstacleLayer(viewer as never, [createMultiPolygonObstacle('obs-1')])
+    rebuildObstacleLayer(viewer as never, [createMultiPolygonObstacle('obs-2')])
+
+    expect(viewer.dataSources.remove).toHaveBeenCalledTimes(1)
+    expect(add).toHaveBeenCalledTimes(2)
+    expect(viewer.dataSources.add).toHaveBeenCalledTimes(2)
+  })
+
+  it('removes old DataSource and does not add new one for empty obstacles', () => {
+    const { viewer, add } = createViewerWithDs()
+
+    rebuildObstacleLayer(viewer as never, [createMultiPolygonObstacle('obs-1')])
+    rebuildObstacleLayer(viewer as never, [])
+
+    expect(viewer.dataSources.remove).toHaveBeenCalledTimes(1)
+    expect(add).toHaveBeenCalledTimes(1) // only from first call
+    expect(viewer.dataSources.add).toHaveBeenCalledTimes(1)
+  })
+
+  it('handles null viewer safely', () => {
+    expect(() => rebuildObstacleLayer(null as never, [createMultiPolygonObstacle('obs-1')])).not.toThrow()
+  })
+
+  it('handles undefined viewer safely', () => {
+    expect(() => rebuildObstacleLayer(undefined, [createMultiPolygonObstacle('obs-1')])).not.toThrow()
   })
 })

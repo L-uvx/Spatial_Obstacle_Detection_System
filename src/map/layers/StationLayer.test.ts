@@ -15,11 +15,25 @@ function createStation(id: string, overrides: Partial<RenderedStation> = {}): Re
   }
 }
 
+function createMockEntity(id: string, show: boolean, overrides: Record<string, unknown> = {}) {
+  return {
+    id,
+    show,
+    name: '',
+    position: {} as Record<string, unknown>,
+    properties: {} as Record<string, unknown>,
+    point: {} as Record<string, unknown>,
+    label: {} as Record<string, unknown>,
+    ...overrides,
+  }
+}
+
 describe('syncStationLayer', () => {
-  it('syncs current-airport stations as point and label entities', () => {
+  it('syncs current-airport stations as point and label entities with show=true', () => {
     const add = vi.fn(
       (entity: {
         id: string
+        show?: boolean
         point?: object
         label?: { text?: string; font?: string; outlineWidth?: number; pixelOffset?: object }
         position?: object
@@ -34,11 +48,11 @@ describe('syncStationLayer', () => {
       },
     }
 
-    const result = syncStationLayer(viewer as never, [createStation('station-1')])
+    const result = syncStationLayer(viewer as never, [createStation('station-1')], 'airport-1')
 
     expect(add).toHaveBeenCalledTimes(1)
     expect(add.mock.calls[0][0].id).toBe('station-layer-station-1')
-    expect(add.mock.calls[0][0].point).toBeDefined()
+    expect(add.mock.calls[0][0].show).toBe(true)
     expect(add.mock.calls[0][0].point).toMatchObject({
       pixelSize: 8,
     })
@@ -52,77 +66,113 @@ describe('syncStationLayer', () => {
     expect(add.mock.calls[0][0].position).toBeDefined()
     expect(result.addedEntityIds).toEqual(['station-layer-station-1'])
     expect(result.removedEntityIds).toEqual([])
+    expect(viewer.entities.remove).not.toHaveBeenCalled()
   })
 
-  it('removes stale station entities when switching airports', () => {
-    const staleEntity = {
-      id: 'station-layer-station-old',
+  it('sets show=false for stations belonging to other airports', () => {
+    const airport2Entity = createMockEntity('station-layer-station-old', true, {
       properties: {
-        stationId: {
-          getValue: () => 'station-old',
-        },
+        stationId: { getValue: () => 'station-old' },
+        airportId: { getValue: () => 'airport-2' },
       },
-    }
-    const nextStation = createStation('station-next', {
-      airportId: 'airport-2',
-      name: '下一机场台站',
-      longitude: 104.45,
-      latitude: 30.31,
-      altitude: 600,
     })
-    const add = vi.fn((entity: { id: string; label?: { text?: string } }) => entity)
+
+    const add = vi.fn((entity: { id: string; show?: boolean; label?: { text?: string } }) => entity)
     const remove = vi.fn()
 
     const viewer = {
       entities: {
-        values: [staleEntity],
+        values: [airport2Entity],
         add,
         remove,
       },
     }
 
-    const result = syncStationLayer(viewer as never, [nextStation])
+    const nextStation = createStation('station-next', {
+      airportId: 'airport-1',
+      name: '机场一台站',
+      longitude: 104.45,
+      latitude: 30.31,
+      altitude: 600,
+    })
 
-    expect(remove).toHaveBeenCalledTimes(1)
-    expect(remove).toHaveBeenCalledWith(staleEntity)
+    const result = syncStationLayer(viewer as never, [nextStation], 'airport-1')
+
+    expect(airport2Entity.show).toBe(false)
+    expect(remove).not.toHaveBeenCalled()
     expect(add).toHaveBeenCalledTimes(1)
     expect(add.mock.calls[0][0].id).toBe('station-layer-station-next')
-    expect(add.mock.calls[0][0].label?.text).toBe('下一机场台站')
-    expect(result.removedEntityIds).toEqual(['station-layer-station-old'])
+    expect(add.mock.calls[0][0].label?.text).toBe('机场一台站')
+    expect(add.mock.calls[0][0].show).toBe(true)
+    expect(result.removedEntityIds).toEqual([])
     expect(result.addedEntityIds).toEqual(['station-layer-station-next'])
   })
 
-  it('keeps existing station entities for the same airport selection', () => {
-    const existingEntity = {
-      id: 'station-layer-station-1',
+  it('sets show=true when switching back to a previously hidden airport', () => {
+    const hiddenEntity = createMockEntity('station-layer-station-1', false, {
       properties: {
-        stationId: {
-          getValue: () => 'station-1',
-        },
+        stationId: { getValue: () => 'station-1' },
+        airportId: { getValue: () => 'airport-1' },
       },
-    }
+    })
+
     const add = vi.fn()
     const remove = vi.fn()
 
     const viewer = {
       entities: {
-        values: [existingEntity],
+        values: [hiddenEntity],
         add,
         remove,
       },
     }
 
-    const result = syncStationLayer(viewer as never, [createStation('station-1')])
+    const result = syncStationLayer(viewer as never, [createStation('station-1')], 'airport-1')
 
-    expect(add).not.toHaveBeenCalled()
+    expect(hiddenEntity.show).toBe(true)
     expect(remove).not.toHaveBeenCalled()
+    expect(add).not.toHaveBeenCalled()
     expect(result.addedEntityIds).toEqual([])
     expect(result.removedEntityIds).toEqual([])
   })
 
-  it('updates existing same-id station entities when station data changes', () => {
-    const existingEntity = {
-      id: 'station-layer-station-1',
+  it('sets show=false for station entities not in current station list', () => {
+    const keptEntity = createMockEntity('station-layer-station-1', true, {
+      properties: {
+        stationId: { getValue: () => 'station-1' },
+        airportId: { getValue: () => 'airport-1' },
+      },
+    })
+    const removedEntity = createMockEntity('station-layer-station-2', true, {
+      properties: {
+        stationId: { getValue: () => 'station-2' },
+        airportId: { getValue: () => 'airport-1' },
+      },
+    })
+
+    const add = vi.fn()
+    const remove = vi.fn()
+
+    const viewer = {
+      entities: {
+        values: [keptEntity, removedEntity],
+        add,
+        remove,
+      },
+    }
+
+    const result = syncStationLayer(viewer as never, [createStation('station-1')], 'airport-1')
+
+    expect(keptEntity.show).toBe(true)
+    expect(removedEntity.show).toBe(false)
+    expect(remove).not.toHaveBeenCalled()
+    expect(add).not.toHaveBeenCalled()
+    expect(result.addedEntityIds).toEqual([])
+    expect(result.removedEntityIds).toEqual([])
+  })
+
+  it('updates existing station entity when station data changes', () => {
+    const existingEntity = createMockEntity('station-layer-station-1', true, {
       name: '旧台站',
       position: { kind: 'old-position' },
       point: {
@@ -130,9 +180,8 @@ describe('syncStationLayer', () => {
         outlineWidth: 1,
       },
       properties: {
-        stationId: {
-          getValue: () => 'station-1',
-        },
+        stationId: { getValue: () => 'station-1' },
+        airportId: { getValue: () => 'airport-1' },
         altitude: 491.1,
       },
       label: {
@@ -141,7 +190,8 @@ describe('syncStationLayer', () => {
         outlineWidth: 2,
         pixelOffset: { kind: 'old-offset' },
       },
-    }
+    })
+
     const add = vi.fn()
     const remove = vi.fn()
 
@@ -163,10 +213,12 @@ describe('syncStationLayer', () => {
           altitude: 600,
         }),
       ],
+      'airport-1',
     )
 
     expect(add).not.toHaveBeenCalled()
     expect(remove).not.toHaveBeenCalled()
+    expect(existingEntity.show).toBe(true)
     expect(existingEntity.name).toBe('更新后台站')
     expect(existingEntity.label.text).toBe('更新后台站')
     expect(existingEntity.point.pixelSize).toBe(8)
@@ -177,89 +229,5 @@ describe('syncStationLayer', () => {
     expect(existingEntity.properties.altitude).toBe(600)
     expect(result.addedEntityIds).toEqual([])
     expect(result.removedEntityIds).toEqual([])
-  })
-
-  it('removes stale station entities by layer id even when stationId property is missing', () => {
-    const staleEntity = {
-      id: 'station-layer-station-old',
-      properties: {},
-    }
-    const remove = vi.fn()
-
-    const viewer = {
-      entities: {
-        values: [staleEntity],
-        add: vi.fn(),
-        remove,
-      },
-    }
-
-    const result = syncStationLayer(viewer as never, [])
-
-    expect(remove).toHaveBeenCalledTimes(1)
-    expect(remove).toHaveBeenCalledWith(staleEntity)
-    expect(result.removedEntityIds).toEqual(['station-layer-station-old'])
-  })
-
-  it('removes all stale station entities when switching away from an airport with multiple stations', () => {
-    const staleEntityA = {
-      id: 'station-layer-station-old-a',
-      properties: {
-        stationId: {
-          getValue: () => 'station-old-a',
-        },
-      },
-    }
-    const staleEntityB = {
-      id: 'station-layer-station-old-b',
-      properties: {
-        stationId: {
-          getValue: () => 'station-old-b',
-        },
-      },
-    }
-    const retainedEntity = {
-      id: 'not-station-layer-entity',
-    }
-    const entityValues = [staleEntityA, staleEntityB, retainedEntity]
-    const add = vi.fn((entity: { id: string }) => entity)
-    const remove = vi.fn((entity: (typeof entityValues)[number]) => {
-      const index = entityValues.indexOf(entity)
-
-      if (index >= 0) {
-        entityValues.splice(index, 1)
-      }
-    })
-
-    const viewer = {
-      entities: {
-        values: entityValues,
-        add,
-        remove,
-      },
-    }
-
-    const result = syncStationLayer(
-      viewer as never,
-      [
-        createStation('station-next', {
-          airportId: 'airport-2',
-          name: '下一机场台站',
-          longitude: 104.45,
-          latitude: 30.31,
-          altitude: 600,
-        }),
-      ],
-    )
-
-    expect(remove).toHaveBeenCalledTimes(2)
-    expect(remove).toHaveBeenCalledWith(staleEntityA)
-    expect(remove).toHaveBeenCalledWith(staleEntityB)
-    expect(add).toHaveBeenCalledTimes(1)
-    expect(result.removedEntityIds).toEqual([
-      'station-layer-station-old-a',
-      'station-layer-station-old-b',
-    ])
-    expect(result.addedEntityIds).toEqual(['station-layer-station-next'])
   })
 })

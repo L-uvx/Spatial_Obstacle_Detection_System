@@ -3,7 +3,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as Cesium from 'cesium'
 import { mapConfig } from '../../config/map'
 import { rebuildAnalysisLayer, applyAnalysisVisibility } from '../../map/layers/AnalysisLayer'
-import { getObstacleFlyToOptions, syncObstacleLayer } from '../../map/layers/ObstacleLayer'
+import { getObstacleFlyToOptions, syncObstacleLayer, rebuildObstacleLayer } from '../../map/layers/ObstacleLayer'
 import { syncStationLayer } from '../../map/layers/StationLayer'
 import type {
   InitialCameraTarget,
@@ -22,6 +22,8 @@ const props = defineProps<{
   loadedProtectionZones: PolygonObstacleAnalysisState['visibleProtectionZones']
   flyToTargetTick: number
   flyToTargetPayload: InitialCameraTarget | null
+  obstacleRebuildTick: number
+  selectedAirportId: string
 }>()
 
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -67,8 +69,8 @@ function applyZoneVisibility(zones: PolygonObstacleAnalysisState['visibleProtect
 }
 
 // 同步当前机场的台站点位与标签。
-function syncStations(stations: RenderedStation[]) {
-  syncStationLayer(viewerRef.value, stations)
+function syncStations(stations: RenderedStation[], airportId: string) {
+  syncStationLayer(viewerRef.value, stations, airportId)
 }
 
 // 生成天地图影像或注记图层的模板地址。
@@ -185,8 +187,11 @@ async function initViewer() {
     viewer.imageryLayers.addImageryProvider(annotationProvider)
     viewerRef.value = viewer
     errorMessage.value = ''
-    syncObstacles(props.obstacles, false)
-    syncStations(props.visibleStations)
+    rebuildObstacleLayer(viewerRef.value, props.obstacles)
+    if (props.initialCameraTarget === null && props.obstacles.length > 0) {
+      hasSyncedInitialObstaclesRef.value = true
+    }
+    syncStations(props.visibleStations, props.selectedAirportId)
     rebuildAnalysisZones(props.loadedProtectionZones)
     applyZoneVisibility(props.visibleProtectionZones)
 
@@ -223,9 +228,9 @@ watch(
 )
 
 watch(
-  () => props.visibleStations,
-  (stations) => {
-    syncStations(stations)
+  () => [props.visibleStations, props.selectedAirportId] as const,
+  ([stations, airportId]) => {
+    syncStations(stations, airportId)
   },
   { deep: true },
 )
@@ -267,6 +272,13 @@ watch(
     if (props.flyToTargetPayload) {
       flyToTarget(props.flyToTargetPayload)
     }
+  },
+)
+
+watch(
+  () => props.obstacleRebuildTick,
+  () => {
+    rebuildObstacleLayer(viewerRef.value, props.obstacles)
   },
 )
 

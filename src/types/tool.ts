@@ -415,6 +415,7 @@ export interface PolygonObstacleAnalysisState {
   visibleProtectionZones: VisibleProtectionZoneRegion[]
   flyToTargetTick: number
   flyToTargetPayload: InitialCameraTarget | null
+  obstacleRebuildTick: number
 }
 
 export const toolbarItems: ToolbarItem[] = [
