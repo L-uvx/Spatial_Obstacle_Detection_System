@@ -199,7 +199,7 @@ vi.mock('../workflows/analyzeWorkflow', () => ({
   runAnalyzeWorkflow: vi.fn(async () => ({
     analysisTaskId: 'analysis-task-1',
     summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
-    message: 'analysis task created',
+    message: '分析任务已完成。',
     selectedTargets: [
       { id: '1', name: 'Airport Near', category: '机场' },
       { id: '2', name: 'Airport Far', category: '机场' },
@@ -956,7 +956,7 @@ describe('useWorkflowActions', () => {
         },
       },
     ])
-    expect(state.statusMessage).toBe('analysis task created')
+    expect(state.statusMessage).toBe('分析任务已完成。')
     // Protection zones are loaded during bootstrap, not analysis
     expect(state.protectionZonePanelOpen).toBe(true)
     expect(state.protectionZoneTree).toHaveLength(1)

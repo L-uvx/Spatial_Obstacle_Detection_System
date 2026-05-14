@@ -27,7 +27,7 @@ async function waitForAnalysisCompletion(taskId: string) {
     }
 
     if (statusResult.status === 'failed') {
-      throw new Error(statusResult.message || '分析任务失败，请检查后端处理结果。')
+      throw new Error('分析任务失败，请检查后端处理结果。')
     }
 
     await delay(1000)
@@ -42,13 +42,13 @@ export async function runAnalyzeWorkflow(input: {
   targetIds: string[]
 }): Promise<AnalyzeWorkflowResult> {
   const serviceResult = await createAnalysisTask(input)
-  const statusResult = await waitForAnalysisCompletion(serviceResult.analysisTaskId)
+  await waitForAnalysisCompletion(serviceResult.analysisTaskId)
   const result = await getAnalysisTaskResult(serviceResult.analysisTaskId)
 
   return {
     analysisTaskId: result.analysisTaskId,
     summary: result.summary,
-    message: statusResult.message,
+    message: '分析任务已完成。',
     selectedTargets: result.selectedTargets,
     obstacleCount: result.obstacleCount,
     ruleResults: result.ruleResults,

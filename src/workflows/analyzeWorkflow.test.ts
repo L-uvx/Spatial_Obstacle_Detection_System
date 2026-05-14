@@ -26,7 +26,7 @@ describe('runAnalyzeWorkflow', () => {
     vi.mocked(analysisService.getAnalysisTaskStatus).mockResolvedValueOnce({
       analysisTaskId: 'analysis-task-1',
       status: 'succeeded',
-      message: 'analysis task finished',
+      message: '分析任务已完成。',
       progressPercent: 100,
       importTaskId: 'import-batch-1',
       targetIds: [1, 2],
@@ -101,7 +101,7 @@ describe('runAnalyzeWorkflow', () => {
     expect(result).toEqual({
       analysisTaskId: 'analysis-task-1',
       summary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
-      message: 'analysis task finished',
+      message: '分析任务已完成。',
       selectedTargets: [
         { id: '1', name: 'Airport Near', category: '机场' },
         { id: '2', name: 'Airport Far', category: '机场' },
@@ -165,7 +165,7 @@ describe('runAnalyzeWorkflow', () => {
     vi.mocked(analysisService.getAnalysisTaskStatus).mockResolvedValueOnce({
       analysisTaskId: 'analysis-task-1',
       status: 'succeeded',
-      message: 'analysis task finished',
+      message: '分析任务已完成。',
       progressPercent: 100,
       importTaskId: 'import-batch-1',
       targetIds: [1],
@@ -228,7 +228,7 @@ describe('runAnalyzeWorkflow', () => {
       targetIds: ['1'],
     })
 
-    expect(result.message).toBe('analysis task finished')
+    expect(result.message).toBe('分析任务已完成。')
   })
 
   it('polls once before requesting the analysis result after success', async () => {
@@ -254,7 +254,7 @@ describe('runAnalyzeWorkflow', () => {
       .mockResolvedValueOnce({
         analysisTaskId: 'analysis-task-1',
         status: 'succeeded',
-        message: 'analysis task finished',
+        message: '分析任务已完成。',
         progressPercent: 100,
         importTaskId: 'import-batch-1',
         targetIds: [1, 2],
@@ -327,7 +327,7 @@ describe('runAnalyzeWorkflow', () => {
     expect(analysisService.getAnalysisTaskStatus).toHaveBeenCalledTimes(2)
     expect(analysisService.getAnalysisTaskResult).toHaveBeenCalledTimes(1)
     expect(analysisService.getAnalysisTaskResult).toHaveBeenCalledWith('analysis-task-1')
-    expect(result.message).toBe('analysis task finished')
+    expect(result.message).toBe('分析任务已完成。')
   })
 
   it('throws on terminal failed status without requesting the analysis result', async () => {
@@ -351,7 +351,7 @@ describe('runAnalyzeWorkflow', () => {
     await expect(runAnalyzeWorkflow({
       importTaskId: 'import-batch-1',
       targetIds: ['1', '2'],
-    })).rejects.toThrow('analysis task failed')
+    })).rejects.toThrow('分析任务失败，请检查后端处理结果。')
 
     expect(analysisService.getAnalysisTaskResult).not.toHaveBeenCalled()
   })
