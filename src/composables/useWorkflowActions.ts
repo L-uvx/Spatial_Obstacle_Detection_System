@@ -146,7 +146,11 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       state.protectionZoneTree = mergeProtectionZones([], zones)
       state.loadedProtectionZones = flattenAllProtectionZones(state.protectionZoneTree)
       state.visibleProtectionZones = flattenVisibleProtectionZones(state.protectionZoneTree)
-      state.protectionZonePanelOpen = state.protectionZoneTree.length > 0
+      const shouldOpen = state.protectionZoneTree.length > 0
+      if (shouldOpen) {
+        state.stationPanelOpen = false
+      }
+      state.protectionZonePanelOpen = shouldOpen
     } catch (error) {
       console.warn('加载机场保护区失败:', error)
     }
@@ -452,6 +456,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
 
   // 打开保护区侧边栏。
   function openProtectionZonePanel() {
+    state.stationPanelOpen = false
     state.protectionZonePanelOpen = true
   }
 
@@ -462,6 +467,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
 
   // 打开机场选择浮层。
   function openStationPanel() {
+    state.protectionZonePanelOpen = false
     state.stationPanelOpen = true
   }
 
@@ -488,5 +494,6 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
     toggleProtectionZoneStationVisibility,
     toggleProtectionZoneVisibility,
     flyToProtectionZone,
+    loadProtectionZones,
   }
 }

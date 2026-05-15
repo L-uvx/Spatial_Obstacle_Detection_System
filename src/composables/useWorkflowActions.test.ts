@@ -526,6 +526,54 @@ describe('useWorkflowActions', () => {
     expect(state.stationPanelOpen).toBe(false)
   })
 
+  it('openProtectionZonePanel closes station panel when opening', () => {
+    const { state, openStationPanel, openProtectionZonePanel } = useWorkflowActions()
+
+    openStationPanel()
+    expect(state.stationPanelOpen).toBe(true)
+
+    openProtectionZonePanel()
+    expect(state.stationPanelOpen).toBe(false)
+    expect(state.protectionZonePanelOpen).toBe(true)
+  })
+
+  it('openStationPanel closes protection zone panel when opening', () => {
+    const { state, openProtectionZonePanel, openStationPanel } = useWorkflowActions()
+
+    openProtectionZonePanel()
+    expect(state.protectionZonePanelOpen).toBe(true)
+
+    openStationPanel()
+    expect(state.protectionZonePanelOpen).toBe(false)
+    expect(state.stationPanelOpen).toBe(true)
+  })
+
+  it('loadProtectionZones closes station panel when auto-opening', async () => {
+    vi.mocked(getAirportProtectionZones).mockResolvedValueOnce(createProtectionZones())
+
+    const { state, openStationPanel, loadProtectionZones } = useWorkflowActions()
+
+    openStationPanel()
+    expect(state.stationPanelOpen).toBe(true)
+
+    await loadProtectionZones('airport-1')
+    expect(state.stationPanelOpen).toBe(false)
+    expect(state.protectionZonePanelOpen).toBe(true)
+  })
+
+  it('loadProtectionZones does NOT auto-open when zones are empty', async () => {
+    vi.mocked(getAirportProtectionZones).mockResolvedValueOnce([])
+
+    const { state, openStationPanel, loadProtectionZones } = useWorkflowActions()
+
+    openStationPanel()
+    expect(state.stationPanelOpen).toBe(true)
+
+    await loadProtectionZones('airport-1')
+    expect(state.stationPanelOpen).toBe(true)
+    expect(state.protectionZonePanelOpen).toBe(false)
+  })
+
   it('flies to the largest protection zone region instead of merging distant regions', () => {
     const { state, flyToProtectionZone } = useWorkflowActions()
 
