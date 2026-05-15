@@ -3,7 +3,6 @@ import { computed, reactive, ref, watch } from 'vue'
 import { pointObstacleTypeOptions, polygonObstacleTypeOptions } from '../../types/tool'
 import type { ImportFormValue, PolygonObstacleAnalysisState } from '../../types/tool'
 import ObstacleTypeSelect from '../common/ObstacleTypeSelect.vue'
-import { getMetricsEntries } from '../../utils/metricsLabels'
 
 const props = defineProps<{
   state: PolygonObstacleAnalysisState
@@ -31,34 +30,6 @@ const modalTitle = computed(() => (props.state.analysisMode === 'point' ? '点�
 const modalObstacleTypeOptions = computed(() =>
   props.state.analysisMode === 'point' ? pointObstacleTypeOptions : polygonObstacleTypeOptions,
 )
-
-const ruleResultGroups = computed(() => {
-  const groupMap = new Map<string, {
-    stationId: string
-    stationName: string
-    stationType: string
-    items: PolygonObstacleAnalysisState['analysisRuleResults']
-  }>()
-
-  for (const item of props.state.analysisRuleResults ?? []) {
-    const key = `${item.stationId}:${item.stationName}:${item.stationType}`
-    const existing = groupMap.get(key)
-
-    if (existing) {
-      existing.items.push(item)
-      continue
-    }
-
-    groupMap.set(key, {
-      stationId: item.stationId,
-      stationName: item.stationName,
-      stationType: item.stationType,
-      items: [item],
-    })
-  }
-
-  return [...groupMap.values()]
-})
 
 // 将导入表单恢复到初始状态，并清空原生文件输入框。
 function resetFormValue() {
@@ -232,56 +203,16 @@ watch(
         <div v-else-if="state.stage === 'analysis-result'" class="analysis-modal__section analysis-modal__section--result">
           <div class="analysis-modal__result-card">
             <h3>超高分析结论</h3>
-            <p>分析任务：{{ state.analysisTaskId }}</p>
+            <p>项目名称：{{ state.projectName }}</p>
             <p>关联障碍物数量：{{ state.analysisObstacleCount }}</p>
-            <p>{{ state.analysisSummary }}</p>
 
             <div v-if="state.analysisSelectedTargets.length > 0" class="analysis-modal__result-section analysis-modal__result-list">
               <h4>已分析对象</h4>
               <ul>
                 <li v-for="target in state.analysisSelectedTargets" :key="target.id">
-                  {{ target.name }}
+                  {{ target.name }}（{{ target.category }}）
                 </li>
               </ul>
-            </div>
-
-            <div v-if="ruleResultGroups.length > 0" class="analysis-modal__result-section analysis-modal__result-list">
-              <h4>规则结果</h4>
-              <div v-for="group in ruleResultGroups" :key="group.stationId" class="analysis-modal__rule-group">
-                <h5>{{ group.stationName }}（{{ group.stationType }}）</h5>
-                <ul>
-                  <li v-for="item in group.items" :key="`${item.obstacleId}:${item.ruleName}:${item.regionCode}`">
-                    <p>障碍物：{{ item.obstacleName }}</p>
-                    <p>规则：{{ item.ruleName }}</p>
-                    <p>规则编码：{{ item.ruleCode }}</p>
-                    <p>结论：{{ item.isCompliant ? '符合' : '不符合' }} | 适用：{{ item.isApplicable ? '是' : '否' }}</p>
-                    <p>区域状态：isInRadius={{ item.isInRadius }} | isInZone={{ item.isInZone }}</p>
-                    <p>{{ item.message }}</p>
-
-                    <p>超限距离：{{ item.overDistanceMeters }}m</p>
-                    <p>相对高度：{{ item.relativeHeightMeters }}m</p>
-                    <div v-if="item.metrics">
-                      <p v-for="entry in getMetricsEntries(item.metrics)" :key="entry.label">
-                        {{ entry.label }}：{{ entry.displayValue }}
-                      </p>
-                    </div>
-                    <p>方位角：{{ item.azimuthDegrees }}°（最小 {{ item.minHorizontalAngleDegrees }}° ~ 最大 {{ item.maxHorizontalAngleDegrees }}°）</p>
-
-                    <div v-if="item.standards.gb.length > 0">
-                      <p v-for="s in item.standards.gb" :key="s.code">
-                        国标：{{ s.text }}（{{ s.code }}）— 结论：{{ s.isCompliant ? '符合' : '不符合' }}
-                      </p>
-                    </div>
-                    <div v-if="item.standards.mh.length > 0">
-                      <p v-for="s in item.standards.mh" :key="s.code">
-                        行标：{{ s.text }}（{{ s.code }}）— 结论：{{ s.isCompliant ? '符合' : '不符合' }}
-                      </p>
-                    </div>
-
-                    <p v-if="item.details">详情：{{ item.details }}</p>
-                  </li>
-                </ul>
-              </div>
             </div>
           </div>
 

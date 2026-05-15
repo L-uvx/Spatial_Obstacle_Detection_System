@@ -327,6 +327,14 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       state.analysisRuleResults = workflowResult.ruleResults
       state.stage = 'analysis-result'
       state.statusMessage = workflowResult.message
+
+      state.exportTaskId = ''
+      state.exportStatus = 'idle'
+      state.exportProgressPercent = 0
+      state.exportMessage = '分析完成后可导出 Word 结论。'
+      state.exportFileName = ''
+      state.downloadUrl = ''
+      state.exportErrorMessage = ''
     } catch (error) {
       state.stage = 'error'
       state.statusMessage = error instanceof Error ? error.message : '分析失败，请稍后重试。'
