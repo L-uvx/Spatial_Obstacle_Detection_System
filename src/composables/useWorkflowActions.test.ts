@@ -1070,6 +1070,67 @@ describe('useWorkflowActions', () => {
     vi.useRealTimers()
   })
 
+  it('localizes English export progress messages to Chinese', async () => {
+    vi.useFakeTimers()
+
+    vi.mocked(runExportWorkflow).mockImplementationOnce(async ({ onProgress }) => {
+      onProgress({
+        exportTaskId: 'export-task-en-1',
+        exportStatus: 'pending',
+        exportProgressPercent: 0,
+        exportMessage: 'export task pending',
+      })
+      onProgress({
+        exportTaskId: 'export-task-en-1',
+        exportStatus: 'running',
+        exportProgressPercent: 50,
+        exportMessage: 'export task running',
+      })
+      return {
+        exportTaskId: 'export-task-en-1',
+        exportStatus: 'succeeded',
+        exportProgressPercent: 100,
+        exportMessage: 'export task succeeded',
+        exportFileName: 'report.docx',
+        downloadUrl: '/mock/report.docx',
+        exportErrorMessage: '',
+      }
+    })
+
+    const file = new File(['demo'], 'obstacles.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
+    const { state, openModal, submitImport, toggleTarget, startAnalysis, exportReport } = useWorkflowActions()
+
+    openModal('polygon')
+    await submitImport({
+      projectName: '测试项目',
+      obstacleType: '铁塔',
+      fileName: 'obstacles.xlsx',
+      file,
+    })
+    toggleTarget('airport-1')
+
+    const analyzePromise = startAnalysis()
+    await vi.runAllTimersAsync()
+    await analyzePromise
+
+    // Set analysisTaskId so export can proceed
+    state.analysisTaskId = 'analysis-task-1'
+    state.stage = 'analysis-result'
+
+    const exportPromise = exportReport()
+    await vi.runAllTimersAsync()
+    await exportPromise
+
+    expect(state.exportMessage).toBe('Word 结论已生成。')
+    expect(state.exportStatus).toBe('succeeded')
+    expect(state.exportFileName).toBe('report.docx')
+
+    vi.useRealTimers()
+  })
+
   it('keeps analysis result stage and stores export failure details when export workflow fails', async () => {
     vi.useFakeTimers()
 

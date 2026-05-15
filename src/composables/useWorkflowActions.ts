@@ -88,6 +88,15 @@ function getAllowedDownloadUrl(downloadUrl: string) {
   return isAllowedDownloadUrl ? downloadUrl : ''
 }
 
+function localizeExportMessage(status: string, rawMessage: string): string {
+  if (/^[A-Za-z]/.test(rawMessage) && !/[\u4e00-\u9fff]/.test(rawMessage)) {
+    if (status === 'pending') return '导出任务已创建，正在排队等待处理。'
+    if (status === 'running') return '正在生成 Word 结论。'
+    if (status === 'succeeded') return 'Word 结论已生成。'
+  }
+  return rawMessage
+}
+
 // 构造单入口流程的初始状态基线。
 function createInitialState(renderedObstacles: RenderedObstacle[] = []): PolygonObstacleAnalysisState {
   return {
@@ -373,7 +382,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
           state.exportTaskId = progress.exportTaskId
           state.exportStatus = progress.exportStatus
           state.exportProgressPercent = progress.exportProgressPercent
-          state.exportMessage = progress.exportMessage
+          state.exportMessage = localizeExportMessage(progress.exportStatus, progress.exportMessage)
           state.exportErrorMessage = ''
         },
         triggerDownload,
@@ -386,7 +395,7 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       state.exportTaskId = workflowResult.exportTaskId
       state.exportStatus = workflowResult.exportStatus
       state.exportProgressPercent = workflowResult.exportProgressPercent
-      state.exportMessage = workflowResult.exportMessage
+      state.exportMessage = localizeExportMessage(workflowResult.exportStatus, workflowResult.exportMessage)
       state.exportFileName = workflowResult.exportFileName
       state.downloadUrl = getAllowedDownloadUrl(workflowResult.downloadUrl)
       state.exportErrorMessage = workflowResult.exportErrorMessage
