@@ -1048,6 +1048,7 @@ export function useDataManagement(_options: UseDataManagementOptions) {
       await deleteObstacle(state.obstacles.deleteTarget.id)
       state.obstacles.deleteTarget = null
       await loadObstaclePage()
+      await _options.onRefreshBootstrap()
     } catch (error) {
       state.obstacles.errorMessage = getErrorMessage(error, '障碍物删除失败')
     }
