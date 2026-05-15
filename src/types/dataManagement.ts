@@ -1,4 +1,4 @@
-export type DataManagementTab = 'airports' | 'runways' | 'stations'
+export type DataManagementTab = 'airports' | 'runways' | 'stations' | 'obstacles'
 
 export interface PaginationParams {
   page: number
@@ -182,4 +182,36 @@ export interface ImportAirportsResult {
   totalFiles: number
   importedCount: number
   skippedCount: number
+}
+
+export interface ObstacleFilters {
+  projectId: string
+  keyword: string
+  obstacleType: string
+}
+
+export interface ObstacleGeometryPoint {
+  type: 'Point'
+  coordinates: [number, number]
+}
+
+export interface ObstacleGeometryMultiPolygon {
+  type: 'MultiPolygon'
+  coordinates: number[][][][]
+}
+
+export type ObstacleGeometry = ObstacleGeometryPoint | ObstacleGeometryMultiPolygon
+
+export interface ObstacleListItem {
+  id: string
+  projectId: string
+  projectName: string
+  name: string
+  obstacleType: string
+  topElevation: number | null
+  sourceBatchId: string
+  sourceRowNo: number
+  geometry: ObstacleGeometry | null
+  createdAt: string
+  updatedAt: string
 }

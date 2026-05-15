@@ -19,6 +19,7 @@ const emit = defineEmits<{
   detail: [station: StationListItem]
   edit: [station: StationListItem]
   delete: [station: StationListItem]
+  locate: [station: StationListItem]
 }>()
 </script>
 
@@ -94,6 +95,14 @@ const emit = defineEmits<{
             <button type="button" data-action="detail-station" @click="emit('detail', station)">详情</button>
             <button type="button" data-action="edit-station" @click="emit('edit', station)">编辑</button>
             <button type="button" data-action="delete-station" @click="emit('delete', station)">删除</button>
+            <button
+              type="button"
+              data-action="locate-station"
+              :disabled="station.longitude === null || station.latitude === null"
+              @click="emit('locate', station)"
+            >
+              定位
+            </button>
           </td>
         </tr>
       </tbody>

@@ -117,6 +117,24 @@ function createDataManagementState(overrides: Partial<DataManagementState> = {})
       },
       deleteTarget: null,
     },
+    obstacles: {
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      filters: {
+        projectId: '',
+        keyword: '',
+        obstacleType: '',
+      },
+      loading: false,
+      errorMessage: '',
+      warnings: [],
+      formOpen: false,
+      readonly: false,
+      draft: {},
+      deleteTarget: null,
+    },
     ...overrides,
   }
 }

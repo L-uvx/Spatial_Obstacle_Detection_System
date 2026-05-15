@@ -3,6 +3,9 @@ import type {
   AirportFilters,
   AirportListItem,
   DataManagementConflict,
+  ObstacleFilters,
+  ObstacleGeometry,
+  ObstacleListItem,
   PaginatedResult,
   PaginationParams,
   RunwayFilters,
@@ -116,6 +119,31 @@ interface StationListItemResponse {
   updatedAt?: string
 }
 
+interface ObstacleListItemResponse {
+  id?: string | number
+  projectId?: string | number
+  projectName?: string
+  name?: string
+  obstacleType?: string
+  topElevation?: number | null
+  sourceBatchId?: string
+  sourceRowNo?: number
+  geometry?: ObstacleGeometry | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+interface ObstacleDetailResponse {
+  id?: string | number
+  projectId?: string | number
+  name?: string
+  obstacleType?: string
+  topElevation?: number | null
+  sourceBatchId?: string
+  sourceRowNo?: number
+  geometry?: ObstacleGeometry | null
+}
+
 interface ConflictResponseBody {
   detail?: DataManagementConflict | string
 }
@@ -211,6 +239,38 @@ function normalizeStationListItem(item: StationListItemResponse): StationListIte
     combineId: typeof item.combineId === 'number' ? item.combineId : null,
     createdAt: item.createdAt ?? '',
     updatedAt: item.updatedAt ?? '',
+  }
+}
+
+function normalizeObstacleListItem(item: ObstacleListItemResponse): ObstacleListItem {
+  return {
+    id: String(item.id ?? ''),
+    projectId: String(item.projectId ?? ''),
+    projectName: item.projectName ?? '',
+    name: item.name ?? '',
+    obstacleType: item.obstacleType ?? '',
+    topElevation: typeof item.topElevation === 'number' ? item.topElevation : null,
+    sourceBatchId: item.sourceBatchId ?? '',
+    sourceRowNo: typeof item.sourceRowNo === 'number' ? item.sourceRowNo : 0,
+    geometry: item.geometry ?? null,
+    createdAt: item.createdAt ?? '',
+    updatedAt: item.updatedAt ?? '',
+  }
+}
+
+function normalizeObstacleDetail(item: ObstacleDetailResponse): ObstacleListItem {
+  return {
+    id: String(item.id ?? ''),
+    projectId: String(item.projectId ?? ''),
+    projectName: '',
+    name: item.name ?? '',
+    obstacleType: item.obstacleType ?? '',
+    topElevation: typeof item.topElevation === 'number' ? item.topElevation : null,
+    sourceBatchId: item.sourceBatchId ?? '',
+    sourceRowNo: typeof item.sourceRowNo === 'number' ? item.sourceRowNo : 0,
+    geometry: item.geometry ?? null,
+    createdAt: '',
+    updatedAt: '',
   }
 }
 
@@ -508,4 +568,37 @@ export async function importAirports(files: File[]): Promise<ImportAirportsResul
 
   await ensureOk(response)
   return readJson<ImportAirportsResult>(response)
+}
+
+export async function getObstacles(
+  params: ObstacleFilters & PaginationParams,
+): Promise<PaginatedResult<ObstacleListItem>> {
+  const response = await fetch(`/data-management/obstacles${buildQuery({ ...params })}`)
+
+  await ensureOk(response)
+
+  const result = await readJson<PaginatedResultResponse<ObstacleListItemResponse>>(response)
+
+  return {
+    items: Array.isArray(result.items) ? result.items.map((item) => normalizeObstacleListItem(item)) : [],
+    total: typeof result.total === 'number' ? result.total : 0,
+    page: typeof result.page === 'number' ? result.page : params.page,
+    pageSize: typeof result.pageSize === 'number' ? result.pageSize : params.pageSize,
+  }
+}
+
+export async function getObstacleDetail(id: string): Promise<ObstacleListItem> {
+  const response = await fetch(`/data-management/obstacles/${id}`)
+
+  await ensureOk(response)
+
+  return normalizeObstacleDetail(await readJson<ObstacleDetailResponse>(response))
+}
+
+export async function deleteObstacle(id: string) {
+  const response = await fetch(`/data-management/obstacles/${id}`, {
+    method: 'DELETE',
+  })
+
+  await ensureOk(response)
 }

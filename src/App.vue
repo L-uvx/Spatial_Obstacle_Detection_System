@@ -5,7 +5,7 @@ import { useDataManagement } from './composables/useDataManagement'
 import { useWorkflowActions } from './composables/useWorkflowActions'
 import type { ImportFormValue, ObstacleAnalysisMode, ProtectionZoneNode } from './types/tool'
 import type { AirportFormValue } from './composables/useDataManagement'
-import type { AirportListItem, RunwayListItem, RunwayPayload, StationListItem, StationPayload } from './types/dataManagement'
+import type { AirportListItem, ObstacleListItem, RunwayListItem, RunwayPayload, StationListItem, StationPayload } from './types/dataManagement'
 
 const resetTick = ref(0)
 const topDownTick = ref(0)
@@ -75,6 +75,16 @@ const {
   openRunwayDetailDialog,
   openStationDetailDialog,
   setActiveTab,
+  setObstacleProjectId,
+  setObstacleKeyword,
+  setObstacleType,
+  changeObstaclePage,
+  changeObstaclePageSize,
+  openObstacleDeleteConfirm,
+  closeObstacleDeleteConfirm,
+  confirmObstacleDelete,
+  openObstacleDetailDialog,
+  closeObstacleDetailDialog,
 } = useDataManagement({
   onRefreshBootstrap: async () => {
     await bootstrap()
@@ -115,7 +125,7 @@ function handleCloseDataManagement() {
 }
 
 // 切换数据管理标签页。
-function handleSwitchDataManagementTab(tab: 'airports' | 'runways' | 'stations') {
+function handleSwitchDataManagementTab(tab: 'airports' | 'runways' | 'stations' | 'obstacles') {
   setActiveTab(tab)
 }
 
@@ -363,6 +373,91 @@ function handleExportReport() {
 function handleFlyToProtectionZone(zone: ProtectionZoneNode) {
   flyToProtectionZone(zone)
 }
+
+function handleSetObstacleProjectId(projectId: string) {
+  void setObstacleProjectId(projectId)
+}
+
+function handleSetObstacleKeyword(keyword: string) {
+  void setObstacleKeyword(keyword)
+}
+
+function handleSetObstacleType(obstacleType: string) {
+  void setObstacleType(obstacleType)
+}
+
+function handleChangeObstaclePage(page: number) {
+  void changeObstaclePage(page)
+}
+
+function handleChangeObstaclePageSize(pageSize: number) {
+  void changeObstaclePageSize(pageSize)
+}
+
+function handleOpenObstacleDetailDialog(item: ObstacleListItem) {
+  openObstacleDetailDialog(item)
+}
+
+function handleCloseObstacleDetailDialog() {
+  closeObstacleDetailDialog()
+}
+
+function handleOpenObstacleDeleteConfirm(item: ObstacleListItem) {
+  openObstacleDeleteConfirm(item)
+}
+
+function handleCloseObstacleDeleteConfirm() {
+  closeObstacleDeleteConfirm()
+}
+
+function handleConfirmObstacleDelete() {
+  void confirmObstacleDelete()
+}
+
+function handleLocateObstacle(item: ObstacleListItem) {
+  if (!item.geometry) return
+
+  let longitude: number
+  let latitude: number
+
+  if (item.geometry.type === 'Point') {
+    longitude = item.geometry.coordinates[0]
+    latitude = item.geometry.coordinates[1]
+  } else if (item.geometry.type === 'MultiPolygon') {
+    const ring = item.geometry.coordinates[0]?.[0]
+    if (!ring || ring.length === 0) return
+    let sumLon = 0
+    let sumLat = 0
+    for (const [lon, lat] of ring) {
+      sumLon += lon
+      sumLat += lat
+    }
+    longitude = sumLon / ring.length
+    latitude = sumLat / ring.length
+  } else {
+    return
+  }
+
+  state.flyToTargetPayload = {
+    longitude,
+    latitude,
+    height: (item.topElevation ?? 0) + 500,
+    pitch: -90,
+  }
+  state.flyToTargetTick += 1
+}
+
+function handleLocateStation(station: StationListItem) {
+  if (station.longitude === null || station.latitude === null) return
+
+  state.flyToTargetPayload = {
+    longitude: station.longitude,
+    latitude: station.latitude,
+    height: (station.altitude ?? 0) + 500,
+    pitch: -90,
+  }
+  state.flyToTargetTick += 1
+}
 </script>
 
 <template>
@@ -405,11 +500,23 @@ function handleFlyToProtectionZone(zone: ProtectionZoneNode) {
     @open-station-delete-confirm="handleOpenStationDeleteConfirm"
     @close-station-delete-confirm="handleCloseStationDeleteConfirm"
     @confirm-station-delete="handleConfirmStationDelete"
+    @set-obstacle-project-id="handleSetObstacleProjectId"
+    @set-obstacle-keyword="handleSetObstacleKeyword"
+    @set-obstacle-type="handleSetObstacleType"
+    @change-obstacle-page="handleChangeObstaclePage"
+    @change-obstacle-page-size="handleChangeObstaclePageSize"
+    @open-obstacle-detail-dialog="handleOpenObstacleDetailDialog"
+    @open-obstacle-delete-confirm="handleOpenObstacleDeleteConfirm"
+    @close-obstacle-detail-dialog="handleCloseObstacleDetailDialog"
+    @close-obstacle-delete-confirm="handleCloseObstacleDeleteConfirm"
+    @confirm-obstacle-delete="handleConfirmObstacleDelete"
+    @locate-obstacle="handleLocateObstacle"
     @open-airport-create-dialog="handleOpenAirportCreateDialog"
     @open-airport-edit-dialog="handleOpenAirportEditDialog"
     @open-airport-detail-dialog="handleOpenAirportDetailDialog"
     @open-runway-detail-dialog="handleOpenRunwayDetailDialog"
     @open-station-detail-dialog="handleOpenStationDetailDialog"
+    @locate-station="handleLocateStation"
     @close-airport-form-dialog="handleCloseAirportFormDialog"
     @save-airport-draft="handleSaveAirportDraft"
     @open-airport-delete-confirm="handleOpenAirportDeleteConfirm"

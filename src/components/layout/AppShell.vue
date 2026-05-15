@@ -13,7 +13,7 @@ import type {
   RenderedObstacle,
 } from '../../types/tool'
 import type { AirportFormValue, DataManagementState } from '../../composables/useDataManagement'
-import type { AirportListItem, RunwayListItem, RunwayPayload, StationListItem, StationPayload } from '../../types/dataManagement'
+import type { AirportListItem, ObstacleListItem, RunwayListItem, RunwayPayload, StationListItem, StationPayload } from '../../types/dataManagement'
 
 const props = defineProps<{
   analysisState: PolygonObstacleAnalysisState
@@ -47,6 +47,17 @@ const emit = defineEmits<{
   setStationRunwayNo: [runwayNo: string]
   changeStationPage: [page: number]
   changeStationPageSize: [pageSize: number]
+  setObstacleProjectId: [projectId: string]
+  setObstacleKeyword: [keyword: string]
+  setObstacleType: [obstacleType: string]
+  changeObstaclePage: [page: number]
+  changeObstaclePageSize: [pageSize: number]
+  openObstacleDetailDialog: [obstacle: ObstacleListItem]
+  openObstacleDeleteConfirm: [obstacle: ObstacleListItem]
+  closeObstacleDetailDialog: []
+  closeObstacleDeleteConfirm: []
+  confirmObstacleDelete: []
+  locateObstacle: [obstacle: ObstacleListItem]
   openAirportCreateDialog: []
   openAirportEditDialog: [airportId: string]
   openAirportDetailDialog: [airport: AirportListItem]
@@ -54,6 +65,7 @@ const emit = defineEmits<{
   openRunwayEditDialog: [runwayId: string]
   openRunwayDetailDialog: [runway: RunwayListItem]
   openStationDetailDialog: [station: StationListItem]
+  locateStation: [station: StationListItem]
   openRunwayDeleteConfirm: [runwayId: string]
   closeRunwayFormDialog: []
   saveRunwayDraft: [value: RunwayPayload]
@@ -244,6 +256,17 @@ function handleSelectAirport(event: Event) {
         @set-station-runway-no="emit('setStationRunwayNo', $event)"
         @change-station-page="emit('changeStationPage', $event)"
         @change-station-page-size="emit('changeStationPageSize', $event)"
+        @set-obstacle-project-id="emit('setObstacleProjectId', $event)"
+        @set-obstacle-keyword="emit('setObstacleKeyword', $event)"
+        @set-obstacle-type="emit('setObstacleType', $event)"
+        @change-obstacle-page="emit('changeObstaclePage', $event)"
+        @change-obstacle-page-size="emit('changeObstaclePageSize', $event)"
+        @open-obstacle-detail-dialog="emit('openObstacleDetailDialog', $event)"
+        @open-obstacle-delete-confirm="emit('openObstacleDeleteConfirm', $event)"
+        @close-obstacle-detail-dialog="emit('closeObstacleDetailDialog')"
+        @close-obstacle-delete-confirm="emit('closeObstacleDeleteConfirm')"
+        @confirm-obstacle-delete="emit('confirmObstacleDelete')"
+        @locate-obstacle="emit('locateObstacle', $event)"
         @open-station-create-dialog="emit('openStationCreateDialog')"
         @open-station-edit-dialog="emit('openStationEditDialog', $event)"
         @open-station-delete-confirm="emit('openStationDeleteConfirm', $event)"
@@ -254,6 +277,7 @@ function handleSelectAirport(event: Event) {
         @open-airport-detail-dialog="emit('openAirportDetailDialog', $event)"
         @open-runway-detail-dialog="emit('openRunwayDetailDialog', $event)"
         @open-station-detail-dialog="emit('openStationDetailDialog', $event)"
+        @locate-station="emit('locateStation', $event)"
         @open-runway-create-dialog="emit('openRunwayCreateDialog')"
         @open-runway-edit-dialog="emit('openRunwayEditDialog', $event)"
         @open-runway-delete-confirm="emit('openRunwayDeleteConfirm', $event)"

@@ -20,6 +20,9 @@ import {
   updateAirport,
   updateRunway,
   updateStation,
+  getObstacles,
+  getObstacleDetail,
+  deleteObstacle,
 } from './dataManagement'
 
 function stubFetchOnce(response: Partial<Response> & { json?: () => Promise<unknown> }) {
@@ -862,6 +865,226 @@ describe('dataManagement service', () => {
       code: 'import_failed',
       detailMessage: '文件格式错误',
       status: 400,
+    })
+  })
+
+  it('requests obstacles with page and pageSize query params', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        items: [],
+        total: 0,
+        page: 2,
+        pageSize: 20,
+      }),
+    }))
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await getObstacles({
+      projectId: '',
+      keyword: '',
+      obstacleType: '',
+      page: 2,
+      pageSize: 20,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/data-management/obstacles?page=2&pageSize=20',
+    )
+  })
+
+  it('requests obstacles with filters projectId, keyword, obstacleType', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 10,
+      }),
+    }))
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await getObstacles({
+      projectId: 'proj-1',
+      keyword: '障碍物A',
+      obstacleType: 'building',
+      page: 1,
+      pageSize: 10,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/data-management/obstacles?projectId=proj-1&keyword=%E9%9A%9C%E7%A2%8D%E7%89%A9A&obstacleType=building&page=1&pageSize=10',
+    )
+  })
+
+  it('normalizes obstacle list items with all fields from backend response', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        items: [{
+          id: 'obs-1',
+          projectId: 'proj-1',
+          projectName: '武汉项目',
+          name: '障碍物A',
+          obstacleType: 'building',
+          topElevation: 120.5,
+          sourceBatchId: 'batch-001',
+          sourceRowNo: 5,
+          geometry: {
+            type: 'Point',
+            coordinates: [114.2, 30.7],
+          },
+          createdAt: '2025-01-01T08:00:00Z',
+          updatedAt: '2025-06-01T12:00:00Z',
+        }],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      }),
+    }))
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await getObstacles({
+      projectId: '',
+      keyword: '',
+      obstacleType: '',
+      page: 1,
+      pageSize: 20,
+    })
+
+    expect(result.items[0]).toMatchObject({
+      id: 'obs-1',
+      projectId: 'proj-1',
+      projectName: '武汉项目',
+      name: '障碍物A',
+      obstacleType: 'building',
+      topElevation: 120.5,
+      sourceBatchId: 'batch-001',
+      sourceRowNo: 5,
+      geometry: {
+        type: 'Point',
+        coordinates: [114.2, 30.7],
+      },
+      createdAt: '2025-01-01T08:00:00Z',
+      updatedAt: '2025-06-01T12:00:00Z',
+    })
+  })
+
+  it('normalizes obstacle list item with missing optional fields', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        items: [{
+          id: 'obs-2',
+          projectId: 'proj-2',
+          name: '障碍物B',
+        }],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      }),
+    }))
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await getObstacles({
+      projectId: '',
+      keyword: '',
+      obstacleType: '',
+      page: 1,
+      pageSize: 20,
+    })
+
+    expect(result.items[0]).toMatchObject({
+      id: 'obs-2',
+      projectId: 'proj-2',
+      projectName: '',
+      name: '障碍物B',
+      obstacleType: '',
+      topElevation: null,
+      sourceBatchId: '',
+      sourceRowNo: 0,
+      geometry: null,
+      createdAt: '',
+      updatedAt: '',
+    })
+  })
+
+  it('loads obstacle detail', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        id: 'obs-3',
+        projectId: 'proj-3',
+        name: '障碍物C',
+        obstacleType: 'antenna',
+        topElevation: 200,
+        sourceBatchId: 'batch-002',
+        sourceRowNo: 10,
+        geometry: {
+          type: 'MultiPolygon',
+          coordinates: [[[[114.0, 30.0], [114.1, 30.0], [114.1, 30.1], [114.0, 30.1], [114.0, 30.0]]]],
+        },
+      }),
+    }))
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await getObstacleDetail('obs-3')
+
+    expect(fetchMock).toHaveBeenCalledWith('/data-management/obstacles/obs-3')
+    expect(result).toMatchObject({
+      id: 'obs-3',
+      projectId: 'proj-3',
+      name: '障碍物C',
+      obstacleType: 'antenna',
+      topElevation: 200,
+      sourceBatchId: 'batch-002',
+      sourceRowNo: 10,
+      geometry: {
+        type: 'MultiPolygon',
+        coordinates: [[[[114.0, 30.0], [114.1, 30.0], [114.1, 30.1], [114.0, 30.1], [114.0, 30.0]]]],
+      },
+      projectName: '',
+      createdAt: '',
+      updatedAt: '',
+    })
+  })
+
+  it('deletes obstacle successfully', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+    }))
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await deleteObstacle('obs-5')
+
+    expect(fetchMock).toHaveBeenCalledWith('/data-management/obstacles/obs-5', {
+      method: 'DELETE',
+    })
+  })
+
+  it('parses obstacle delete not found response', async () => {
+    stubFetchOnce({
+      ok: false,
+      status: 404,
+      json: async () => ({
+        detail: {
+          code: 'obstacle_not_found',
+          message: '障碍物不存在',
+        },
+      }),
+    })
+
+    await expect(deleteObstacle('obs-999')).rejects.toMatchObject({
+      code: 'obstacle_not_found',
+      detailMessage: '障碍物不存在',
+      status: 404,
     })
   })
 })

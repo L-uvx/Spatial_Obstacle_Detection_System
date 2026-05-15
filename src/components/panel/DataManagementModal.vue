@@ -8,8 +8,10 @@ import RunwayFormDialog from '../data-management/RunwayFormDialog.vue'
 import StationFormDialog from '../data-management/StationFormDialog.vue'
 import RunwayTable from '../data-management/RunwayTable.vue'
 import StationTable from '../data-management/StationTable.vue'
+import ObstacleTable from '../data-management/ObstacleTable.vue'
+import ObstacleDetailDialog from '../data-management/ObstacleDetailDialog.vue'
 import type { AirportFormValue, DataManagementState } from '../../composables/useDataManagement'
-import type { AirportListItem, RunwayListItem, RunwayPayload, StationListItem, StationPayload } from '../../types/dataManagement'
+import type { AirportListItem, ObstacleListItem, RunwayListItem, RunwayPayload, StationListItem, StationPayload } from '../../types/dataManagement'
 
 const props = defineProps<{
   state: DataManagementState
@@ -24,7 +26,11 @@ function getActiveWarnings() {
     return props.state.runways.warnings
   }
 
-  return props.state.stations.warnings
+  if (props.state.activeTab === 'stations') {
+    return props.state.stations.warnings
+  }
+
+  return props.state.obstacles.warnings
 }
 
 function getActivePager() {
@@ -36,7 +42,11 @@ function getActivePager() {
     return props.state.runways
   }
 
-  return props.state.stations
+  if (props.state.activeTab === 'stations') {
+    return props.state.stations
+  }
+
+  return props.state.obstacles
 }
 
 function getPagerSummary() {
@@ -74,8 +84,10 @@ function handlePreviousPage() {
     emit('changeAirportPage', nextPage)
   } else if (props.state.activeTab === 'runways') {
     emit('changeRunwayPage', nextPage)
-  } else {
+  } else if (props.state.activeTab === 'stations') {
     emit('changeStationPage', nextPage)
+  } else {
+    emit('changeObstaclePage', nextPage)
   }
 }
 
@@ -93,8 +105,10 @@ function handleNextPage() {
     emit('changeAirportPage', nextPage)
   } else if (props.state.activeTab === 'runways') {
     emit('changeRunwayPage', nextPage)
-  } else {
+  } else if (props.state.activeTab === 'stations') {
     emit('changeStationPage', nextPage)
+  } else {
+    emit('changeObstaclePage', nextPage)
   }
 }
 
@@ -109,8 +123,10 @@ function handlePageSizeChange(event: Event) {
     emit('changeAirportPageSize', Number(target.value))
   } else if (props.state.activeTab === 'runways') {
     emit('changeRunwayPageSize', Number(target.value))
-  } else {
+  } else if (props.state.activeTab === 'stations') {
     emit('changeStationPageSize', Number(target.value))
+  } else {
+    emit('changeObstaclePageSize', Number(target.value))
   }
 }
 
@@ -156,7 +172,19 @@ const emit = defineEmits<{
   confirmAirportDelete: []
   openRunwayDetailDialog: [runway: RunwayListItem]
   openStationDetailDialog: [station: StationListItem]
+  locateStation: [station: StationListItem]
   importAirports: []
+  setObstacleProjectId: [projectId: string]
+  setObstacleKeyword: [keyword: string]
+  setObstacleType: [obstacleType: string]
+  changeObstaclePage: [page: number]
+  changeObstaclePageSize: [pageSize: number]
+  openObstacleDetailDialog: [obstacle: ObstacleListItem]
+  openObstacleDeleteConfirm: [obstacle: ObstacleListItem]
+  closeObstacleDetailDialog: []
+  closeObstacleDeleteConfirm: []
+  confirmObstacleDelete: []
+  locateObstacle: [obstacle: ObstacleListItem]
 }>()
 
 const importFileInput = ref<HTMLInputElement | null>(null)
@@ -306,6 +334,11 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
         <button type="button" class="data-management-modal__tab" data-tab="stations" :data-active="state.activeTab === 'stations'" @click="emit('switchTab', 'stations')">
           台站管理
         </button>
+        <button type="button" class="data-management-modal__tab" data-tab="obstacles"
+          :data-active="state.activeTab === 'obstacles'"
+          @click="emit('switchTab', 'obstacles')">
+          障碍物管理
+        </button>
       </nav>
       <div class="data-management-modal__body shell-scrollbar">
         <section
@@ -399,7 +432,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
             <button type="button" @click="emit('closeRunwayDeleteConfirm')">关闭</button>
           </section>
         </template>
-        <template v-else>
+        <template v-else-if="state.activeTab === 'stations'">
           <StationTable
             :items="state.stations.items"
             :airport-id="state.stations.filters.airportId"
@@ -415,6 +448,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
             @detail="emit('openStationDetailDialog', $event)"
             @edit="emit('openStationEditDialog', $event.id)"
             @delete="emit('openStationDeleteConfirm', $event.id)"
+            @locate="emit('locateStation', $event)"
           />
           <p v-if="state.stations.errorMessage" class="data-management-modal__placeholder">{{ state.stations.errorMessage }}</p>
           <StationFormDialog
@@ -443,6 +477,47 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
               确认删除
             </button>
             <button type="button" @click="emit('closeStationDeleteConfirm')">关闭</button>
+          </section>
+        </template>
+        <template v-else>
+          <ObstacleTable
+            :items="state.obstacles.items"
+            :project-id="state.obstacles.filters.projectId"
+            :keyword="state.obstacles.filters.keyword"
+            :obstacle-type="state.obstacles.filters.obstacleType"
+            :loading="state.obstacles.loading"
+            @update:project-id="emit('setObstacleProjectId', $event)"
+            @update:keyword="emit('setObstacleKeyword', $event)"
+            @update:obstacle-type="emit('setObstacleType', $event)"
+            @detail="emit('openObstacleDetailDialog', $event)"
+            @delete="emit('openObstacleDeleteConfirm', $event)"
+            @locate="emit('locateObstacle', $event)"
+          />
+          <p v-if="state.obstacles.errorMessage" class="data-management-modal__placeholder">
+            {{ state.obstacles.errorMessage }}
+          </p>
+          <ObstacleDetailDialog
+            :open="state.obstacles.formOpen"
+            :model-value="(state.obstacles.draft as ObstacleListItem)"
+            @close="emit('closeObstacleDetailDialog')"
+          />
+          <section
+            v-if="state.obstacles.deleteTarget"
+            class="data-management-modal__delete-confirm"
+            aria-label="删除障碍物确认"
+          >
+            <p>待删除障碍物：{{ state.obstacles.deleteTarget.name }}</p>
+            <p v-if="state.obstacles.errorMessage" class="data-management-modal__delete-error">
+              {{ state.obstacles.errorMessage }}
+            </p>
+            <button
+              type="button"
+              data-testid="confirm-obstacle-delete"
+              @click="emit('confirmObstacleDelete')"
+            >
+              确认删除
+            </button>
+            <button type="button" @click="emit('closeObstacleDeleteConfirm')">关闭</button>
           </section>
         </template>
       </div>
@@ -507,7 +582,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
                     机场: {{ item.airportName }} | 跑道: {{ item.runwayCount }} | 台站: {{ item.stationCount }}
                   </template>
                   <template v-else-if="item.status === 'skipped'">
-                    已跳过（非 Excel 文件）
+                     已跳过（非 Excel 文件）
                   </template>
                   <template v-else>
                     {{ item.errorMessage || '解析失败' }}

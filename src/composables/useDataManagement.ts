@@ -4,11 +4,13 @@ import {
   createRunway,
   createStation,
   deleteAirport,
+  deleteObstacle,
   deleteRunway,
   deleteStation,
   getAirports,
   getAirportDetail,
   getAirportOptions,
+  getObstacles,
   getRunwayDetail,
   getRunways,
   getStationDetail,
@@ -22,6 +24,8 @@ import type { DataManagementConflictError } from '../services/dataManagement'
 import type {
   AirportFilters,
   AirportListItem,
+  ObstacleFilters,
+  ObstacleListItem,
   RunwayFilters,
   RunwayListItem,
   RunwayPayload,
@@ -51,9 +55,11 @@ export interface StationDraft extends StationFormValue {
   id?: string
 }
 
+export interface ObstacleDraft extends Partial<ObstacleListItem> {}
+
 export interface DataManagementState {
   isOpen: boolean
-  activeTab: 'airports' | 'runways' | 'stations'
+  activeTab: 'airports' | 'runways' | 'stations' | 'obstacles'
   airportOptions: SelectOption[]
   stationTypeOptions: SelectOption[]
   airports: {
@@ -97,6 +103,20 @@ export interface DataManagementState {
     readonly: boolean
     draft: StationDraft
     deleteTarget: StationListItem | null
+  }
+  obstacles: {
+    items: ObstacleListItem[]
+    total: number
+    page: number
+    pageSize: number
+    filters: ObstacleFilters
+    loading: boolean
+    errorMessage: string
+    warnings: string[]
+    formOpen: boolean
+    readonly: boolean
+    draft: ObstacleDraft
+    deleteTarget: ObstacleListItem | null
   }
 }
 
@@ -161,6 +181,10 @@ function createEmptyStationDraft(): StationDraft {
   }
 }
 
+function createEmptyObstacleDraft(): ObstacleDraft {
+  return {}
+}
+
 function createInitialState(): DataManagementState {
   return {
     isOpen: false,
@@ -221,6 +245,24 @@ function createInitialState(): DataManagementState {
       draft: createEmptyStationDraft(),
       deleteTarget: null,
     },
+    obstacles: {
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 10,
+      filters: {
+        projectId: '',
+        keyword: '',
+        obstacleType: '',
+      },
+      loading: false,
+      errorMessage: '',
+      warnings: [],
+      formOpen: false,
+      readonly: false,
+      draft: createEmptyObstacleDraft(),
+      deleteTarget: null,
+    },
   }
 }
 
@@ -244,6 +286,10 @@ export function useDataManagement(_options: UseDataManagementOptions) {
 
   function clearStationWarnings() {
     state.stations.warnings = []
+  }
+
+  function clearObstacleWarnings() {
+    state.obstacles.warnings = []
   }
 
   function getErrorMessage(error: unknown, fallbackMessage: string) {
@@ -346,6 +392,32 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     }
   }
 
+  async function loadObstaclePage() {
+    state.obstacles.loading = true
+    state.obstacles.errorMessage = ''
+
+    try {
+      const result = await getObstacles({
+        projectId: state.obstacles.filters.projectId,
+        keyword: state.obstacles.filters.keyword,
+        obstacleType: state.obstacles.filters.obstacleType,
+        page: state.obstacles.page,
+        pageSize: state.obstacles.pageSize,
+      })
+
+      state.obstacles.items = result.items
+      state.obstacles.total = result.total
+      state.obstacles.page = result.page
+      state.obstacles.pageSize = result.pageSize
+    } catch (error) {
+      state.obstacles.items = []
+      state.obstacles.total = 0
+      state.obstacles.errorMessage = error instanceof Error ? error.message : '障碍物列表加载失败'
+    } finally {
+      state.obstacles.loading = false
+    }
+  }
+
   async function openDataManagement() {
     state.isOpen = true
     await loadOptionSources()
@@ -362,6 +434,11 @@ export function useDataManagement(_options: UseDataManagementOptions) {
 
     if (state.activeTab === 'stations') {
       await loadStationPage()
+      return
+    }
+
+    if (state.activeTab === 'obstacles') {
+      await loadObstaclePage()
     }
   }
 
@@ -369,6 +446,7 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     clearAirportWarnings()
     clearRunwayWarnings()
     clearStationWarnings()
+    clearObstacleWarnings()
     state.isOpen = false
   }
 
@@ -457,6 +535,35 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     state.stations.pageSize = pageSize
     state.stations.page = 1
     await loadStationPage()
+  }
+
+  async function setObstacleProjectId(projectId: string) {
+    state.obstacles.filters.projectId = projectId
+    state.obstacles.page = 1
+    await loadObstaclePage()
+  }
+
+  async function setObstacleKeyword(keyword: string) {
+    state.obstacles.filters.keyword = keyword
+    state.obstacles.page = 1
+    await loadObstaclePage()
+  }
+
+  async function setObstacleType(obstacleType: string) {
+    state.obstacles.filters.obstacleType = obstacleType
+    state.obstacles.page = 1
+    await loadObstaclePage()
+  }
+
+  async function changeObstaclePage(page: number) {
+    state.obstacles.page = page
+    await loadObstaclePage()
+  }
+
+  async function changeObstaclePageSize(pageSize: number) {
+    state.obstacles.pageSize = pageSize
+    state.obstacles.page = 1
+    await loadObstaclePage()
   }
 
   function openAirportCreateDialog() {
@@ -672,6 +779,21 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     clearStationWarnings()
     state.stations.formOpen = false
     state.stations.readonly = false
+  }
+
+  function openObstacleDetailDialog(item: ObstacleListItem) {
+    state.obstacles.errorMessage = ''
+    state.obstacles.readonly = false
+    clearObstacleWarnings()
+    state.obstacles.draft = item
+    state.obstacles.readonly = true
+    state.obstacles.formOpen = true
+  }
+
+  function closeObstacleDetailDialog() {
+    clearObstacleWarnings()
+    state.obstacles.formOpen = false
+    state.obstacles.readonly = false
   }
 
   function openStationDetailDialog(item: StationListItem) {
@@ -905,6 +1027,32 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     }
   }
 
+  function openObstacleDeleteConfirm(item: ObstacleListItem) {
+    state.obstacles.errorMessage = ''
+    state.obstacles.deleteTarget = item
+  }
+
+  function closeObstacleDeleteConfirm() {
+    state.obstacles.deleteTarget = null
+    state.obstacles.errorMessage = ''
+  }
+
+  async function confirmObstacleDelete() {
+    if (!state.obstacles.deleteTarget) {
+      return
+    }
+
+    state.obstacles.errorMessage = ''
+
+    try {
+      await deleteObstacle(state.obstacles.deleteTarget.id)
+      state.obstacles.deleteTarget = null
+      await loadObstaclePage()
+    } catch (error) {
+      state.obstacles.errorMessage = getErrorMessage(error, '障碍物删除失败')
+    }
+  }
+
   function setActiveTab(tab: DataManagementState['activeTab']) {
     state.activeTab = tab
 
@@ -920,6 +1068,11 @@ export function useDataManagement(_options: UseDataManagementOptions) {
 
     if (tab === 'stations' && state.isOpen) {
       void loadStationPage()
+      return
+    }
+
+    if (tab === 'obstacles' && state.isOpen) {
+      void loadObstaclePage()
     }
   }
 
@@ -944,6 +1097,11 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     setStationRunwayNo,
     changeStationPage,
     changeStationPageSize,
+    setObstacleProjectId,
+    setObstacleKeyword,
+    setObstacleType,
+    changeObstaclePage,
+    changeObstaclePageSize,
     openAirportCreateDialog,
     openAirportEditDialog,
     openAirportDetailDialog,
@@ -959,6 +1117,8 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     openStationDetailDialog,
     closeStationFormDialog,
     saveStationDraft,
+    openObstacleDetailDialog,
+    closeObstacleDetailDialog,
     openAirportDeleteConfirm,
     closeAirportDeleteConfirm,
     confirmAirportDelete,
@@ -968,8 +1128,12 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     openStationDeleteConfirm,
     closeStationDeleteConfirm,
     confirmStationDelete,
+    openObstacleDeleteConfirm,
+    closeObstacleDeleteConfirm,
+    confirmObstacleDelete,
     setActiveTab,
     loadRunwayPage,
     loadStationPage,
+    loadObstaclePage,
   }
 }

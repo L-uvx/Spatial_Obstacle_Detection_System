@@ -836,7 +836,10 @@ body {
 
 .airport-table,
 .runway-table,
-.station-table {
+.airport-table,
+.runway-table,
+.station-table,
+.obstacle-table {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -847,7 +850,8 @@ body {
 
 .airport-table__toolbar,
 .runway-table__toolbar,
-.station-table__toolbar {
+.station-table__toolbar,
+.obstacle-table__toolbar {
   flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
@@ -858,7 +862,8 @@ body {
 
 .airport-table__toolbar label,
 .runway-table__toolbar label,
-.station-table__toolbar label {
+.station-table__toolbar label,
+.obstacle-table__toolbar label {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -880,7 +885,12 @@ body {
 
 .airport-table__toolbar input,
 .runway-table__toolbar input,
-.station-table__toolbar input {
+.station-table__toolbar input,
+.obstacle-table__toolbar input,
+.airport-table__toolbar select,
+.runway-table__toolbar select,
+.station-table__toolbar select,
+.obstacle-table__toolbar select {
   width: 160px;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 10px;
@@ -926,7 +936,8 @@ body {
 
 .airport-table__table,
 .runway-table__table,
-.station-table__table {
+.station-table__table,
+.obstacle-table__table {
   flex: 1 1 auto;
   width: 100%;
   border-collapse: separate;
@@ -939,7 +950,8 @@ body {
 
 .airport-table__table th,
 .runway-table__table th,
-.station-table__table th {
+.station-table__table th,
+.obstacle-table__table th {
   padding: 12px 14px;
   color: #93c5fd;
   font-size: 12px;
@@ -953,7 +965,8 @@ body {
 
 .airport-table__table td,
 .runway-table__table td,
-.station-table__table td {
+.station-table__table td,
+.obstacle-table__table td {
   padding: 10px 14px;
   color: #cbd5e1;
   font-size: 13px;
@@ -962,19 +975,22 @@ body {
 
 .airport-table__table tr:last-child td,
 .runway-table__table tr:last-child td,
-.station-table__table tr:last-child td {
+.station-table__table tr:last-child td,
+.obstacle-table__table tr:last-child td {
   border-bottom: 0;
 }
 
 .airport-table__table tr:hover td,
 .runway-table__table tr:hover td,
-.station-table__table tr:hover td {
+.station-table__table tr:hover td,
+.obstacle-table__table tr:hover td {
   background: rgba(30, 41, 59, 0.38);
 }
 
 .airport-table__table td button,
 .runway-table__table td button,
-.station-table__table td button {
+.station-table__table td button,
+.obstacle-table__table td button {
   border: 0;
   border-radius: 8px;
   padding: 5px 12px;
@@ -987,13 +1003,15 @@ body {
 
 .airport-table__table td button:hover,
 .runway-table__table td button:hover,
-.station-table__table td button:hover {
+.station-table__table td button:hover,
+.obstacle-table__table td button:hover {
   background: rgba(71, 85, 105, 0.75);
 }
 
 .airport-table__table td button + button,
 .runway-table__table td button + button,
-.station-table__table td button + button {
+.station-table__table td button + button,
+.obstacle-table__table td button + button {
   margin-left: 8px;
 }
 

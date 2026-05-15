@@ -5,11 +5,14 @@ import {
   createRunway,
   createStation,
   deleteAirport,
+  deleteObstacle,
   deleteRunway,
   deleteStation,
   getAirports,
   getAirportDetail,
   getAirportOptions,
+  getObstacleDetail,
+  getObstacles,
   getRunwayDetail,
   getRunways,
   getStationDetail,
@@ -19,6 +22,7 @@ import {
   updateRunway,
   updateStation,
 } from '../services/dataManagement'
+import type { ObstacleListItem } from '../types/dataManagement'
 
 vi.mock('../services/dataManagement', () => ({
   getAirports: vi.fn(async () => ({
@@ -95,6 +99,26 @@ vi.mock('../services/dataManagement', () => ({
   deleteAirport: vi.fn(async () => undefined),
   deleteRunway: vi.fn(async () => undefined),
   deleteStation: vi.fn(async () => undefined),
+  getObstacles: vi.fn(async () => ({
+    items: [],
+    total: 0,
+    page: 1,
+    pageSize: 20,
+  })),
+  deleteObstacle: vi.fn(async () => undefined),
+  getObstacleDetail: vi.fn(async () => ({
+    id: 'obstacle-1',
+    projectId: 'project-1',
+    projectName: '项目1',
+    name: '障碍物1',
+    obstacleType: 'building',
+    topElevation: null,
+    sourceBatchId: 'batch-1',
+    sourceRowNo: 1,
+    geometry: null,
+    createdAt: '',
+    updatedAt: '',
+  })),
 }))
 
 describe('useDataManagement', () => {
@@ -154,6 +178,26 @@ describe('useDataManagement', () => {
       warnings: [],
     })
     vi.mocked(deleteStation).mockResolvedValue(undefined)
+    vi.mocked(getObstacles).mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+    })
+    vi.mocked(deleteObstacle).mockResolvedValue(undefined)
+    vi.mocked(getObstacleDetail).mockResolvedValue({
+      id: 'obstacle-1',
+      projectId: 'project-1',
+      projectName: '项目1',
+      name: '障碍物1',
+      obstacleType: 'building',
+      topElevation: null,
+      sourceBatchId: 'batch-1',
+      sourceRowNo: 1,
+      geometry: null,
+      createdAt: '',
+      updatedAt: '',
+    })
   })
 
   it('resets airport page to 1 when keyword filter changes', async () => {
@@ -1079,5 +1123,307 @@ describe('useDataManagement', () => {
       stationSubType: null,
       combineId: null,
     })
+  })
+
+  it('initializes obstacles sub-state with correct defaults', () => {
+    const { state } = useDataManagement({
+      onRefreshBootstrap: vi.fn(),
+    })
+
+    expect(state.obstacles.items).toEqual([])
+    expect(state.obstacles.total).toBe(0)
+    expect(state.obstacles.page).toBe(1)
+    expect(state.obstacles.pageSize).toBe(10)
+    expect(state.obstacles.filters).toEqual({
+      projectId: '',
+      keyword: '',
+      obstacleType: '',
+    })
+    expect(state.obstacles.loading).toBe(false)
+    expect(state.obstacles.errorMessage).toBe('')
+    expect(state.obstacles.warnings).toEqual([])
+    expect(state.obstacles.formOpen).toBe(false)
+    expect(state.obstacles.readonly).toBe(false)
+    expect(state.obstacles.draft).toEqual({})
+    expect(state.obstacles.deleteTarget).toBeNull()
+  })
+
+  it('resets obstacle page to 1 when keyword filter changes', async () => {
+    const { state, setObstacleKeyword } = useDataManagement({
+      onRefreshBootstrap: vi.fn(),
+    })
+
+    state.obstacles.page = 3
+
+    await setObstacleKeyword('测试')
+
+    expect(state.obstacles.page).toBe(1)
+    expect(state.obstacles.filters.keyword).toBe('测试')
+    expect(getObstacles).toHaveBeenCalledWith({
+      projectId: '',
+      keyword: '测试',
+      obstacleType: '',
+      page: 1,
+      pageSize: 10,
+    })
+  })
+
+  it('resets obstacle page to 1 when projectId filter changes', async () => {
+    const { state, setObstacleProjectId } = useDataManagement({
+      onRefreshBootstrap: vi.fn(),
+    })
+
+    state.obstacles.page = 5
+
+    await setObstacleProjectId('project-1')
+
+    expect(state.obstacles.page).toBe(1)
+    expect(state.obstacles.filters.projectId).toBe('project-1')
+  })
+
+  it('resets obstacle page to 1 when obstacleType filter changes', async () => {
+    const { state, setObstacleType } = useDataManagement({
+      onRefreshBootstrap: vi.fn(),
+    })
+
+    state.obstacles.page = 2
+
+    await setObstacleType('building')
+
+    expect(state.obstacles.page).toBe(1)
+    expect(state.obstacles.filters.obstacleType).toBe('building')
+  })
+
+  it('reloads obstacle list with requested page when obstacle page changes', async () => {
+    const { changeObstaclePage } = useDataManagement({
+      onRefreshBootstrap: vi.fn(),
+    })
+
+    await changeObstaclePage(3)
+
+    expect(getObstacles).toHaveBeenCalledWith({
+      projectId: '',
+      keyword: '',
+      obstacleType: '',
+      page: 3,
+      pageSize: 10,
+    })
+  })
+
+  it('resets obstacle page to 1 and reloads when obstacle page size changes', async () => {
+    const { state, changeObstaclePageSize } = useDataManagement({
+      onRefreshBootstrap: vi.fn(),
+    })
+
+    state.obstacles.page = 4
+
+    await changeObstaclePageSize(50)
+
+    expect(state.obstacles.page).toBe(1)
+    expect(getObstacles).toHaveBeenCalledWith({
+      projectId: '',
+      keyword: '',
+      obstacleType: '',
+      page: 1,
+      pageSize: 50,
+    })
+  })
+
+  it('sets deleteTarget when opening obstacle delete confirm', () => {
+    const { state, openObstacleDeleteConfirm } = useDataManagement({
+      onRefreshBootstrap: vi.fn(),
+    })
+
+    const item: ObstacleListItem = {
+      id: 'obstacle-1',
+      projectId: 'project-1',
+      projectName: '项目1',
+      name: '障碍物1',
+      obstacleType: 'building',
+      topElevation: null,
+      sourceBatchId: 'batch-1',
+      sourceRowNo: 1,
+      geometry: null,
+      createdAt: '',
+      updatedAt: '',
+    }
+
+    openObstacleDeleteConfirm(item)
+
+    expect(state.obstacles.deleteTarget).toStrictEqual(item)
+  })
+
+  it('clears deleteTarget when closing obstacle delete confirm', () => {
+    const { state, closeObstacleDeleteConfirm, openObstacleDeleteConfirm } = useDataManagement({
+      onRefreshBootstrap: vi.fn(),
+    })
+
+    openObstacleDeleteConfirm({
+      id: 'obstacle-1',
+      projectId: 'project-1',
+      projectName: '项目1',
+      name: '障碍物1',
+      obstacleType: 'building',
+      topElevation: null,
+      sourceBatchId: 'batch-1',
+      sourceRowNo: 1,
+      geometry: null,
+      createdAt: '',
+      updatedAt: '',
+    })
+
+    closeObstacleDeleteConfirm()
+
+    expect(state.obstacles.deleteTarget).toBeNull()
+    expect(state.obstacles.errorMessage).toBe('')
+  })
+
+  it('deletes obstacle, reloads list, clears target, but does NOT refresh bootstrap', async () => {
+    const onRefreshBootstrap = vi.fn(async () => undefined)
+    const { state, openObstacleDeleteConfirm, confirmObstacleDelete } = useDataManagement({
+      onRefreshBootstrap,
+    })
+
+    openObstacleDeleteConfirm({
+      id: 'obstacle-3',
+      projectId: 'project-1',
+      projectName: '项目1',
+      name: '待删除障碍物',
+      obstacleType: 'building',
+      topElevation: null,
+      sourceBatchId: 'batch-1',
+      sourceRowNo: 1,
+      geometry: null,
+      createdAt: '',
+      updatedAt: '',
+    })
+
+    await confirmObstacleDelete()
+
+    expect(deleteObstacle).toHaveBeenCalledWith('obstacle-3')
+    expect(state.obstacles.deleteTarget).toBeNull()
+    expect(getObstacles).toHaveBeenCalledTimes(1)
+    expect(onRefreshBootstrap).not.toHaveBeenCalled()
+  })
+
+  it('opens obstacle detail dialog with formOpen, readonly, and draft set', () => {
+    const { state, openObstacleDetailDialog } = useDataManagement({
+      onRefreshBootstrap: vi.fn(),
+    })
+
+    const item: ObstacleListItem = {
+      id: 'obstacle-2',
+      projectId: 'project-1',
+      projectName: '项目1',
+      name: '障碍物2',
+      obstacleType: 'tree',
+      topElevation: 100,
+      sourceBatchId: 'batch-2',
+      sourceRowNo: 2,
+      geometry: null,
+      createdAt: '',
+      updatedAt: '',
+    }
+
+    openObstacleDetailDialog(item)
+
+    expect(state.obstacles.formOpen).toBe(true)
+    expect(state.obstacles.readonly).toBe(true)
+    expect(state.obstacles.draft).toStrictEqual(item)
+  })
+
+  it('closes obstacle form dialog and resets readonly', () => {
+    const { state, closeObstacleDetailDialog, openObstacleDetailDialog } = useDataManagement({
+      onRefreshBootstrap: vi.fn(),
+    })
+
+    openObstacleDetailDialog({
+      id: 'obstacle-2',
+      projectId: 'project-1',
+      projectName: '项目1',
+      name: '障碍物2',
+      obstacleType: 'tree',
+      topElevation: 100,
+      sourceBatchId: 'batch-2',
+      sourceRowNo: 2,
+      geometry: null,
+      createdAt: '',
+      updatedAt: '',
+    })
+
+    closeObstacleDetailDialog()
+
+    expect(state.obstacles.formOpen).toBe(false)
+    expect(state.obstacles.readonly).toBe(false)
+  })
+
+  it('loads obstacle list when switching to obstacles tab while modal is open', async () => {
+    const { openDataManagement, setActiveTab } = useDataManagement({
+      onRefreshBootstrap: vi.fn(),
+    })
+
+    openDataManagement()
+    vi.mocked(getAirports).mockClear()
+    vi.mocked(getRunways).mockClear()
+    vi.mocked(getStations).mockClear()
+    vi.mocked(getObstacles).mockClear()
+
+    setActiveTab('obstacles')
+
+    await Promise.resolve()
+
+    expect(getObstacles).toHaveBeenCalledWith({
+      projectId: '',
+      keyword: '',
+      obstacleType: '',
+      page: 1,
+      pageSize: 10,
+    })
+  })
+
+  it('keeps obstacle delete dialog open and surfaces backend message on delete conflict', async () => {
+    vi.mocked(deleteObstacle).mockRejectedValue(Object.assign(new Error('障碍物删除失败'), {
+      status: 500,
+      code: 'delete_failed',
+      detailMessage: '障碍物删除失败',
+    }))
+
+    const onRefreshBootstrap = vi.fn(async () => undefined)
+    const { state, openObstacleDeleteConfirm, confirmObstacleDelete } = useDataManagement({
+      onRefreshBootstrap,
+    })
+
+    openObstacleDeleteConfirm({
+      id: 'obstacle-4',
+      projectId: 'project-1',
+      projectName: '项目1',
+      name: '冲突障碍物',
+      obstacleType: 'building',
+      topElevation: null,
+      sourceBatchId: 'batch-1',
+      sourceRowNo: 1,
+      geometry: null,
+      createdAt: '',
+      updatedAt: '',
+    })
+
+    await confirmObstacleDelete()
+
+    expect(state.obstacles.deleteTarget?.id).toBe('obstacle-4')
+    expect(state.obstacles.errorMessage).toBe('障碍物删除失败')
+    expect(onRefreshBootstrap).not.toHaveBeenCalled()
+  })
+
+  it('loads obstacle page when opening data management with obstacles tab active', async () => {
+    const { state, openDataManagement } = useDataManagement({
+      onRefreshBootstrap: vi.fn(),
+    })
+
+    state.activeTab = 'obstacles'
+    vi.mocked(getObstacles).mockClear()
+
+    await openDataManagement()
+
+    expect(getObstacles).toHaveBeenCalledTimes(1)
   })
 })

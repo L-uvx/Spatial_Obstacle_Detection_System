@@ -116,6 +116,24 @@ function createState(overrides: Partial<DataManagementState> = {}): DataManageme
       },
       deleteTarget: null,
     },
+    obstacles: {
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      filters: {
+        projectId: '',
+        keyword: '',
+        obstacleType: '',
+      },
+      loading: false,
+      errorMessage: '',
+      warnings: [],
+      formOpen: false,
+      readonly: false,
+      draft: {},
+      deleteTarget: null,
+    },
     ...overrides,
   }
 }
@@ -845,7 +863,7 @@ describe('DataManagementModal', () => {
     })
 
     expect(wrapper.find('.data-management-modal__import-btn').exists()).toBe(true)
-    expect(wrapper.find('.data-management-modal__import-btn').text()).toBe('导入机场')
+    expect(wrapper.find('.data-management-modal__import-btn').text()).toContain('导入机场')
   })
 
   it('has hidden file input for import', () => {
@@ -857,5 +875,237 @@ describe('DataManagementModal', () => {
 
     const fileInput = wrapper.find('input[type="file"][hidden]')
     expect(fileInput.exists()).toBe(true)
+  })
+
+  it('renders obstacles tab button', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState(),
+      },
+    })
+
+    const tab = wrapper.find('[data-tab="obstacles"]')
+    expect(tab.exists()).toBe(true)
+    expect(tab.text()).toBe('障碍物管理')
+    expect(tab.attributes('data-active')).toBe('false')
+  })
+
+  it('emits switchTab with obstacles on tab click', async () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState(),
+      },
+    })
+
+    await wrapper.get('[data-tab="obstacles"]').trigger('click')
+
+    expect(wrapper.emitted('switchTab')).toEqual([['obstacles']])
+  })
+
+  it('renders ObstacleTable when activeTab is obstacles', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          activeTab: 'obstacles',
+        }),
+      },
+    })
+
+    expect(wrapper.find('[aria-label="障碍物列表"]').exists()).toBe(true)
+  })
+
+  it('renders obstacle filter controls on obstacles tab', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          activeTab: 'obstacles',
+        }),
+      },
+    })
+
+    expect(wrapper.find('[data-testid="obstacle-project-id-input"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="obstacle-keyword-input"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="obstacle-type-select"]').exists()).toBe(true)
+  })
+
+  it('renders obstacle delete confirm section when deleteTarget is set', async () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          activeTab: 'obstacles',
+          obstacles: {
+            items: [],
+            total: 0,
+            page: 1,
+            pageSize: 20,
+            filters: { projectId: '', keyword: '', obstacleType: '' },
+            loading: false,
+            errorMessage: '障碍物下仍有关联分析数据，无法删除。',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: {},
+            deleteTarget: {
+              id: 'obstacle-1',
+              projectId: 'proj-1',
+              projectName: '测试项目',
+              name: '测试障碍物',
+              obstacleType: '人工障碍物',
+              topElevation: 120,
+              sourceBatchId: 'batch-1',
+              sourceRowNo: 1,
+              geometry: null,
+              createdAt: '',
+              updatedAt: '',
+            },
+          },
+        }),
+      },
+    })
+
+    expect(wrapper.text()).toContain('障碍物下仍有关联分析数据，无法删除。')
+
+    await wrapper.get('[data-testid="confirm-obstacle-delete"]').trigger('click')
+
+    expect(wrapper.emitted('confirmObstacleDelete')).toEqual([[]])
+  })
+
+  it('renders obstacle warnings on obstacles tab', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          activeTab: 'obstacles',
+          obstacles: {
+            items: [],
+            total: 0,
+            page: 1,
+            pageSize: 20,
+            filters: { projectId: '', keyword: '', obstacleType: '' },
+            loading: false,
+            errorMessage: '',
+            warnings: ['障碍物坐标已自动补齐'],
+            formOpen: false,
+            readonly: false,
+            draft: {},
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    expect(wrapper.get('[data-testid="data-management-warnings"]').text()).toContain(
+      '障碍物坐标已自动补齐',
+    )
+  })
+
+  it('shows pagination for obstacles tab', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          activeTab: 'obstacles',
+          obstacles: {
+            items: [],
+            total: 45,
+            page: 2,
+            pageSize: 20,
+            filters: { projectId: '', keyword: '', obstacleType: '' },
+            loading: false,
+            errorMessage: '',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: {},
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    expect(wrapper.get('[data-testid="modal-current-page"]').text()).toBe('2 / 3')
+  })
+
+  it('emits changeObstaclePage on prev/next click', async () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          activeTab: 'obstacles',
+          obstacles: {
+            items: [],
+            total: 45,
+            page: 2,
+            pageSize: 20,
+            filters: { projectId: '', keyword: '', obstacleType: '' },
+            loading: false,
+            errorMessage: '',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: {},
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    await wrapper.get('[data-testid="modal-prev-page"]').trigger('click')
+    expect(wrapper.emitted('changeObstaclePage')).toEqual([[1]])
+
+    await wrapper.get('[data-testid="modal-next-page"]').trigger('click')
+    expect(wrapper.emitted('changeObstaclePage')).toEqual([[1], [3]])
+  })
+
+  it('emits changeObstaclePageSize on page size change', async () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          activeTab: 'obstacles',
+          obstacles: {
+            items: [],
+            total: 45,
+            page: 1,
+            pageSize: 20,
+            filters: { projectId: '', keyword: '', obstacleType: '' },
+            loading: false,
+            errorMessage: '',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: {},
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    await wrapper.get('[data-testid="modal-page-size"]').setValue('50')
+    expect(wrapper.emitted('changeObstaclePageSize')).toEqual([[50]])
+  })
+
+  it('renders obstacle errorMessage when present', () => {
+    const wrapper = mount(DataManagementModal, {
+      props: {
+        state: createState({
+          activeTab: 'obstacles',
+          obstacles: {
+            items: [],
+            total: 0,
+            page: 1,
+            pageSize: 20,
+            filters: { projectId: '', keyword: '', obstacleType: '' },
+            loading: false,
+            errorMessage: '加载失败，请重试。',
+            warnings: [],
+            formOpen: false,
+            readonly: false,
+            draft: {},
+            deleteTarget: null,
+          },
+        }),
+      },
+    })
+
+    expect(wrapper.find('.data-management-modal__placeholder').text()).toBe(
+      '加载失败，请重试。',
+    )
   })
 })
