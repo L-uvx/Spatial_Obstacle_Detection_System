@@ -359,14 +359,13 @@ describe('PolygonObstacleAnalysisModal', () => {
     expect(wrapper.get('.analysis-modal__primary').attributes('disabled')).toBeDefined()
   })
 
-  it('renders minimal text analysis result details from backend', () => {
+  it('renders analysis result with project name, obstacle count and target list', () => {
     const wrapper = mount(PolygonObstacleAnalysisModal, {
       props: {
         state: {
           ...createImportFormState(),
           stage: 'analysis-result',
           analysisTaskId: 'analysis-task-1',
-          analysisSummary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
           analysisSelectedTargets: [
             { id: '1', name: 'Airport Near', category: '机场' },
             { id: '2', name: 'Airport Far', category: '机场' },
@@ -377,13 +376,10 @@ describe('PolygonObstacleAnalysisModal', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('已基于当前导入障碍物和所选机场生成最小分析结果。')
+    expect(wrapper.text()).toContain('超高分析结论')
     expect(wrapper.text()).toContain('Airport Near')
     expect(wrapper.text()).toContain('Airport Far')
     expect(wrapper.text()).toContain('2')
-    expect(wrapper.text()).not.toContain('保护区显示管理')
-    expect(wrapper.text()).not.toContain('天河机场')
-    expect(wrapper.text()).not.toContain('导航台A')
   })
 
   it('does not render the dedicated footer in import stage', () => {
@@ -525,86 +521,22 @@ describe('PolygonObstacleAnalysisModal', () => {
     expect(secondRowCells).toEqual(['', '湖北空管局', '8.0km'])
   })
 
-  it('renders rule results grouped by station with gb and mh content', () => {
+  it('renders analysis result section without rule results', () => {
     const wrapper = mount(PolygonObstacleAnalysisModal, {
       props: {
         state: {
           ...createImportFormState(),
           stage: 'analysis-result',
           analysisTaskId: 'analysis-task-1',
-          analysisSummary: '已基于当前导入障碍物和所选机场生成最小分析结果。',
-          analysisRuleResults: [
-            {
-              stationId: '4',
-              stationName: '西南近无方向信标台',
-              stationType: 'NDB',
-              obstacleId: '67',
-              obstacleName: '障碍物2',
-              rawObstacleType: '建筑物/构建物',
-              globalObstacleCategory: 'building_general',
-              ruleCode: 'ndb_minimum_distance_50m',
-              ruleName: 'ndb_minimum_distance_50m',
-              zoneCode: 'ndb_minimum_distance_50m',
-              zoneName: 'NDB 50m minimum distance zone',
-              regionCode: 'default',
-              regionName: 'default',
-              isApplicable: true,
-              isCompliant: true,
-              message: 'distance meets minimum threshold',
-              metrics: {
-                isInProtectionZone: true,
-                actualDistanceMeters: 150.5,
-                actualElevationAngleDegrees: 1.2,
-                baseHeightMeters: 30,
-                elevationAngleDegrees: 3,
-                allowedHeightMeters: 200,
-                topElevationMeters: 80,
-                innerRadiusMeters: 50,
-                outerRadiusMeters: 37040,
-              },
-              standards: {
-                gb: [
-                  {
-                    code: 'GB_NDB_50m最小间距区域_50',
-                    text: '无方向信标天线与地形地物之间的最小间距国标内容',
-                    isCompliant: true,
-                  },
-                ],
-                mh: [
-                  {
-                    code: 'MH_NDB_50m最小间距区域_50',
-                    text: '无方向信标天线与地形地物之间的最小间距行标内容',
-                    isCompliant: true,
-                  },
-                ],
-              },
-              overDistanceMeters: 0,
-              azimuthDegrees: 90,
-              maxHorizontalAngleDegrees: 95,
-              minHorizontalAngleDegrees: 85,
-              relativeHeightMeters: 50,
-              isInRadius: true,
-              isInZone: true,
-              details: '',
-            },
-          ],
+          analysisObstacleCount: 0,
+          protectionZoneTree: createProtectionZoneTree(),
         },
       },
     })
 
-    expect(wrapper.text()).toContain('西南近无方向信标台')
-    expect(wrapper.text()).toContain('障碍物2')
-    expect(wrapper.text()).toContain('ndb_minimum_distance_50m')
-    expect(wrapper.text()).toContain('国标内容')
-    expect(wrapper.text()).toContain('行标内容')
-    expect(wrapper.text()).toContain('GB_NDB_50m最小间距区域_50')
-    expect(wrapper.text()).toContain('MH_NDB_50m最小间距区域_50')
-    expect(wrapper.text()).toContain('规则编码：ndb_minimum_distance_50m')
-    expect(wrapper.text()).toContain('实际距离（米）：150.5')
-    expect(wrapper.text()).toContain('是否进入保护区：是')
-    expect(wrapper.text()).toContain('90°')
-    expect(wrapper.text()).toContain('isInRadius=true')
-    expect(wrapper.text()).toContain('isInZone=true')
+    expect(wrapper.text()).toContain('超高分析结论')
+    expect(wrapper.text()).toContain('0')
+    expect(wrapper.find('.analysis-modal__result-list').exists()).toBe(false)
   })
 
   it('renders export running progress in analysis result view', () => {

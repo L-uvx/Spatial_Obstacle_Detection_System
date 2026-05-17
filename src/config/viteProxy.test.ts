@@ -6,12 +6,12 @@ describe('vite proxy config', () => {
     const proxy = viteConfig.server?.proxy
 
     expect(proxy?.['/polygon-obstacle']).toMatchObject({
-      target: 'http://127.0.0.1:8000',
+      target: 'http://172.25.74.165:8000',
       changeOrigin: true,
     })
 
     expect(proxy?.['/point-obstacle']).toMatchObject({
-      target: 'http://127.0.0.1:8000',
+      target: 'http://172.25.74.165:8000',
       changeOrigin: true,
     })
   })

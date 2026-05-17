@@ -1313,7 +1313,7 @@ describe('useDataManagement', () => {
     expect(deleteObstacle).toHaveBeenCalledWith('obstacle-3')
     expect(state.obstacles.deleteTarget).toBeNull()
     expect(getObstacles).toHaveBeenCalledTimes(1)
-    expect(onRefreshBootstrap).not.toHaveBeenCalled()
+    expect(onRefreshBootstrap).toHaveBeenCalledTimes(1)
   })
 
   it('opens obstacle detail dialog with formOpen, readonly, and draft set', () => {
