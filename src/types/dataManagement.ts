@@ -67,6 +67,7 @@ export interface RunwayListItem {
   runwayCodeA: string
   runwayType: string
   runwayCodeB: string
+  maximumTypeAircraft: string | null
   createdAt: string
   updatedAt: string
 }
@@ -87,6 +88,7 @@ export interface RunwayPayload {
   runwayCodeA: string
   runwayType: string
   runwayCodeB: string
+  maximumTypeAircraft: string | null
 }
 
 export interface StationFilters {

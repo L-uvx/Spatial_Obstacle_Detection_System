@@ -32,6 +32,7 @@ const draft = reactive<RunwayFormValue>({
   runwayCodeA: '',
   runwayType: '',
   runwayCodeB: '',
+  maximumTypeAircraft: 'D类和D类以上',
 })
 const errorMessage = ref('')
 
@@ -62,6 +63,7 @@ watch(
     draft.runwayCodeA = value.runwayCodeA
     draft.runwayType = value.runwayType
     draft.runwayCodeB = value.runwayCodeB
+    draft.maximumTypeAircraft = value.maximumTypeAircraft
     errorMessage.value = ''
   },
   { immediate: true, deep: true },
@@ -112,6 +114,7 @@ function handleSave() {
     runwayCodeA: draft.runwayCodeA.trim(),
     runwayType: draft.runwayType.trim(),
     runwayCodeB: draft.runwayCodeB.trim(),
+    maximumTypeAircraft: draft.maximumTypeAircraft,
   })
 }
 </script>
@@ -238,6 +241,14 @@ function handleSave() {
         <label>
           <span>编码B</span>
           <input v-model="draft.runwayCodeB" type="text" :disabled="readonly" />
+        </label>
+        <label>
+          <span>最大可起降航空器类别</span>
+          <select v-model="draft.maximumTypeAircraft" :disabled="readonly">
+    <option value="D类和D类以上">D类和D类以上</option>
+            <option value="C类和C类以下">C类和C类以下</option>
+            <option value="B类和B类以下">B类和B类以下</option>
+          </select>
         </label>
         <p v-if="errorMessage" class="data-management-form-dialog__error">{{ errorMessage }}</p>
       </div>

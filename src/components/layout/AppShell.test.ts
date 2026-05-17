@@ -63,6 +63,7 @@ function createDataManagementState(overrides: Partial<DataManagementState> = {})
         altitude: null,
         enterHeight: null,
         maximumAirworthiness: null,
+        maximumTypeAircraft: null,
         stationSubType: '',
         runwayCodeA: '',
         runwayType: '',

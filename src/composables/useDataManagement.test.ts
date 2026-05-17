@@ -59,6 +59,7 @@ vi.mock('../services/dataManagement', () => ({
     latitude: 30.7,
     headingDegrees: 12,
     lengthMeters: 3400,
+    maximumTypeAircraft: null,
   })),
   getStationDetail: vi.fn(async () => ({
     id: 'station-1',
@@ -493,6 +494,7 @@ describe('useDataManagement', () => {
       altitude: number | null
       enterHeight: number | null
       maximumAirworthiness: number | null
+      maximumTypeAircraft: string | null
       stationSubType: string
       runwayCodeA: string
       runwayType: string
@@ -535,6 +537,7 @@ describe('useDataManagement', () => {
       altitude: null,
       enterHeight: null,
       maximumAirworthiness: null,
+      maximumTypeAircraft: null,
       stationSubType: '',
       runwayCodeA: '',
       runwayType: '',
@@ -564,6 +567,7 @@ describe('useDataManagement', () => {
       altitude: null,
       enterHeight: null,
       maximumAirworthiness: null,
+      maximumTypeAircraft: null,
       stationSubType: '',
       runwayCodeA: '',
       runwayType: '',
@@ -751,6 +755,7 @@ describe('useDataManagement', () => {
       altitude: null,
       enterHeight: null,
       maximumAirworthiness: null,
+      maximumTypeAircraft: null,
       stationSubType: '',
       runwayCodeA: '',
       runwayType: '',
@@ -771,6 +776,7 @@ describe('useDataManagement', () => {
       altitude: null,
       enterHeight: null,
       maximumAirworthiness: null,
+      maximumTypeAircraft: null,
       stationSubType: '',
       runwayCodeA: '',
       runwayType: '',
@@ -806,6 +812,7 @@ describe('useDataManagement', () => {
       altitude: null,
       enterHeight: null,
       maximumAirworthiness: null,
+      maximumTypeAircraft: null,
       stationSubType: '',
       runwayCodeA: '',
       runwayType: '',
@@ -836,6 +843,7 @@ describe('useDataManagement', () => {
       altitude: null,
       enterHeight: null,
       maximumAirworthiness: null,
+      maximumTypeAircraft: null,
       stationSubType: '',
       runwayCodeA: '',
       runwayType: '',
@@ -878,6 +886,7 @@ describe('useDataManagement', () => {
       altitude: null,
       enterHeight: null,
       maximumAirworthiness: null,
+      maximumTypeAircraft: null,
       stationSubType: '',
       runwayCodeA: '',
       runwayType: '',
@@ -1080,6 +1089,7 @@ describe('useDataManagement', () => {
       altitude: null,
       enterHeight: null,
       maximumAirworthiness: null,
+      maximumTypeAircraft: 'D类和D类以上',
       stationSubType: '',
       runwayCodeA: '',
       runwayType: '',

@@ -24,6 +24,7 @@ function createRunway(overrides: Partial<RunwayListItem> = {}): RunwayListItem {
     runwayCodeA: '',
     runwayType: '',
     runwayCodeB: '',
+    maximumTypeAircraft: null,
     createdAt: '',
     updatedAt: '',
     ...overrides,

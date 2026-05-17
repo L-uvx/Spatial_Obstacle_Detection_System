@@ -150,6 +150,7 @@ describe('dataManagement service', () => {
         latitude: 30.7,
         headingDegrees: 12,
         lengthMeters: 3400,
+        maximumTypeAircraft: 'D类和D类以上',
       }),
     }))
 
@@ -167,6 +168,7 @@ describe('dataManagement service', () => {
       latitude: 30.7,
       headingDegrees: 12,
       lengthMeters: 3400,
+      maximumTypeAircraft: 'D类和D类以上',
     })
   })
 
@@ -360,6 +362,7 @@ describe('dataManagement service', () => {
       runwayCodeA: '',
       runwayType: '',
       runwayCodeB: '',
+      maximumTypeAircraft: null,
     })
 
     expect(fetchMock).toHaveBeenCalledWith('/data-management/runways', {
@@ -383,6 +386,7 @@ describe('dataManagement service', () => {
         runwayCodeA: '',
         runwayType: '',
         runwayCodeB: '',
+        maximumTypeAircraft: null,
       }),
     })
     expect(result).toEqual({
@@ -418,6 +422,7 @@ describe('dataManagement service', () => {
       runwayCodeA: '',
       runwayType: '',
       runwayCodeB: '',
+      maximumTypeAircraft: null,
     })
 
     expect(fetchMock).toHaveBeenCalledWith('/data-management/runways/302', {
@@ -441,6 +446,7 @@ describe('dataManagement service', () => {
         runwayCodeA: '',
         runwayType: '',
         runwayCodeB: '',
+        maximumTypeAircraft: null,
       }),
     })
     expect(result).toEqual({
@@ -673,6 +679,7 @@ describe('dataManagement service', () => {
           runwayCodeA: 'RC-A',
           runwayType: 'precision',
           runwayCodeB: 'RC-B',
+          maximumTypeAircraft: 'D类和D类以上',
           createdAt: '2025-01-01T08:00:00Z',
           updatedAt: '2025-06-01T12:00:00Z',
         }],
@@ -702,6 +709,7 @@ describe('dataManagement service', () => {
       runwayCodeA: 'RC-A',
       runwayType: 'precision',
       runwayCodeB: 'RC-B',
+      maximumTypeAircraft: 'D类和D类以上',
     })
   })
 

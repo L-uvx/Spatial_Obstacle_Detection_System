@@ -80,6 +80,7 @@ interface RunwayListItemResponse {
   runwayCodeA?: string
   runwayType?: string
   runwayCodeB?: string
+  maximumTypeAircraft?: string | null
   createdAt?: string
   updatedAt?: string
 }
@@ -201,6 +202,7 @@ function normalizeRunwayListItem(item: RunwayListItemResponse): RunwayListItem {
     runwayCodeA: item.runwayCodeA ?? '',
     runwayType: item.runwayType ?? '',
     runwayCodeB: item.runwayCodeB ?? '',
+    maximumTypeAircraft: item.maximumTypeAircraft ?? 'D类和D类以上',
     createdAt: item.createdAt ?? '',
     updatedAt: item.updatedAt ?? '',
   }
