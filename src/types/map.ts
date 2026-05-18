@@ -9,7 +9,7 @@ export interface InitialViewConfig {
 
 export interface TerrainConfig {
   enabled: boolean
-  type: 'cesium-world-terrain'
+  type: 'cesium-world-terrain' | 'tianditu-terrain'
   ionToken: string
 }
 

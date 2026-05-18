@@ -12,6 +12,7 @@ import type {
   RenderedStation,
 } from '../../types/tool'
 import { buildCameraFlyToOptions, buildTopDownView, getInitialCameraKey, resolveResetCameraTarget } from './camera'
+import { createTiandituTerrainProvider } from '../../utils/tiandituTerrain'
 
 const props = defineProps<{
   resetTick: number
@@ -113,17 +114,27 @@ async function buildTerrainProvider() {
     return undefined
   }
 
-  if (mapConfig.terrain.type !== 'cesium-world-terrain') {
-    return undefined
+  if (mapConfig.terrain.type === 'cesium-world-terrain') {
+    if (!mapConfig.terrain.ionToken) {
+      console.warn('Missing VITE_CESIUM_ION_TOKEN, terrain is disabled and imagery-only mode will be used.')
+      return undefined
+    }
+
+    Cesium.Ion.defaultAccessToken = mapConfig.terrain.ionToken
+    return Cesium.createWorldTerrainAsync()
   }
 
-  if (!mapConfig.terrain.ionToken) {
-    console.warn('Missing VITE_CESIUM_ION_TOKEN, terrain is disabled and imagery-only mode will be used.')
-    return undefined
+  if (mapConfig.terrain.type === 'tianditu-terrain') {
+    const tdtKey = mapConfig.tdtKey
+    if (!tdtKey) {
+      console.warn('Missing VITE_TDT_KEY, Tianditu terrain is unavailable.')
+      return undefined
+    }
+    return createTiandituTerrainProvider(tdtKey)
   }
 
-  Cesium.Ion.defaultAccessToken = mapConfig.terrain.ionToken
-  return Cesium.createWorldTerrainAsync()
+  console.warn(`Unknown terrain type: ${mapConfig.terrain.type}, terrain disabled.`)
+  return undefined
 }
 
 // 使用基础影像和可选地形创建 Cesium Viewer 实例。

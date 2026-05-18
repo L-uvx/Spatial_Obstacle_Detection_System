@@ -95,6 +95,10 @@ vi.mock('../../map/layers/StationLayer', async () => {
   }
 })
 
+vi.mock('../../utils/tiandituTerrain', () => ({
+  createTiandituTerrainProvider: vi.fn(() => ({}) as Cesium.TerrainProvider),
+}))
+
 function createObstacle(id: string): RenderedObstacle {
   return {
     id,
