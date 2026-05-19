@@ -8,7 +8,8 @@ export const mapConfig: MapConfig = {
   imageryStyle: 'img',
   terrain: {
     enabled: true,
-    type: 'tianditu-terrain',
+    type: 'cesium-world-terrain',
+    // type: 'tianditu-terrain',
     ionToken,
   },
   showAnimation: false,
