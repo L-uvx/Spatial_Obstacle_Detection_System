@@ -226,7 +226,7 @@ function createObstacleEntities(
             height: 0,
             extrudedHeight: obstacle.topElevation,
             perPositionHeight: false,
-            material: Cesium.Color.fromCssColorString('#ff8a3d').withAlpha(0.45),
+            material: Cesium.Color.fromCssColorString('#ff8a3d').withAlpha(1),
             outline: true,
             outlineColor: Cesium.Color.fromCssColorString('#ffb26b'),
           },
