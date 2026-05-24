@@ -43,15 +43,6 @@ function formatCoordinate(item: ObstacleListItem): string {
         />
       </label>
       <label>
-        <span>关键字</span>
-        <input
-          data-testid="obstacle-keyword-input"
-          type="text"
-          :value="keyword"
-          @input="emit('update:keyword', ($event.target as HTMLInputElement).value)"
-        />
-      </label>
-      <label>
         <span>障碍物类型</span>
         <select
           data-testid="obstacle-type-select"
@@ -61,6 +52,15 @@ function formatCoordinate(item: ObstacleListItem): string {
           <option value="">全部类型</option>
           <option v-for="t in typeOptions" :key="t" :value="t">{{ t }}</option>
         </select>
+      </label>
+      <label>
+        <span>关键字</span>
+        <input
+          data-testid="obstacle-keyword-input"
+          type="text"
+          :value="keyword"
+          @input="emit('update:keyword', ($event.target as HTMLInputElement).value)"
+        />
       </label>
     </div>
 

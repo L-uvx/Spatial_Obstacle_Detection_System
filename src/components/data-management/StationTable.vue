@@ -47,21 +47,21 @@ const emit = defineEmits<{
         />
       </label>
       <label>
-        <span>关键字</span>
-        <input
-          data-testid="station-keyword-input"
-          type="text"
-          :value="keyword"
-          @input="emit('update:keyword', ($event.target as HTMLInputElement).value)"
-        />
-      </label>
-      <label>
         <span>关联跑道</span>
         <input
           data-testid="station-runway-no-input"
           type="text"
           :value="runwayNo"
           @input="emit('update:runwayNo', ($event.target as HTMLInputElement).value)"
+        />
+      </label>
+      <label>
+        <span>关键字</span>
+        <input
+          data-testid="station-keyword-input"
+          type="text"
+          :value="keyword"
+          @input="emit('update:keyword', ($event.target as HTMLInputElement).value)"
         />
       </label>
       <button type="button" data-action="create-station" @click="emit('create')">新建台站</button>
