@@ -205,27 +205,60 @@ vi.mock('../workflows/analyzeWorkflow', () => ({
       { id: '2', name: 'Airport Far', category: '机场' },
     ],
     obstacleCount: 2,
-    ruleResults: [
+    targetResults: [
       {
-        stationId: '4',
-        stationName: '西南近无方向信标台',
-        stationType: 'NDB',
-        obstacleId: '67',
-        obstacleName: '障碍物2',
-        rawObstacleType: '建筑物/构建物',
-        globalObstacleCategory: 'building_general',
-        ruleName: 'ndb_minimum_distance_50m',
-        zoneCode: 'ndb_minimum_distance_50m',
-        zoneName: 'NDB 50m minimum distance zone',
-        regionCode: 'default',
-        regionName: 'default',
-        isApplicable: true,
-        isCompliant: true,
-        message: 'distance meets minimum threshold',
-        standards: {
-          gb: { code: 'gb-code', text: '国标内容', isCompliant: true },
-          mh: { code: 'mh-code', text: '行标内容', isCompliant: true },
-        },
+        targetId: 1,
+        targetName: 'Airport Near',
+        ruleResults: [
+          {
+            stationId: '4',
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            obstacleId: '67',
+            obstacleName: '障碍物2',
+            rawObstacleType: '建筑物/构建物',
+            globalObstacleCategory: 'building_general',
+            ruleName: 'ndb_minimum_distance_50m',
+            zoneCode: 'ndb_minimum_distance_50m',
+            zoneName: 'NDB 50m minimum distance zone',
+            regionCode: 'default',
+            regionName: 'default',
+            isApplicable: true,
+            isCompliant: true,
+            message: 'distance meets minimum threshold',
+            standards: {
+              gb: { code: 'gb-code', text: '国标内容', isCompliant: true },
+              mh: { code: 'mh-code', text: '行标内容', isCompliant: true },
+            },
+          },
+        ],
+      },
+      {
+        targetId: 2,
+        targetName: 'Airport Far',
+        ruleResults: [
+          {
+            stationId: '5',
+            stationName: '其他台站',
+            stationType: 'VOR',
+            obstacleId: '68',
+            obstacleName: '障碍物3',
+            rawObstacleType: '其他',
+            globalObstacleCategory: 'other',
+            ruleName: 'vor_minimum_distance_100m',
+            zoneCode: 'vor_minimum_distance_100m',
+            zoneName: 'VOR 100m minimum distance zone',
+            regionCode: 'default',
+            regionName: 'default',
+            isApplicable: true,
+            isCompliant: false,
+            message: 'distance below minimum threshold',
+            standards: {
+              gb: { code: 'gb-code-2', text: '国标内容2', isCompliant: false },
+              mh: { code: 'mh-code-2', text: '行标内容2', isCompliant: false },
+            },
+          },
+        ],
       },
     ],
   })),
@@ -981,27 +1014,74 @@ describe('useWorkflowActions', () => {
       { id: '2', name: 'Airport Far', category: '机场' },
     ])
     expect(state.analysisObstacleCount).toBe(2)
-    expect(state.analysisRuleResults).toEqual([
+    expect(state.analysisTargetResults).toEqual([
       {
-        stationId: '4',
-        stationName: '西南近无方向信标台',
-        stationType: 'NDB',
-        obstacleId: '67',
-        obstacleName: '障碍物2',
-        rawObstacleType: '建筑物/构建物',
-        globalObstacleCategory: 'building_general',
-        ruleName: 'ndb_minimum_distance_50m',
-        zoneCode: 'ndb_minimum_distance_50m',
-        zoneName: 'NDB 50m minimum distance zone',
-        regionCode: 'default',
-        regionName: 'default',
-        isApplicable: true,
-        isCompliant: true,
-        message: 'distance meets minimum threshold',
-        standards: {
-          gb: { code: 'gb-code', text: '国标内容', isCompliant: true },
-          mh: { code: 'mh-code', text: '行标内容', isCompliant: true },
-        },
+        targetId: 1,
+        targetName: 'Airport Near',
+        ruleResults: [
+          {
+            stationId: '4',
+            stationName: '西南近无方向信标台',
+            stationType: 'NDB',
+            obstacleId: '67',
+            obstacleName: '障碍物2',
+            rawObstacleType: '建筑物/构建物',
+            globalObstacleCategory: 'building_general',
+            ruleName: 'ndb_minimum_distance_50m',
+            zoneCode: 'ndb_minimum_distance_50m',
+            zoneName: 'NDB 50m minimum distance zone',
+            regionCode: 'default',
+            regionName: 'default',
+            isApplicable: true,
+            isCompliant: true,
+            message: 'distance meets minimum threshold',
+            standards: {
+              gb: { code: 'gb-code', text: '国标内容', isCompliant: true },
+              mh: { code: 'mh-code', text: '行标内容', isCompliant: true },
+            },
+          },
+        ],
+        exportTaskId: '',
+        exportStatus: 'idle',
+        exportProgressPercent: 0,
+        exportMessage: '分析完成后可导出 Word 结论。',
+        exportFileName: '',
+        downloadUrl: '',
+        exportErrorMessage: '',
+      },
+      {
+        targetId: 2,
+        targetName: 'Airport Far',
+        ruleResults: [
+          {
+            stationId: '5',
+            stationName: '其他台站',
+            stationType: 'VOR',
+            obstacleId: '68',
+            obstacleName: '障碍物3',
+            rawObstacleType: '其他',
+            globalObstacleCategory: 'other',
+            ruleName: 'vor_minimum_distance_100m',
+            zoneCode: 'vor_minimum_distance_100m',
+            zoneName: 'VOR 100m minimum distance zone',
+            regionCode: 'default',
+            regionName: 'default',
+            isApplicable: true,
+            isCompliant: false,
+            message: 'distance below minimum threshold',
+            standards: {
+              gb: { code: 'gb-code-2', text: '国标内容2', isCompliant: false },
+              mh: { code: 'mh-code-2', text: '行标内容2', isCompliant: false },
+            },
+          },
+        ],
+        exportTaskId: '',
+        exportStatus: 'idle',
+        exportProgressPercent: 0,
+        exportMessage: '分析完成后可导出 Word 结论。',
+        exportFileName: '',
+        downloadUrl: '',
+        exportErrorMessage: '',
       },
     ])
     expect(state.statusMessage).toBe('分析任务已完成。')
@@ -1038,18 +1118,18 @@ describe('useWorkflowActions', () => {
       { key: 'airport-1:station-1:zone-a:rule-b:region-south', ruleCode: 'rule-b' },
     ])
 
-    const exportPromise = exportReport()
+    const exportPromise = exportReport(1)
 
     await vi.runAllTimersAsync()
     await exportPromise
 
-    expect(state.exportTaskId).toBe('export-task-1')
-    expect(state.exportStatus).toBe('succeeded')
-    expect(state.exportProgressPercent).toBe(100)
-    expect(state.exportMessage).toBe('Word 结论已生成。')
-    expect(state.exportFileName).toBe('analysis-task-1.docx')
-    expect(state.downloadUrl).toBe('/mock/report.docx')
-    expect(state.exportErrorMessage).toBe('')
+    expect(state.analysisTargetResults[0].exportTaskId).toBe('export-task-1')
+    expect(state.analysisTargetResults[0].exportStatus).toBe('succeeded')
+    expect(state.analysisTargetResults[0].exportProgressPercent).toBe(100)
+    expect(state.analysisTargetResults[0].exportMessage).toBe('Word 结论已生成。')
+    expect(state.analysisTargetResults[0].exportFileName).toBe('analysis-task-1.docx')
+    expect(state.analysisTargetResults[0].downloadUrl).toBe('/mock/report.docx')
+    expect(state.analysisTargetResults[0].exportErrorMessage).toBe('')
 
     closeModal()
 
@@ -1120,13 +1200,13 @@ describe('useWorkflowActions', () => {
     state.analysisTaskId = 'analysis-task-1'
     state.stage = 'analysis-result'
 
-    const exportPromise = exportReport()
+    const exportPromise = exportReport(1)
     await vi.runAllTimersAsync()
     await exportPromise
 
-    expect(state.exportMessage).toBe('Word 结论已生成。')
-    expect(state.exportStatus).toBe('succeeded')
-    expect(state.exportFileName).toBe('report.docx')
+    expect(state.analysisTargetResults[0].exportMessage).toBe('Word 结论已生成。')
+    expect(state.analysisTargetResults[0].exportStatus).toBe('succeeded')
+    expect(state.analysisTargetResults[0].exportFileName).toBe('report.docx')
 
     vi.useRealTimers()
   })
@@ -1165,19 +1245,19 @@ describe('useWorkflowActions', () => {
     await vi.runAllTimersAsync()
     await analyzePromise
 
-    const exportPromise = exportReport()
+    const exportPromise = exportReport(1)
 
     await vi.runAllTimersAsync()
 
     await expect(exportPromise).resolves.toBeUndefined()
     expect(state.stage).toBe('analysis-result')
-    expect(state.exportTaskId).toBe('export-task-2')
-    expect(state.exportStatus).toBe('failed')
-    expect(state.exportProgressPercent).toBe(35)
-    expect(state.exportMessage).toBe('导出失败，请稍后重试。')
-    expect(state.exportErrorMessage).toBe('导出失败，请稍后重试。')
-    expect(state.exportFileName).toBe('')
-    expect(state.downloadUrl).toBe('')
+    expect(state.analysisTargetResults[0].exportTaskId).toBe('export-task-2')
+    expect(state.analysisTargetResults[0].exportStatus).toBe('failed')
+    expect(state.analysisTargetResults[0].exportProgressPercent).toBe(35)
+    expect(state.analysisTargetResults[0].exportMessage).toBe('正在生成 Word 结论。')
+    expect(state.analysisTargetResults[0].exportErrorMessage).toBe('导出失败，请稍后重试。')
+    expect(state.analysisTargetResults[0].exportFileName).toBe('')
+    expect(state.analysisTargetResults[0].downloadUrl).toBe('')
 
     vi.useRealTimers()
   })
@@ -1312,8 +1392,8 @@ describe('useWorkflowActions', () => {
     await vi.runAllTimersAsync()
     await analyzePromise
 
-    const firstExportPromise = exportReport()
-    const secondExportPromise = exportReport()
+    const firstExportPromise = exportReport(1)
+    const secondExportPromise = exportReport(1)
 
     const resolveFirstExport = exportResolvers.first
 
@@ -1323,12 +1403,12 @@ describe('useWorkflowActions', () => {
     await vi.runAllTimersAsync()
     await firstExportPromise
 
-    expect(state.exportTaskId).toBe('export-task-new')
-    expect(state.exportStatus).toBe('running')
-    expect(state.exportProgressPercent).toBe(80)
-    expect(state.exportMessage).toBe('新导出任务执行中。')
-    expect(state.exportFileName).toBe('')
-    expect(state.downloadUrl).toBe('')
+    expect(state.analysisTargetResults[0].exportTaskId).toBe('export-task-new')
+    expect(state.analysisTargetResults[0].exportStatus).toBe('running')
+    expect(state.analysisTargetResults[0].exportProgressPercent).toBe(80)
+    expect(state.analysisTargetResults[0].exportMessage).toBe('新导出任务执行中。')
+    expect(state.analysisTargetResults[0].exportFileName).toBe('')
+    expect(state.analysisTargetResults[0].downloadUrl).toBe('')
 
     const resolveSecondExport = exportResolvers.second
 
@@ -1338,12 +1418,12 @@ describe('useWorkflowActions', () => {
     await vi.runAllTimersAsync()
     await secondExportPromise
 
-    expect(state.exportTaskId).toBe('export-task-new')
-    expect(state.exportStatus).toBe('succeeded')
-    expect(state.exportProgressPercent).toBe(100)
-    expect(state.exportMessage).toBe('新导出任务已完成。')
-    expect(state.exportFileName).toBe('new.docx')
-    expect(state.downloadUrl).toBe('/mock/new.docx')
+    expect(state.analysisTargetResults[0].exportTaskId).toBe('export-task-new')
+    expect(state.analysisTargetResults[0].exportStatus).toBe('succeeded')
+    expect(state.analysisTargetResults[0].exportProgressPercent).toBe(100)
+    expect(state.analysisTargetResults[0].exportMessage).toBe('新导出任务已完成。')
+    expect(state.analysisTargetResults[0].exportFileName).toBe('new.docx')
+    expect(state.analysisTargetResults[0].downloadUrl).toBe('/mock/new.docx')
 
     vi.useRealTimers()
   })
@@ -1384,11 +1464,11 @@ describe('useWorkflowActions', () => {
     await vi.runAllTimersAsync()
     await analyzePromise
 
-    await expect(exportReport()).resolves.toBeUndefined()
+    await expect(exportReport(1)).resolves.toBeUndefined()
 
-    expect(state.exportStatus).toBe('succeeded')
-    expect(state.exportFileName).toBe('analysis-task-3.docx')
-    expect(state.downloadUrl).toBe('')
+    expect(state.analysisTargetResults[0].exportStatus).toBe('succeeded')
+    expect(state.analysisTargetResults[0].exportFileName).toBe('analysis-task-3.docx')
+    expect(state.analysisTargetResults[0].downloadUrl).toBe('')
 
     vi.useRealTimers()
   })

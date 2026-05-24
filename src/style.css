@@ -404,11 +404,6 @@ body {
   margin-top: 8px;
 }
 
-.analysis-modal__export-status {
-  margin: 14px 0 0;
-  color: #cbd5e1;
-}
-
 .analysis-modal__export-status[data-status='succeeded'] {
   color: #86efac;
 }
@@ -417,14 +412,109 @@ body {
   color: #fde68a;
 }
 
+.analysis-modal__export-status[data-status='failed'] {
+  color: #fca5a5;
+}
+
+/* ---------- 分析结果每目标卡片 ---------- */
+
+.analysis-modal__target-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.analysis-modal__target-card {
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.analysis-modal__target-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.analysis-modal__target-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e8eefc;
+}
+
+.analysis-modal__target-count {
+  font-size: 13px;
+  color: #93c5fd;
+}
+
+.analysis-modal__target-export {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.analysis-modal__target-export-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.analysis-modal__primary--small {
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.analysis-modal__export-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.analysis-modal__export-status {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analysis-modal__export-progress {
+  font-size: 13px;
+  color: #fde68a;
+  white-space: nowrap;
+}
+
+.analysis-modal__target-export-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.analysis-modal__export-file {
+  font-size: 13px;
+  color: #93c5fd;
+}
+
+.analysis-modal__export-error {
+  margin: 0;
+  font-size: 13px;
+  color: #fca5a5;
+}
+
 .analysis-modal__download {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
   border: 1px solid rgba(37, 99, 235, 0.35);
   border-radius: 12px;
-  padding: 10px 16px;
+  padding: 8px 14px;
+  font-size: 13px;
   color: #bfdbfe;
   background: rgba(30, 41, 59, 0.65);
   text-decoration: none;
@@ -434,6 +524,13 @@ body {
 .analysis-modal__download:hover {
   border-color: rgba(96, 165, 250, 0.5);
   background: rgba(37, 99, 235, 0.18);
+}
+
+.analysis-modal__footer-summary {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
 }
 
 /* ---------- 数据管理大弹窗 ---------- */

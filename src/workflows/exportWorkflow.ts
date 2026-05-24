@@ -41,12 +41,13 @@ function emitProgress(
 // 串联导出任务创建、轮询、结果解析和下载触发。
 export async function runExportWorkflow(input: {
   analysisTaskId: string
+  targetId: number
   onProgress: (progress: ExportWorkflowProgress) => void
   triggerDownload: (downloadUrl: string) => void
   pollIntervalMs?: number
 }): Promise<ExportWorkflowResult> {
   const pollIntervalMs = input.pollIntervalMs ?? 1000
-  const createResult = await createExportTask(input.analysisTaskId)
+  const createResult = await createExportTask(input.analysisTaskId, input.targetId)
 
   emitProgress(input.onProgress, {
     exportTaskId: createResult.exportTaskId,

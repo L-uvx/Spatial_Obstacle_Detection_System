@@ -365,8 +365,8 @@ function handleStartAnalysis() {
 }
 
 // 触发当前分析结果的 Word 导出。
-function handleExportReport() {
-  void exportReport()
+function handleExportReport(targetId: number) {
+  void exportReport(targetId)
 }
 
 // 飞行到指定保护区的几何中心。

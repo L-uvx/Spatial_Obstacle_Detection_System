@@ -125,15 +125,8 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
     analysisSummary: '',
     analysisSelectedTargets: [],
     analysisObstacleCount: 0,
-    analysisRuleResults: [],
+    analysisTargetResults: [],
     statusMessage: '等待打开障碍物分析流程。',
-    exportTaskId: '',
-    exportStatus: 'idle',
-    exportProgressPercent: 0,
-    exportMessage: '分析完成后可导出 Word 结论。',
-    exportFileName: '',
-    downloadUrl: '',
-    exportErrorMessage: '',
     renderedObstacles,
     protectionZoneTree: [],
     loadedProtectionZones: [],
@@ -146,7 +139,7 @@ function createInitialState(renderedObstacles: RenderedObstacle[] = []): Polygon
 
 export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
   const state = reactive(createInitialState(initialObstacles))
-  let exportRunId = 0
+  const targetExportRunIds = new Map<number, number>()
 
   // 根据当前机场拉取保护区几何并合并到长期状态中。
   async function loadProtectionZones(airportId: string) {
@@ -337,17 +330,20 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
       state.analysisSummary = workflowResult.summary
       state.analysisSelectedTargets = workflowResult.selectedTargets
       state.analysisObstacleCount = workflowResult.obstacleCount
-      state.analysisRuleResults = workflowResult.ruleResults
+      state.analysisTargetResults = workflowResult.targetResults.map((t) => ({
+        targetId: t.targetId,
+        targetName: t.targetName,
+        ruleResults: t.ruleResults,
+        exportTaskId: '',
+        exportStatus: 'idle' as const,
+        exportProgressPercent: 0,
+        exportMessage: '分析完成后可导出 Word 结论。',
+        exportFileName: '',
+        downloadUrl: '',
+        exportErrorMessage: '',
+      }))
       state.stage = 'analysis-result'
       state.statusMessage = workflowResult.message
-
-      state.exportTaskId = ''
-      state.exportStatus = 'idle'
-      state.exportProgressPercent = 0
-      state.exportMessage = '分析完成后可导出 Word 结论。'
-      state.exportFileName = ''
-      state.downloadUrl = ''
-      state.exportErrorMessage = ''
     } catch (error) {
       state.stage = 'error'
       state.statusMessage = error instanceof Error ? error.message : '分析失败，请稍后重试。'
@@ -355,58 +351,62 @@ export function useWorkflowActions(initialObstacles: RenderedObstacle[] = []) {
   }
 
   // 发起 Word 导出，并通过运行 id 防止旧请求覆盖新状态。
-  async function exportReport() {
+  async function exportReport(targetId: number) {
     if (state.stage !== 'analysis-result' || !state.analysisTaskId) {
       return
     }
 
-    exportRunId += 1
-    const currentExportRunId = exportRunId
+    const targetResult = state.analysisTargetResults.find((t) => t.targetId === targetId)
+    if (!targetResult) {
+      return
+    }
 
-    state.exportTaskId = ''
-    state.exportStatus = 'idle'
-    state.exportProgressPercent = 0
-    state.exportMessage = '分析完成后可导出 Word 结论。'
-    state.exportFileName = ''
-    state.downloadUrl = ''
-    state.exportErrorMessage = ''
+    const prevRunId = targetExportRunIds.get(targetId) ?? 0
+    const currentExportRunId = prevRunId + 1
+    targetExportRunIds.set(targetId, currentExportRunId)
+
+    targetResult.exportTaskId = ''
+    targetResult.exportStatus = 'idle'
+    targetResult.exportProgressPercent = 0
+    targetResult.exportMessage = '分析完成后可导出 Word 结论。'
+    targetResult.exportFileName = ''
+    targetResult.downloadUrl = ''
+    targetResult.exportErrorMessage = ''
 
     try {
       const workflowResult = await runExportWorkflow({
         analysisTaskId: state.analysisTaskId,
+        targetId,
         onProgress(progress) {
-          if (currentExportRunId !== exportRunId) {
+          if (targetExportRunIds.get(targetId) !== currentExportRunId) {
             return
           }
-
-          state.exportTaskId = progress.exportTaskId
-          state.exportStatus = progress.exportStatus
-          state.exportProgressPercent = progress.exportProgressPercent
-          state.exportMessage = localizeExportMessage(progress.exportStatus, progress.exportMessage)
-          state.exportErrorMessage = ''
+          targetResult.exportTaskId = progress.exportTaskId
+          targetResult.exportStatus = progress.exportStatus
+          targetResult.exportProgressPercent = progress.exportProgressPercent
+          targetResult.exportMessage = localizeExportMessage(progress.exportStatus, progress.exportMessage)
+          targetResult.exportErrorMessage = ''
         },
         triggerDownload,
       })
 
-      if (currentExportRunId !== exportRunId) {
+      if (targetExportRunIds.get(targetId) !== currentExportRunId) {
         return
       }
 
-      state.exportTaskId = workflowResult.exportTaskId
-      state.exportStatus = workflowResult.exportStatus
-      state.exportProgressPercent = workflowResult.exportProgressPercent
-      state.exportMessage = localizeExportMessage(workflowResult.exportStatus, workflowResult.exportMessage)
-      state.exportFileName = workflowResult.exportFileName
-      state.downloadUrl = getAllowedDownloadUrl(workflowResult.downloadUrl)
-      state.exportErrorMessage = workflowResult.exportErrorMessage
+      targetResult.exportTaskId = workflowResult.exportTaskId
+      targetResult.exportStatus = workflowResult.exportStatus
+      targetResult.exportProgressPercent = workflowResult.exportProgressPercent
+      targetResult.exportMessage = localizeExportMessage(workflowResult.exportStatus, workflowResult.exportMessage)
+      targetResult.exportFileName = workflowResult.exportFileName
+      targetResult.downloadUrl = getAllowedDownloadUrl(workflowResult.downloadUrl)
+      targetResult.exportErrorMessage = workflowResult.exportErrorMessage
     } catch (error) {
-      if (currentExportRunId !== exportRunId) {
+      if (targetExportRunIds.get(targetId) !== currentExportRunId) {
         return
       }
-
-      state.exportStatus = 'failed'
-      state.exportErrorMessage = error instanceof Error ? error.message : '导出失败，请稍后重试。'
-      state.exportMessage = state.exportErrorMessage
+      targetResult.exportStatus = 'failed'
+      targetResult.exportErrorMessage = error instanceof Error ? error.message : '导出失败，请稍后重试。'
     }
   }
 

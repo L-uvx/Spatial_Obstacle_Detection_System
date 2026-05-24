@@ -1,5 +1,6 @@
 import { createAnalysisTask, getAnalysisTaskResult, getAnalysisTaskStatus } from '../services/analysis'
-import type { AnalysisRuleResult, AnalysisSelectedTarget } from '../types/tool'
+import type { AnalysisSelectedTarget } from '../types/tool'
+import type { AnalysisTaskResult } from '../services/analysis'
 
 export interface AnalyzeWorkflowResult {
   analysisTaskId: string
@@ -7,7 +8,7 @@ export interface AnalyzeWorkflowResult {
   message: string
   selectedTargets: AnalysisSelectedTarget[]
   obstacleCount: number
-  ruleResults: AnalysisRuleResult[]
+  targetResults: AnalysisTaskResult['targetResults']
 }
 
 // 为轮询流程提供统一的等待间隔。
@@ -51,6 +52,6 @@ export async function runAnalyzeWorkflow(input: {
     message: '分析任务已完成。',
     selectedTargets: result.selectedTargets,
     obstacleCount: result.obstacleCount,
-    ruleResults: result.ruleResults,
+    targetResults: result.targetResults,
   }
 }

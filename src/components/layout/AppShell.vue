@@ -95,7 +95,7 @@ const emit = defineEmits<{
   openProtectionZonePanel: []
   closeProtectionZonePanel: []
   startAnalysis: []
-  exportReport: []
+  exportReport: [targetId: number]
   flyToProtectionZone: [zone: ProtectionZoneNode]
 }>()
 
@@ -235,7 +235,7 @@ function handleSelectAirport(event: Event) {
         @set-station-protection-zone-visibility="handleToggleProtectionZoneStation"
         @set-zone-protection-zone-visibility="handleToggleProtectionZone"
         @start-analysis="emit('startAnalysis')"
-        @export-report="emit('exportReport')"
+        @export-report="emit('exportReport', $event)"
       />
       <DataManagementModal
         :state="dataManagementState"

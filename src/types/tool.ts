@@ -35,6 +35,19 @@ export interface AnalysisSelectedTarget {
   category: '机场' | '空管局'
 }
 
+export interface AnalysisTargetResult {
+  targetId: number
+  targetName: string
+  ruleResults: AnalysisRuleResult[]
+  exportTaskId: string
+  exportStatus: ExportStatus
+  exportProgressPercent: number
+  exportMessage: string
+  exportFileName: string
+  downloadUrl: string
+  exportErrorMessage: string
+}
+
 export interface AnalysisRuleMetrics {
   /** Maps from backend `enteredProtectionZone`; always `false` if absent */
   isInProtectionZone: boolean
@@ -400,15 +413,8 @@ export interface PolygonObstacleAnalysisState {
   analysisSummary: string
   analysisSelectedTargets: AnalysisSelectedTarget[]
   analysisObstacleCount: number
-  analysisRuleResults: AnalysisRuleResult[]
+  analysisTargetResults: AnalysisTargetResult[]
   statusMessage: string
-  exportTaskId: string
-  exportStatus: ExportStatus
-  exportProgressPercent: number
-  exportMessage: string
-  exportFileName: string
-  downloadUrl: string
-  exportErrorMessage: string
   renderedObstacles: RenderedObstacle[]
   protectionZoneTree: ProtectionZoneAirportNode[]
   loadedProtectionZones: VisibleProtectionZoneRegion[]

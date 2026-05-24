@@ -6,7 +6,23 @@ import { describe, expect, it, vi } from 'vitest'
 import PolygonObstacleAnalysisModal from './PolygonObstacleAnalysisModal.vue'
 import ObstacleTypeSelect from '../common/ObstacleTypeSelect.vue'
 import { pointObstacleTypeOptions, polygonObstacleTypeOptions } from '../../types/tool'
-import type { PolygonObstacleAnalysisState, ProtectionZoneAirportNode } from '../../types/tool'
+import type { AnalysisTargetResult, PolygonObstacleAnalysisState, ProtectionZoneAirportNode } from '../../types/tool'
+
+function createAnalysisTargetResult(overrides?: Partial<AnalysisTargetResult>): AnalysisTargetResult {
+  return {
+    targetId: 1,
+    targetName: '测试目标',
+    ruleResults: [],
+    exportTaskId: '',
+    exportStatus: 'idle' as const,
+    exportProgressPercent: 0,
+    exportMessage: '分析完成后可导出 Word 结论。',
+    exportFileName: '',
+    downloadUrl: '',
+    exportErrorMessage: '',
+    ...overrides,
+  }
+}
 
 function createVisibleProtectionZoneRegion(): PolygonObstacleAnalysisState['visibleProtectionZones'][number] {
   return {
@@ -75,15 +91,8 @@ function createImportFormState(): PolygonObstacleAnalysisState {
     analysisSummary: '',
     analysisSelectedTargets: [],
     analysisObstacleCount: 0,
-    analysisRuleResults: [],
+    analysisTargetResults: [],
     statusMessage: '请上传多边形障碍物 Excel。',
-    exportTaskId: '',
-    exportStatus: 'idle',
-    exportProgressPercent: 0,
-    exportMessage: '分析完成后可导出 Word 结论。',
-    exportFileName: '',
-    downloadUrl: '',
-    exportErrorMessage: '',
     renderedObstacles: [],
     protectionZoneTree: [],
     loadedProtectionZones: [],
@@ -201,7 +210,7 @@ describe('PolygonObstacleAnalysisModal', () => {
         submitImport: vi.fn(async () => undefined),
         toggleTarget: vi.fn(),
         startAnalysis: vi.fn(async () => undefined),
-        exportReport: vi.fn(async () => undefined),
+        exportReport: vi.fn(async (_targetId: number) => undefined),
         toggleProtectionZoneAirportVisibility,
         toggleProtectionZoneStationVisibility,
         toggleProtectionZoneVisibility,
@@ -370,6 +379,10 @@ describe('PolygonObstacleAnalysisModal', () => {
             { id: '1', name: 'Airport Near', category: '机场' },
             { id: '2', name: 'Airport Far', category: '机场' },
           ],
+          analysisTargetResults: [
+            createAnalysisTargetResult({ targetId: 1, targetName: 'Airport Near', ruleResults: [] }),
+            createAnalysisTargetResult({ targetId: 2, targetName: 'Airport Far', ruleResults: [] }),
+          ],
           analysisObstacleCount: 2,
           protectionZoneTree: createProtectionZoneTree(),
         },
@@ -380,6 +393,7 @@ describe('PolygonObstacleAnalysisModal', () => {
     expect(wrapper.text()).toContain('Airport Near')
     expect(wrapper.text()).toContain('Airport Far')
     expect(wrapper.text()).toContain('2')
+    expect(wrapper.find('.analysis-modal__target-card').exists()).toBe(true)
   })
 
   it('does not render the dedicated footer in import stage', () => {
@@ -400,11 +414,17 @@ describe('PolygonObstacleAnalysisModal', () => {
           stage: 'analysis-result',
           analysisTaskId: 'analysis-task-1',
           analysisSummary: '已生成分析结论。',
+          analysisTargetResults: [
+            createAnalysisTargetResult({ exportStatus: 'idle' }),
+            createAnalysisTargetResult({ exportStatus: 'succeeded', targetId: 2, targetName: '目标2' }),
+          ],
         },
       },
     })
 
     expect(wrapper.find('.analysis-modal__footer').exists()).toBe(true)
+    expect(wrapper.text()).toContain('共 2 个分析对象')
+    expect(wrapper.text()).toContain('已导出 1 个')
   })
 
   it('adds a dedicated result-stage section hook inside the modal body', () => {
@@ -441,7 +461,7 @@ describe('PolygonObstacleAnalysisModal', () => {
     expect(footer.classes()).toContain('analysis-modal__footer--rounded')
   })
 
-  it('exposes the export action from the dedicated footer instead of the result card in analysis-result stage', () => {
+  it('exposes the export action from per-target cards instead of the footer in analysis-result stage', () => {
     const wrapper = mount(PolygonObstacleAnalysisModal, {
       props: {
         state: {
@@ -449,18 +469,21 @@ describe('PolygonObstacleAnalysisModal', () => {
           stage: 'analysis-result',
           analysisTaskId: 'analysis-task-1',
           analysisSummary: '已生成分析结论。',
+          analysisTargetResults: [
+            createAnalysisTargetResult(),
+          ],
         },
       },
     })
 
-    const resultCard = wrapper.get('.analysis-modal__result-card')
+    const targetCard = wrapper.get('.analysis-modal__target-card')
     const footer = wrapper.get('.analysis-modal__footer')
 
-    expect(footer.find('button.analysis-modal__primary').exists()).toBe(true)
-    expect(resultCard.find('button.analysis-modal__primary').exists()).toBe(false)
+    expect(targetCard.find('button.analysis-modal__primary').exists()).toBe(true)
+    expect(footer.find('button.analysis-modal__primary').exists()).toBe(false)
   })
 
-  it('exposes the download action from the dedicated footer instead of the result card after export succeeds', () => {
+  it('exposes the download action from per-target cards instead of the footer after export succeeds', () => {
     const wrapper = mount(PolygonObstacleAnalysisModal, {
       props: {
         state: {
@@ -468,19 +491,23 @@ describe('PolygonObstacleAnalysisModal', () => {
           stage: 'analysis-result',
           analysisTaskId: 'analysis-task-1',
           analysisSummary: '已生成分析结论。',
-          exportStatus: 'succeeded',
-          exportMessage: '导出成功，可下载 Word 报告。',
-          exportFileName: 'analysis-result.docx',
-          downloadUrl: '/downloads/analysis-result.docx',
+          analysisTargetResults: [
+            createAnalysisTargetResult({
+              exportStatus: 'succeeded',
+              exportMessage: '导出成功，可下载 Word 报告。',
+              exportFileName: 'analysis-result.docx',
+              downloadUrl: '/downloads/analysis-result.docx',
+            }),
+          ],
         },
       },
     })
 
-    const resultCard = wrapper.get('.analysis-modal__result-card')
+    const targetCard = wrapper.get('.analysis-modal__target-card')
     const footer = wrapper.get('.analysis-modal__footer')
 
-    expect(footer.find('a.analysis-modal__download').exists()).toBe(true)
-    expect(resultCard.find('a.analysis-modal__download').exists()).toBe(false)
+    expect(targetCard.find('a.analysis-modal__download').exists()).toBe(true)
+    expect(footer.find('a.analysis-modal__download').exists()).toBe(false)
   })
 
   it('renders only target name and distance in the mixed selection table', () => {
@@ -546,18 +573,24 @@ describe('PolygonObstacleAnalysisModal', () => {
           ...createImportFormState(),
           stage: 'analysis-result',
           analysisTaskId: 'analysis-task-1',
-          exportTaskId: 'export-task-1',
-          exportStatus: 'running',
-          exportProgressPercent: 50,
-          exportMessage: 'export task running',
+          analysisTargetResults: [
+            createAnalysisTargetResult({
+              exportTaskId: 'export-task-1',
+              exportStatus: 'running',
+              exportProgressPercent: 50,
+              exportMessage: 'export task running',
+            }),
+          ],
         },
       },
     })
 
-    expect(wrapper.text()).toContain('50%')
-    expect(wrapper.text()).toContain('export task running')
-    expect(wrapper.get('button.analysis-modal__primary').attributes('disabled')).toBeDefined()
-    expect(wrapper.get('button.analysis-modal__primary').text()).toContain('导出中...')
+    const targetCard = wrapper.get('.analysis-modal__target-card')
+
+    expect(targetCard.text()).toContain('50%')
+    expect(targetCard.text()).toContain('export task running')
+    expect(targetCard.find('button.analysis-modal__primary').attributes('disabled')).toBeDefined()
+    expect(targetCard.find('button.analysis-modal__primary').text()).toContain('导出中...')
   })
 
   it('renders pending export state in analysis result view', () => {
@@ -567,33 +600,45 @@ describe('PolygonObstacleAnalysisModal', () => {
           ...createImportFormState(),
           stage: 'analysis-result',
           analysisTaskId: 'analysis-task-1',
-          exportTaskId: 'export-task-1',
-          exportStatus: 'pending',
-          exportProgressPercent: 0,
-          exportMessage: 'export task pending',
+          analysisTargetResults: [
+            createAnalysisTargetResult({
+              exportTaskId: 'export-task-1',
+              exportStatus: 'pending',
+              exportProgressPercent: 0,
+              exportMessage: 'export task pending',
+            }),
+          ],
         },
       },
     })
 
-    expect(wrapper.get('button.analysis-modal__primary').attributes('disabled')).toBeDefined()
-    expect(wrapper.get('button.analysis-modal__primary').text()).toContain('导出中...')
-    expect(wrapper.text()).toContain('当前进度：0%')
+    const targetCard = wrapper.get('.analysis-modal__target-card')
+
+    expect(targetCard.find('button.analysis-modal__primary').attributes('disabled')).toBeDefined()
+    expect(targetCard.find('button.analysis-modal__primary').text()).toContain('导出中...')
+    expect(targetCard.text()).toContain('0%')
   })
 
-  it('disables export button when analysis task id is empty in analysis result view', () => {
+  it('enables export button when analysis task id is empty but target has idle export status', () => {
     const wrapper = mount(PolygonObstacleAnalysisModal, {
       props: {
         state: {
           ...createImportFormState(),
           stage: 'analysis-result',
           analysisTaskId: '',
-          exportStatus: 'idle',
+          analysisTargetResults: [
+            createAnalysisTargetResult({
+              exportStatus: 'idle',
+            }),
+          ],
         },
       },
     })
 
-    expect(wrapper.get('button.analysis-modal__primary').attributes('disabled')).toBeDefined()
-    expect(wrapper.get('button.analysis-modal__primary').text()).toContain('导出结论')
+    const targetCard = wrapper.get('.analysis-modal__target-card')
+
+    expect(targetCard.find('button.analysis-modal__primary').attributes('disabled')).toBeUndefined()
+    expect(targetCard.find('button.analysis-modal__primary').text()).toContain('导出结论')
   })
 
   it('renders export success file name and redownload link', () => {
@@ -603,23 +648,29 @@ describe('PolygonObstacleAnalysisModal', () => {
           ...createImportFormState(),
           stage: 'analysis-result',
           analysisTaskId: 'analysis-task-1',
-          exportTaskId: 'export-task-1',
-          exportStatus: 'succeeded',
-          exportProgressPercent: 100,
-          exportMessage: '报告已生成，开始下载。',
-          exportFileName: 'polygon-obstacle-analysis-analysis-task-1.docx',
-          downloadUrl: 'http://127.0.0.1:8000/polygon-obstacle/exports/export-task-1/download',
+          analysisTargetResults: [
+            createAnalysisTargetResult({
+              exportTaskId: 'export-task-1',
+              exportStatus: 'succeeded',
+              exportProgressPercent: 100,
+              exportMessage: '报告已生成，开始下载。',
+              exportFileName: 'polygon-obstacle-analysis-analysis-task-1.docx',
+              downloadUrl: 'http://127.0.0.1:8000/polygon-obstacle/exports/export-task-1/download',
+            }),
+          ],
         },
       },
     })
 
-    expect(wrapper.text()).toContain('polygon-obstacle-analysis-analysis-task-1.docx')
-    expect(wrapper.get('button.analysis-modal__primary').text()).toContain('重新导出')
-    expect(wrapper.get('a.analysis-modal__download').attributes('href')).toBe(
+    const targetCard = wrapper.get('.analysis-modal__target-card')
+
+    expect(targetCard.text()).toContain('polygon-obstacle-analysis-analysis-task-1.docx')
+    expect(targetCard.find('button.analysis-modal__primary').text()).toContain('重新导出')
+    expect(targetCard.get('a.analysis-modal__download').attributes('href')).toBe(
       'http://127.0.0.1:8000/polygon-obstacle/exports/export-task-1/download',
     )
-    expect(wrapper.get('a.analysis-modal__download').attributes('download')).toBeDefined()
-    expect(wrapper.get('a.analysis-modal__download').text()).toContain('重新下载')
+    expect(targetCard.get('a.analysis-modal__download').attributes('download')).toBeDefined()
+    expect(targetCard.get('a.analysis-modal__download').text()).toContain('重新下载')
   })
 
   it('renders export error message when present', () => {
@@ -629,16 +680,22 @@ describe('PolygonObstacleAnalysisModal', () => {
           ...createImportFormState(),
           stage: 'analysis-result',
           analysisTaskId: 'analysis-task-1',
-          exportTaskId: 'export-task-1',
-          exportStatus: 'failed',
-          exportMessage: '导出失败，请重试。',
-          exportErrorMessage: 'report generation failed',
+          analysisTargetResults: [
+            createAnalysisTargetResult({
+              exportTaskId: 'export-task-1',
+              exportStatus: 'failed',
+              exportMessage: '导出失败，请重试。',
+              exportErrorMessage: 'report generation failed',
+            }),
+          ],
         },
       },
     })
 
-    expect(wrapper.text()).toContain('导出失败，请重试。')
-    expect(wrapper.text()).toContain('report generation failed')
+    const targetCard = wrapper.get('.analysis-modal__target-card')
+
+    expect(targetCard.text()).toContain('导出失败，请重试。')
+    expect(targetCard.text()).toContain('report generation failed')
   })
 
 })

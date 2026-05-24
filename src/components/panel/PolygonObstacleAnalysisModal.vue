@@ -13,7 +13,7 @@ const emit = defineEmits<{
   submitImport: [formValue: ImportFormValue]
   toggleTarget: [targetId: string]
   startAnalysis: []
-  exportReport: []
+  exportReport: [targetId: number]
 }>()
 
 const formValue = reactive<ImportFormValue>({
@@ -216,31 +216,60 @@ watch(
             </div>
           </div>
 
-          <p class="analysis-modal__export-status" :data-status="state.exportStatus">{{ state.exportMessage }}</p>
-          <p v-if="state.exportStatus === 'pending' || state.exportStatus === 'running'" class="analysis-modal__export-progress">
-            当前进度：{{ state.exportProgressPercent }}%
-          </p>
-          <p v-if="state.exportFileName" class="analysis-modal__export-file">文件名：{{ state.exportFileName }}</p>
-          <p v-if="state.exportErrorMessage" class="analysis-modal__export-error">{{ state.exportErrorMessage }}</p>
+          <div class="analysis-modal__target-results">
+            <div
+              v-for="targetResult in state.analysisTargetResults"
+              :key="targetResult.targetId"
+              class="analysis-modal__target-card"
+            >
+              <div class="analysis-modal__target-header">
+                <span class="analysis-modal__target-name">{{ targetResult.targetName }}</span>
+                <span class="analysis-modal__target-count">{{ targetResult.ruleResults.length }} 条规则结果</span>
+              </div>
+
+              <div class="analysis-modal__target-export">
+                <div class="analysis-modal__target-export-row">
+                  <button
+                    type="button"
+                    class="analysis-modal__primary analysis-modal__primary--small"
+                    :disabled="targetResult.exportStatus === 'pending' || targetResult.exportStatus === 'running'"
+                    @click="emit('exportReport', targetResult.targetId)"
+                  >
+                    {{
+                      targetResult.exportStatus === 'succeeded'
+                        ? '重新导出'
+                        : targetResult.exportStatus === 'pending' || targetResult.exportStatus === 'running'
+                          ? '导出中...'
+                          : '导出结论'
+                    }}
+                  </button>
+
+                  <div v-if="targetResult.exportStatus !== 'idle'" class="analysis-modal__export-info">
+                    <span class="analysis-modal__export-status" :data-status="targetResult.exportStatus">
+                      {{ targetResult.exportMessage }}
+                    </span>
+                    <span v-if="targetResult.exportStatus === 'pending' || targetResult.exportStatus === 'running'" class="analysis-modal__export-progress">
+                      {{ targetResult.exportProgressPercent }}%
+                    </span>
+                  </div>
+                </div>
+
+                <div v-if="targetResult.exportFileName || targetResult.downloadUrl || targetResult.exportErrorMessage" class="analysis-modal__target-export-meta">
+                  <span v-if="targetResult.exportFileName" class="analysis-modal__export-file">文件名：{{ targetResult.exportFileName }}</span>
+                  <a v-if="targetResult.downloadUrl" class="analysis-modal__download" :href="targetResult.downloadUrl" download>重新下载 Word 报告</a>
+                  <p v-if="targetResult.exportErrorMessage" class="analysis-modal__export-error">{{ targetResult.exportErrorMessage }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div v-if="state.stage === 'analysis-result'" class="analysis-modal__footer analysis-modal__footer--rounded">
-        <button
-          type="button"
-          class="analysis-modal__primary"
-          :disabled="state.exportStatus === 'pending' || state.exportStatus === 'running' || !state.analysisTaskId"
-          @click="emit('exportReport')"
-        >
-          {{
-            state.exportStatus === 'succeeded'
-              ? '重新导出'
-              : state.exportStatus === 'pending' || state.exportStatus === 'running'
-                ? '导出中...'
-                : '导出结论'
-          }}
-        </button>
-        <a v-if="state.downloadUrl" class="analysis-modal__download" :href="state.downloadUrl" download>重新下载 Word 报告</a>
+        <p class="analysis-modal__footer-summary">
+          共 {{ state.analysisTargetResults.length }} 个分析对象，
+          已导出 {{ state.analysisTargetResults.filter(t => t.exportStatus === 'succeeded').length }} 个
+        </p>
       </div>
     </div>
   </section>

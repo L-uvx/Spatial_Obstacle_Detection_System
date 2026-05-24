@@ -43,6 +43,8 @@ describe('report service', () => {
       json: async () => ({
         exportTaskId: 'export-task-1',
         analysisTaskId: 'analysis-task-1',
+        targetId: 1,
+        targetName: 'Airport Near',
         status: 'pending',
         message: 'export task created',
         progressPercent: 0,
@@ -51,12 +53,14 @@ describe('report service', () => {
 
     vi.stubGlobal('fetch', fetchMock)
 
-    const result = await createExportTask('analysis-task-1')
+    const result = await createExportTask('analysis-task-1', 1)
 
-    expect(fetchMock).toHaveBeenCalledWith('/polygon-obstacle/analysis/analysis-task-1/export', {
+    expect(fetchMock).toHaveBeenCalledWith('/polygon-obstacle/analysis/analysis-task-1/export?targetId=1', {
       method: 'POST',
     })
     expect(result.exportTaskId).toBe('export-task-1')
+    expect(result.targetId).toBe(1)
+    expect(result.targetName).toBe('Airport Near')
     expect(result.status).toBe('pending')
   })
 
@@ -67,7 +71,7 @@ describe('report service', () => {
       json: async () => ({ detail: 'analysis task is not ready for export' }),
     })
 
-    await expect(createExportTask('analysis-task-1')).rejects.toThrow('analysis task is not ready for export')
+    await expect(createExportTask('analysis-task-1', 1)).rejects.toThrow('analysis task is not ready for export')
   })
 
   it('requests export status from nested status path', async () => {
@@ -76,6 +80,8 @@ describe('report service', () => {
       json: async () => ({
         exportTaskId: 'export-task-1',
         analysisTaskId: 'analysis-task-1',
+        targetId: 1,
+        targetName: 'Airport Near',
         status: 'running',
         message: 'export task running',
         progressPercent: 50,
@@ -100,6 +106,8 @@ describe('report service', () => {
       json: async () => ({
         exportTaskId: 'export-task-1',
         analysisTaskId: 'analysis-task-1',
+        targetId: 1,
+        targetName: 'Airport Near',
         status: 'succeeded',
         fileName: 'polygon-obstacle-analysis-analysis-task-1.docx',
         downloadUrl: '/polygon-obstacle/exports/export-task-1/download',

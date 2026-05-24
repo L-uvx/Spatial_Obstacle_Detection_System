@@ -1,6 +1,8 @@
 export interface ExportTaskStatusResult {
   exportTaskId: string
   analysisTaskId: string
+  targetId: number
+  targetName: string
   status: 'pending' | 'running' | 'succeeded' | 'failed'
   message: string
   progressPercent: number
@@ -9,6 +11,8 @@ export interface ExportTaskStatusResult {
 export interface ExportTaskResult {
   exportTaskId: string
   analysisTaskId: string
+  targetId: number
+  targetName: string
   status: 'pending' | 'running' | 'succeeded' | 'failed'
   fileName: string | null
   downloadUrl: string | null
@@ -31,8 +35,8 @@ function parseErrorDetail(detail: unknown, fallbackMessage: string) {
   return fallbackMessage
 }
 
-export async function createExportTask(analysisTaskId: string): Promise<ExportTaskStatusResult> {
-  const response = await fetch(`/polygon-obstacle/analysis/${analysisTaskId}/export`, {
+export async function createExportTask(analysisTaskId: string, targetId: number): Promise<ExportTaskStatusResult> {
+  const response = await fetch(`/polygon-obstacle/analysis/${analysisTaskId}/export?targetId=${targetId}`, {
     method: 'POST',
   })
 
@@ -46,6 +50,8 @@ export async function createExportTask(analysisTaskId: string): Promise<ExportTa
   return {
     exportTaskId: result.exportTaskId,
     analysisTaskId: result.analysisTaskId,
+    targetId: result.targetId ?? targetId,
+    targetName: result.targetName ?? '',
     status: result.status,
     message: result.message,
     progressPercent: result.progressPercent,
@@ -70,6 +76,8 @@ export async function getExportTaskStatus(
   return {
     exportTaskId: result.exportTaskId,
     analysisTaskId: result.analysisTaskId,
+    targetId: result.targetId,
+    targetName: result.targetName,
     status: result.status,
     message: result.message,
     progressPercent: result.progressPercent,
@@ -94,6 +102,8 @@ export async function getExportTaskResult(
   return {
     exportTaskId: result.exportTaskId,
     analysisTaskId: result.analysisTaskId,
+    targetId: result.targetId,
+    targetName: result.targetName,
     status: result.status,
     fileName: result.fileName,
     downloadUrl: result.downloadUrl,

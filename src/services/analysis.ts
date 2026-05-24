@@ -30,7 +30,7 @@ export interface AnalysisTaskResult {
   selectedTargets: AnalysisSelectedTarget[]
   obstacleCount: number
   summary: string
-  ruleResults: AnalysisRuleResult[]
+  targetResults: { targetId: number; targetName: string; ruleResults: AnalysisRuleResult[] }[]
 }
 
 interface AnalysisRuleStandardResponse {
@@ -71,6 +71,12 @@ interface AnalysisRuleResultResponse {
   details?: string
 }
 
+interface AnalysisTargetResultResponse {
+  targetId: number
+  targetName: string
+  ruleResults: AnalysisRuleResultResponse[]
+}
+
 interface ProtectionZoneResponse {
   id: number | string
   airportId: number | string
@@ -105,7 +111,7 @@ interface AnalysisTaskResultResponse {
   obstacleCount: number
   summary: string
   protectionZones?: ProtectionZoneResponse[]
-  ruleResults?: AnalysisRuleResultResponse[]
+  targetResults?: AnalysisTargetResultResponse[]
 }
 
 function isFiniteNumberArray(value: unknown): value is number[] {
@@ -179,7 +185,7 @@ function isValidAnalysisTaskResultResponse(value: unknown): value is AnalysisTas
     && typeof candidate.summary === 'string'
     && (candidate.selectedTargets === undefined || Array.isArray(candidate.selectedTargets))
     && (candidate.protectionZones === undefined || Array.isArray(candidate.protectionZones))
-    && (candidate.ruleResults === undefined || Array.isArray(candidate.ruleResults))
+    && (candidate.targetResults === undefined || Array.isArray(candidate.targetResults))
   )
 }
 
@@ -337,6 +343,14 @@ function normalizeAnalysisRuleResults(results: unknown[] = []): AnalysisRuleResu
       details: String(item.details ?? ''),
     }]
   })
+}
+
+function normalizeAnalysisTargetResults(targets: AnalysisTargetResultResponse[] = []): AnalysisTaskResult['targetResults'] {
+  return targets.map((t) => ({
+    targetId: t.targetId,
+    targetName: t.targetName,
+    ruleResults: normalizeAnalysisRuleResults(t.ruleResults ?? []),
+  }))
 }
 
 function isFiniteNumber(value: unknown): value is number {
@@ -859,6 +873,6 @@ export async function getAnalysisTaskResult(taskId: string): Promise<AnalysisTas
     selectedTargets: normalizeAnalysisSelectedTargets(result.selectedTargets),
     obstacleCount: result.obstacleCount,
     summary: result.summary,
-    ruleResults: normalizeAnalysisRuleResults(result.ruleResults ?? []),
+    targetResults: normalizeAnalysisTargetResults(result.targetResults ?? []),
   }
 }

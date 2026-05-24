@@ -21,6 +21,8 @@ describe('runExportWorkflow', () => {
     vi.mocked(reportService.createExportTask).mockResolvedValueOnce({
       exportTaskId: 'export-task-0',
       analysisTaskId: 'analysis-task-0',
+      targetId: 1,
+      targetName: 'Airport Near',
       status: 'failed',
       message: '导出任务创建后立即失败',
       progressPercent: 0,
@@ -29,6 +31,7 @@ describe('runExportWorkflow', () => {
     await expect(
       runExportWorkflow({
         analysisTaskId: 'analysis-task-0',
+        targetId: 1,
         onProgress,
         triggerDownload,
         pollIntervalMs: 0,
@@ -54,6 +57,8 @@ describe('runExportWorkflow', () => {
     vi.mocked(reportService.createExportTask).mockResolvedValueOnce({
       exportTaskId: 'export-task-1',
       analysisTaskId: 'analysis-task-1',
+      targetId: 1,
+      targetName: 'Airport Near',
       status: 'pending',
       message: '导出任务已创建',
       progressPercent: 0,
@@ -62,6 +67,8 @@ describe('runExportWorkflow', () => {
       .mockResolvedValueOnce({
         exportTaskId: 'export-task-1',
         analysisTaskId: 'analysis-task-1',
+        targetId: 1,
+        targetName: 'Airport Near',
         status: 'running',
         message: '正在生成报告',
         progressPercent: 45,
@@ -69,6 +76,8 @@ describe('runExportWorkflow', () => {
       .mockResolvedValueOnce({
         exportTaskId: 'export-task-1',
         analysisTaskId: 'analysis-task-1',
+        targetId: 1,
+        targetName: 'Airport Near',
         status: 'succeeded',
         message: '导出任务已完成',
         progressPercent: 100,
@@ -76,6 +85,8 @@ describe('runExportWorkflow', () => {
     vi.mocked(reportService.getExportTaskResult).mockResolvedValueOnce({
       exportTaskId: 'export-task-1',
       analysisTaskId: 'analysis-task-1',
+      targetId: 1,
+      targetName: 'Airport Near',
       status: 'succeeded',
       fileName: 'analysis-report.docx',
       downloadUrl: '/polygon-obstacle/exports/export-task-1/download',
@@ -87,12 +98,13 @@ describe('runExportWorkflow', () => {
 
     const result = await runExportWorkflow({
       analysisTaskId: 'analysis-task-1',
+      targetId: 1,
       onProgress,
       triggerDownload,
       pollIntervalMs: 0,
     })
 
-    expect(reportService.createExportTask).toHaveBeenCalledWith('analysis-task-1')
+    expect(reportService.createExportTask).toHaveBeenCalledWith('analysis-task-1', 1)
     expect(reportService.getExportTaskStatus).toHaveBeenNthCalledWith(
       1,
       'analysis-task-1',
@@ -148,6 +160,8 @@ describe('runExportWorkflow', () => {
     vi.mocked(reportService.createExportTask).mockResolvedValueOnce({
       exportTaskId: 'export-task-2',
       analysisTaskId: 'analysis-task-2',
+      targetId: 1,
+      targetName: 'Airport Near',
       status: 'pending',
       message: '导出任务已创建',
       progressPercent: 0,
@@ -155,6 +169,8 @@ describe('runExportWorkflow', () => {
     vi.mocked(reportService.getExportTaskStatus).mockResolvedValueOnce({
       exportTaskId: 'export-task-2',
       analysisTaskId: 'analysis-task-2',
+      targetId: 1,
+      targetName: 'Airport Near',
       status: 'failed',
       message: '报告生成失败',
       progressPercent: 75,
@@ -163,6 +179,7 @@ describe('runExportWorkflow', () => {
     await expect(
       runExportWorkflow({
         analysisTaskId: 'analysis-task-2',
+        targetId: 1,
         onProgress,
         triggerDownload,
         pollIntervalMs: 0,
@@ -192,6 +209,8 @@ describe('runExportWorkflow', () => {
     vi.mocked(reportService.createExportTask).mockResolvedValueOnce({
       exportTaskId: 'export-task-3',
       analysisTaskId: 'analysis-task-3',
+      targetId: 1,
+      targetName: 'Airport Near',
       status: 'pending',
       message: '导出任务已创建',
       progressPercent: 0,
@@ -199,6 +218,8 @@ describe('runExportWorkflow', () => {
     vi.mocked(reportService.getExportTaskStatus).mockResolvedValueOnce({
       exportTaskId: 'export-task-3',
       analysisTaskId: 'analysis-task-3',
+      targetId: 1,
+      targetName: 'Airport Near',
       status: 'succeeded',
       message: '导出任务已完成',
       progressPercent: 100,
@@ -206,6 +227,8 @@ describe('runExportWorkflow', () => {
     vi.mocked(reportService.getExportTaskResult).mockResolvedValueOnce({
       exportTaskId: 'export-task-3',
       analysisTaskId: 'analysis-task-3',
+      targetId: 1,
+      targetName: 'Airport Near',
       status: 'failed',
       fileName: null,
       downloadUrl: null,
@@ -215,6 +238,7 @@ describe('runExportWorkflow', () => {
     await expect(
       runExportWorkflow({
         analysisTaskId: 'analysis-task-3',
+        targetId: 1,
         onProgress,
         triggerDownload,
         pollIntervalMs: 0,
@@ -231,6 +255,8 @@ describe('runExportWorkflow', () => {
     vi.mocked(reportService.createExportTask).mockResolvedValueOnce({
       exportTaskId: 'export-task-4',
       analysisTaskId: 'analysis-task-4',
+      targetId: 1,
+      targetName: 'Airport Near',
       status: 'pending',
       message: '导出任务已创建',
       progressPercent: 0,
@@ -238,6 +264,8 @@ describe('runExportWorkflow', () => {
     vi.mocked(reportService.getExportTaskStatus).mockResolvedValueOnce({
       exportTaskId: 'export-task-4',
       analysisTaskId: 'analysis-task-4',
+      targetId: 1,
+      targetName: 'Airport Near',
       status: 'succeeded',
       message: '导出任务已完成',
       progressPercent: 100,
@@ -245,6 +273,8 @@ describe('runExportWorkflow', () => {
     vi.mocked(reportService.getExportTaskResult).mockResolvedValueOnce({
       exportTaskId: 'export-task-4',
       analysisTaskId: 'analysis-task-4',
+      targetId: 1,
+      targetName: 'Airport Near',
       status: 'succeeded',
       fileName: null,
       downloadUrl: null,
@@ -254,6 +284,7 @@ describe('runExportWorkflow', () => {
     await expect(
       runExportWorkflow({
         analysisTaskId: 'analysis-task-4',
+        targetId: 1,
         onProgress,
         triggerDownload,
         pollIntervalMs: 0,
