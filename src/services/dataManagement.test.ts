@@ -73,7 +73,7 @@ describe('dataManagement service', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await getRunways({
-      airportId: 'airport-1',
+      airportName: '天河',
       keyword: '天河',
       runNumber: '01',
       page: 3,
@@ -81,7 +81,7 @@ describe('dataManagement service', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/data-management/runways?airportId=airport-1&keyword=%E5%A4%A9%E6%B2%B3&runNumber=01&page=3&pageSize=15',
+      '/data-management/runways?airportName=%E5%A4%A9%E6%B2%B3&keyword=%E5%A4%A9%E6%B2%B3&runNumber=01&page=3&pageSize=15',
     )
   })
 
@@ -99,7 +99,7 @@ describe('dataManagement service', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await getStations({
-      airportId: 'airport-9',
+      airportName: '首都',
       stationType: 'ILS',
       keyword: '近台',
       runwayNo: '18L',
@@ -108,7 +108,7 @@ describe('dataManagement service', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/data-management/stations?airportId=airport-9&stationType=ILS&keyword=%E8%BF%91%E5%8F%B0&runwayNo=18L&page=4&pageSize=12',
+      '/data-management/stations?airportName=%E9%A6%96%E9%83%BD&stationType=ILS&keyword=%E8%BF%91%E5%8F%B0&runwayNo=18L&page=4&pageSize=12',
     )
   })
 
@@ -692,7 +692,7 @@ describe('dataManagement service', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const result = await getRunways({
-      airportId: 'airport-1',
+      airportName: '天河机场',
       keyword: '',
       runNumber: '',
       page: 1,
@@ -759,7 +759,7 @@ describe('dataManagement service', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const result = await getStations({
-      airportId: 'airport-1',
+      airportName: '天河机场',
       stationType: '',
       keyword: '',
       runwayNo: '',
@@ -890,7 +890,7 @@ describe('dataManagement service', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await getObstacles({
-      projectId: '',
+      projectName: '',
       keyword: '',
       obstacleType: '',
       page: 2,
@@ -916,7 +916,7 @@ describe('dataManagement service', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await getObstacles({
-      projectId: 'proj-1',
+      projectName: '武汉项目',
       keyword: '障碍物A',
       obstacleType: 'building',
       page: 1,
@@ -924,7 +924,7 @@ describe('dataManagement service', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/data-management/obstacles?projectId=proj-1&keyword=%E9%9A%9C%E7%A2%8D%E7%89%A9A&obstacleType=building&page=1&pageSize=10',
+      '/data-management/obstacles?projectName=%E6%AD%A6%E6%B1%89%E9%A1%B9%E7%9B%AE&keyword=%E9%9A%9C%E7%A2%8D%E7%89%A9A&obstacleType=building&page=1&pageSize=10',
     )
   })
 
@@ -957,7 +957,7 @@ describe('dataManagement service', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const result = await getObstacles({
-      projectId: '',
+      projectName: '',
       keyword: '',
       obstacleType: '',
       page: 1,
@@ -1000,7 +1000,7 @@ describe('dataManagement service', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const result = await getObstacles({
-      projectId: '',
+      projectName: '',
       keyword: '',
       obstacleType: '',
       page: 1,

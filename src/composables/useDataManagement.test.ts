@@ -297,7 +297,7 @@ describe('useDataManagement', () => {
     expect(state.runways.page).toBe(1)
     expect(state.runways.filters.keyword).toBe('主跑道')
     expect(getRunways).toHaveBeenCalledWith({
-      airportId: '',
+      airportName: '',
       keyword: '主跑道',
       runNumber: '',
       page: 1,
@@ -319,7 +319,7 @@ describe('useDataManagement', () => {
     await Promise.resolve()
 
     expect(getRunways).toHaveBeenCalledWith({
-      airportId: '',
+      airportName: '',
       keyword: '',
       runNumber: '',
       page: 1,
@@ -335,7 +335,7 @@ describe('useDataManagement', () => {
     await changeRunwayPage(2)
 
     expect(getRunways).toHaveBeenCalledWith({
-      airportId: '',
+      airportName: '',
       keyword: '',
       runNumber: '',
       page: 2,
@@ -354,7 +354,7 @@ describe('useDataManagement', () => {
 
     expect(state.runways.page).toBe(1)
     expect(getRunways).toHaveBeenCalledWith({
-      airportId: '',
+      airportName: '',
       keyword: '',
       runNumber: '',
       page: 1,
@@ -374,7 +374,7 @@ describe('useDataManagement', () => {
     expect(state.stations.page).toBe(1)
     expect(state.stations.filters.keyword).toBe('进近')
     expect(getStations).toHaveBeenCalledWith({
-      airportId: '',
+      airportName: '',
       stationType: '',
       keyword: '进近',
       runwayNo: '',
@@ -398,7 +398,7 @@ describe('useDataManagement', () => {
     await Promise.resolve()
 
     expect(getStations).toHaveBeenCalledWith({
-      airportId: '',
+      airportName: '',
       stationType: '',
       keyword: '',
       runwayNo: '',
@@ -591,7 +591,7 @@ describe('useDataManagement', () => {
     await changeStationPage(4)
 
     expect(getStations).toHaveBeenCalledWith({
-      airportId: '',
+      airportName: '',
       stationType: '',
       keyword: '',
       runwayNo: '',
@@ -1145,7 +1145,7 @@ describe('useDataManagement', () => {
     expect(state.obstacles.page).toBe(1)
     expect(state.obstacles.pageSize).toBe(10)
     expect(state.obstacles.filters).toEqual({
-      projectId: '',
+      projectName: '',
       keyword: '',
       obstacleType: '',
     })
@@ -1170,7 +1170,7 @@ describe('useDataManagement', () => {
     expect(state.obstacles.page).toBe(1)
     expect(state.obstacles.filters.keyword).toBe('测试')
     expect(getObstacles).toHaveBeenCalledWith({
-      projectId: '',
+      projectName: '',
       keyword: '测试',
       obstacleType: '',
       page: 1,
@@ -1178,17 +1178,17 @@ describe('useDataManagement', () => {
     })
   })
 
-  it('resets obstacle page to 1 when projectId filter changes', async () => {
-    const { state, setObstacleProjectId } = useDataManagement({
+  it('resets obstacle page to 1 when projectName filter changes', async () => {
+    const { state, setObstacleProjectName } = useDataManagement({
       onRefreshBootstrap: vi.fn(),
     })
 
     state.obstacles.page = 5
 
-    await setObstacleProjectId('project-1')
+    await setObstacleProjectName('project-1')
 
     expect(state.obstacles.page).toBe(1)
-    expect(state.obstacles.filters.projectId).toBe('project-1')
+    expect(state.obstacles.filters.projectName).toBe('project-1')
   })
 
   it('resets obstacle page to 1 when obstacleType filter changes', async () => {
@@ -1212,7 +1212,7 @@ describe('useDataManagement', () => {
     await changeObstaclePage(3)
 
     expect(getObstacles).toHaveBeenCalledWith({
-      projectId: '',
+      projectName: '',
       keyword: '',
       obstacleType: '',
       page: 3,
@@ -1231,7 +1231,7 @@ describe('useDataManagement', () => {
 
     expect(state.obstacles.page).toBe(1)
     expect(getObstacles).toHaveBeenCalledWith({
-      projectId: '',
+      projectName: '',
       keyword: '',
       obstacleType: '',
       page: 1,
@@ -1383,7 +1383,7 @@ describe('useDataManagement', () => {
     await Promise.resolve()
 
     expect(getObstacles).toHaveBeenCalledWith({
-      projectId: '',
+      projectName: '',
       keyword: '',
       obstacleType: '',
       page: 1,

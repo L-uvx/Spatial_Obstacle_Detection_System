@@ -44,7 +44,7 @@ export interface AirportListItem {
 }
 
 export interface RunwayFilters {
-  airportId: string
+  airportName: string
   keyword: string
   runNumber: string
 }
@@ -92,7 +92,7 @@ export interface RunwayPayload {
 }
 
 export interface StationFilters {
-  airportId: string
+  airportName: string
   stationType: string
   keyword: string
   runwayNo: string
@@ -187,7 +187,7 @@ export interface ImportAirportsResult {
 }
 
 export interface ObstacleFilters {
-  projectId: string
+  projectName: string
   keyword: string
   obstacleType: string
 }

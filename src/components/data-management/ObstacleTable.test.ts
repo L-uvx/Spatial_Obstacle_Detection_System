@@ -31,7 +31,7 @@ describe('ObstacleTable', () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [item],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: false,
@@ -49,7 +49,7 @@ describe('ObstacleTable', () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: true,
@@ -63,7 +63,7 @@ describe('ObstacleTable', () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: false,
@@ -73,26 +73,26 @@ describe('ObstacleTable', () => {
     expect(wrapper.text()).toContain('暂无障碍物数据')
   })
 
-  it('emits update:projectId on input', async () => {
+  it('emits update:projectName on input', async () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: false,
       },
     })
 
-    await wrapper.get('[data-testid="obstacle-project-id-input"]').setValue('proj-x')
-    expect(wrapper.emitted('update:projectId')).toEqual([['proj-x']])
+    await wrapper.get('[data-testid="obstacle-project-name-input"]').setValue('proj-x')
+    expect(wrapper.emitted('update:projectName')).toEqual([['proj-x']])
   })
 
   it('emits update:keyword on input', async () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: false,
@@ -107,7 +107,7 @@ describe('ObstacleTable', () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: false,
@@ -123,7 +123,7 @@ describe('ObstacleTable', () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [item],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: false,
@@ -139,7 +139,7 @@ describe('ObstacleTable', () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [item],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: false,
@@ -155,7 +155,7 @@ describe('ObstacleTable', () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [item],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: false,
@@ -171,7 +171,7 @@ describe('ObstacleTable', () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [item],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: false,
@@ -189,7 +189,7 @@ describe('ObstacleTable', () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [item],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: false,
@@ -206,7 +206,7 @@ describe('ObstacleTable', () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [item],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: false,
@@ -221,7 +221,7 @@ describe('ObstacleTable', () => {
     const wrapper = mount(ObstacleTable, {
       props: {
         items: [item],
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
         loading: false,

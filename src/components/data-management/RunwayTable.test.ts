@@ -37,21 +37,21 @@ describe('RunwayTable', () => {
     const wrapper = mount(RunwayTable, {
       props: {
         items: [runway],
-        airportId: '',
+        airportName: '',
         keyword: '',
         runNumber: '',
         loading: false,
       },
     })
 
-    await wrapper.get('[data-testid="runway-airport-id-input"]').setValue('airport-1')
+    await wrapper.get('[data-testid="runway-airport-name-input"]').setValue('airport-1')
     await wrapper.get('[data-testid="runway-keyword-input"]').setValue('东')
     await wrapper.get('[data-testid="runway-run-number-input"]').setValue('01')
     await wrapper.get('[data-action="create-runway"]').trigger('click')
     await wrapper.get('[data-action="edit-runway"]').trigger('click')
     await wrapper.get('[data-action="delete-runway"]').trigger('click')
 
-    expect(wrapper.emitted('update:airportId')).toEqual([['airport-1']])
+    expect(wrapper.emitted('update:airportName')).toEqual([['airport-1']])
     expect(wrapper.emitted('update:keyword')).toEqual([['东']])
     expect(wrapper.emitted('update:runNumber')).toEqual([['01']])
     expect(wrapper.emitted('create')).toEqual([[]])

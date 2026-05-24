@@ -3,14 +3,14 @@ import type { RunwayListItem } from '../../types/dataManagement'
 
 const props = defineProps<{
   items: RunwayListItem[]
-  airportId: string
+  airportName: string
   keyword: string
   runNumber: string
   loading: boolean
 }>()
 
 const emit = defineEmits<{
-  'update:airportId': [airportId: string]
+  'update:airportName': [airportName: string]
   'update:keyword': [keyword: string]
   'update:runNumber': [runNumber: string]
   create: []
@@ -24,12 +24,12 @@ const emit = defineEmits<{
   <section class="runway-table" aria-label="跑道列表">
     <div class="runway-table__toolbar">
       <label>
-        <span>机场 ID</span>
+        <span>机场名称</span>
         <input
-          data-testid="runway-airport-id-input"
+          data-testid="runway-airport-name-input"
           type="text"
-          :value="airportId"
-          @input="emit('update:airportId', ($event.target as HTMLInputElement).value)"
+          :value="airportName"
+          @input="emit('update:airportName', ($event.target as HTMLInputElement).value)"
         />
       </label>
       <label>

@@ -39,12 +39,12 @@ const {
   setAirportHasCoordinates,
   changeAirportPage,
   changeAirportPageSize,
-  setRunwayAirportId,
+  setRunwayAirportName,
   setRunwayKeyword,
   setRunwayRunNumber,
   changeRunwayPage,
   changeRunwayPageSize,
-  setStationAirportId,
+  setStationAirportName,
   setStationType,
   setStationKeyword,
   setStationRunwayNo,
@@ -75,7 +75,7 @@ const {
   openRunwayDetailDialog,
   openStationDetailDialog,
   setActiveTab,
-  setObstacleProjectId,
+  setObstacleProjectName,
   setObstacleKeyword,
   setObstacleType,
   changeObstaclePage,
@@ -145,8 +145,8 @@ function handleChangeAirportPageSize(pageSize: number) {
   void changeAirportPageSize(pageSize)
 }
 
-function handleSetRunwayAirportId(airportId: string) {
-  void setRunwayAirportId(airportId)
+function handleSetRunwayAirportName(airportName: string) {
+  void setRunwayAirportName(airportName)
 }
 
 function handleSetRunwayKeyword(keyword: string) {
@@ -165,8 +165,8 @@ function handleChangeRunwayPageSize(pageSize: number) {
   void changeRunwayPageSize(pageSize)
 }
 
-function handleSetStationAirportId(airportId: string) {
-  void setStationAirportId(airportId)
+function handleSetStationAirportName(airportName: string) {
+  void setStationAirportName(airportName)
 }
 
 function handleSetStationType(stationType: string) {
@@ -374,8 +374,8 @@ function handleFlyToProtectionZone(zone: ProtectionZoneNode) {
   flyToProtectionZone(zone)
 }
 
-function handleSetObstacleProjectId(projectId: string) {
-  void setObstacleProjectId(projectId)
+function handleSetObstacleProjectName(projectName: string) {
+  void setObstacleProjectName(projectName)
 }
 
 function handleSetObstacleKeyword(keyword: string) {
@@ -475,12 +475,12 @@ function handleLocateStation(station: StationListItem) {
     @set-airport-has-coordinates="handleSetAirportHasCoordinates"
     @change-airport-page="handleChangeAirportPage"
     @change-airport-page-size="handleChangeAirportPageSize"
-    @set-runway-airport-id="handleSetRunwayAirportId"
+    @set-runway-airport-name="handleSetRunwayAirportName"
     @set-runway-keyword="handleSetRunwayKeyword"
     @set-runway-run-number="handleSetRunwayRunNumber"
     @change-runway-page="handleChangeRunwayPage"
     @change-runway-page-size="handleChangeRunwayPageSize"
-    @set-station-airport-id="handleSetStationAirportId"
+    @set-station-airport-name="handleSetStationAirportName"
     @set-station-type="handleSetStationType"
     @set-station-keyword="handleSetStationKeyword"
     @set-station-runway-no="handleSetStationRunwayNo"
@@ -500,7 +500,7 @@ function handleLocateStation(station: StationListItem) {
     @open-station-delete-confirm="handleOpenStationDeleteConfirm"
     @close-station-delete-confirm="handleCloseStationDeleteConfirm"
     @confirm-station-delete="handleConfirmStationDelete"
-    @set-obstacle-project-id="handleSetObstacleProjectId"
+    @set-obstacle-project-name="handleSetObstacleProjectName"
     @set-obstacle-keyword="handleSetObstacleKeyword"
     @set-obstacle-type="handleSetObstacleType"
     @change-obstacle-page="handleChangeObstaclePage"

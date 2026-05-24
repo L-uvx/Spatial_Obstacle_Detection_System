@@ -215,7 +215,7 @@ function createInitialState(): DataManagementState {
       page: 1,
       pageSize: 10,
       filters: {
-        airportId: '',
+        airportName: '',
         keyword: '',
         runNumber: '',
       },
@@ -233,7 +233,7 @@ function createInitialState(): DataManagementState {
       page: 1,
       pageSize: 10,
       filters: {
-        airportId: '',
+        airportName: '',
         stationType: '',
         keyword: '',
         runwayNo: '',
@@ -252,7 +252,7 @@ function createInitialState(): DataManagementState {
       page: 1,
       pageSize: 10,
       filters: {
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
       },
@@ -346,7 +346,7 @@ export function useDataManagement(_options: UseDataManagementOptions) {
 
     try {
       const result = await getRunways({
-        airportId: state.runways.filters.airportId,
+        airportName: state.runways.filters.airportName,
         keyword: state.runways.filters.keyword,
         runNumber: state.runways.filters.runNumber,
         page: state.runways.page,
@@ -372,7 +372,7 @@ export function useDataManagement(_options: UseDataManagementOptions) {
 
     try {
       const result = await getStations({
-        airportId: state.stations.filters.airportId,
+        airportName: state.stations.filters.airportName,
         stationType: state.stations.filters.stationType,
         keyword: state.stations.filters.keyword,
         runwayNo: state.stations.filters.runwayNo,
@@ -399,7 +399,7 @@ export function useDataManagement(_options: UseDataManagementOptions) {
 
     try {
       const result = await getObstacles({
-        projectId: state.obstacles.filters.projectId,
+        projectName: state.obstacles.filters.projectName,
         keyword: state.obstacles.filters.keyword,
         obstacleType: state.obstacles.filters.obstacleType,
         page: state.obstacles.page,
@@ -474,8 +474,8 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     await loadAirportPage()
   }
 
-  async function setRunwayAirportId(airportId: string) {
-    state.runways.filters.airportId = airportId
+  async function setRunwayAirportName(airportName: string) {
+    state.runways.filters.airportName = airportName
     state.runways.page = 1
     await loadRunwayPage()
   }
@@ -503,8 +503,8 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     await loadRunwayPage()
   }
 
-  async function setStationAirportId(airportId: string) {
-    state.stations.filters.airportId = airportId
+  async function setStationAirportName(airportName: string) {
+    state.stations.filters.airportName = airportName
     state.stations.page = 1
     await loadStationPage()
   }
@@ -538,8 +538,8 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     await loadStationPage()
   }
 
-  async function setObstacleProjectId(projectId: string) {
-    state.obstacles.filters.projectId = projectId
+  async function setObstacleProjectName(projectName: string) {
+    state.obstacles.filters.projectName = projectName
     state.obstacles.page = 1
     await loadObstaclePage()
   }
@@ -1091,18 +1091,18 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     setAirportHasCoordinates,
     changeAirportPage,
     changeAirportPageSize,
-    setRunwayAirportId,
+    setRunwayAirportName,
     setRunwayKeyword,
     setRunwayRunNumber,
     changeRunwayPage,
     changeRunwayPageSize,
-    setStationAirportId,
+    setStationAirportName,
     setStationType,
     setStationKeyword,
     setStationRunwayNo,
     changeStationPage,
     changeStationPageSize,
-    setObstacleProjectId,
+    setObstacleProjectName,
     setObstacleKeyword,
     setObstacleType,
     changeObstaclePage,

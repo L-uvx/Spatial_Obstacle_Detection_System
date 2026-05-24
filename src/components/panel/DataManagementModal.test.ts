@@ -41,7 +41,7 @@ function createState(overrides: Partial<DataManagementState> = {}): DataManageme
       page: 1,
       pageSize: 20,
       filters: {
-        airportId: '',
+        airportName: '',
         keyword: '',
         runNumber: '',
       },
@@ -76,7 +76,7 @@ function createState(overrides: Partial<DataManagementState> = {}): DataManageme
       page: 1,
       pageSize: 20,
       filters: {
-        airportId: '',
+        airportName: '',
         stationType: '',
         keyword: '',
         runwayNo: '',
@@ -123,7 +123,7 @@ function createState(overrides: Partial<DataManagementState> = {}): DataManageme
       page: 1,
       pageSize: 20,
       filters: {
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
       },
@@ -269,7 +269,7 @@ describe('DataManagementModal', () => {
       },
     })
 
-    expect(wrapper.find('[data-testid="runway-airport-id-input"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="runway-airport-name-input"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="runway-keyword-input"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="runway-run-number-input"]').exists()).toBe(true)
   })
@@ -285,7 +285,7 @@ describe('DataManagementModal', () => {
             page: 1,
             pageSize: 20,
             filters: {
-              airportId: '',
+              airportName: '',
               keyword: '',
               runNumber: '',
             },
@@ -332,7 +332,7 @@ describe('DataManagementModal', () => {
             page: 1,
             pageSize: 20,
             filters: {
-              airportId: '',
+              airportName: '',
               keyword: '',
               runNumber: '',
             },
@@ -404,7 +404,7 @@ describe('DataManagementModal', () => {
             page: 1,
             pageSize: 20,
             filters: {
-              airportId: '',
+              airportName: '',
               keyword: '',
               runNumber: '',
             },
@@ -451,7 +451,7 @@ describe('DataManagementModal', () => {
       },
     })
 
-    expect(wrapper.find('[data-testid="station-airport-id-input"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="station-airport-name-input"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="station-type-input"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="station-keyword-input"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="station-runway-no-input"]').exists()).toBe(true)
@@ -468,7 +468,7 @@ describe('DataManagementModal', () => {
             page: 1,
             pageSize: 20,
             filters: {
-              airportId: '',
+              airportName: '',
               stationType: '',
               keyword: '',
               runwayNo: '',
@@ -564,7 +564,7 @@ describe('DataManagementModal', () => {
             page: 1,
             pageSize: 20,
             filters: {
-              airportId: '',
+              airportName: '',
               stationType: '',
               keyword: '',
               runwayNo: '',
@@ -654,7 +654,7 @@ describe('DataManagementModal', () => {
             total: 11,
             page: 1,
             pageSize: 10,
-            filters: { airportId: '', keyword: '', runNumber: '' },
+            filters: { airportName: '', keyword: '', runNumber: '' },
             loading: false,
             errorMessage: '',
             warnings: [],
@@ -803,7 +803,7 @@ describe('DataManagementModal', () => {
             total: 25,
             page: 1,
             pageSize: 10,
-            filters: { airportId: '', keyword: '', runNumber: '' },
+            filters: { airportName: '', keyword: '', runNumber: '' },
             loading: false,
             errorMessage: '',
             warnings: [],
@@ -835,7 +835,7 @@ describe('DataManagementModal', () => {
             total: 25,
             page: 1,
             pageSize: 10,
-            filters: { airportId: '', stationType: '', keyword: '', runwayNo: '' },
+            filters: { airportName: '', stationType: '', keyword: '', runwayNo: '' },
             loading: false,
             errorMessage: '',
             warnings: [],
@@ -928,7 +928,7 @@ describe('DataManagementModal', () => {
       },
     })
 
-    expect(wrapper.find('[data-testid="obstacle-project-id-input"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="obstacle-project-name-input"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="obstacle-keyword-input"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="obstacle-type-select"]').exists()).toBe(true)
   })
@@ -943,7 +943,7 @@ describe('DataManagementModal', () => {
             total: 0,
             page: 1,
             pageSize: 20,
-            filters: { projectId: '', keyword: '', obstacleType: '' },
+            filters: { projectName: '', keyword: '', obstacleType: '' },
             loading: false,
             errorMessage: '障碍物下仍有关联分析数据，无法删除。',
             warnings: [],
@@ -985,7 +985,7 @@ describe('DataManagementModal', () => {
             total: 0,
             page: 1,
             pageSize: 20,
-            filters: { projectId: '', keyword: '', obstacleType: '' },
+            filters: { projectName: '', keyword: '', obstacleType: '' },
             loading: false,
             errorMessage: '',
             warnings: ['障碍物坐标已自动补齐'],
@@ -1013,7 +1013,7 @@ describe('DataManagementModal', () => {
             total: 45,
             page: 2,
             pageSize: 20,
-            filters: { projectId: '', keyword: '', obstacleType: '' },
+            filters: { projectName: '', keyword: '', obstacleType: '' },
             loading: false,
             errorMessage: '',
             warnings: [],
@@ -1039,7 +1039,7 @@ describe('DataManagementModal', () => {
             total: 45,
             page: 2,
             pageSize: 20,
-            filters: { projectId: '', keyword: '', obstacleType: '' },
+            filters: { projectName: '', keyword: '', obstacleType: '' },
             loading: false,
             errorMessage: '',
             warnings: [],
@@ -1069,7 +1069,7 @@ describe('DataManagementModal', () => {
             total: 45,
             page: 1,
             pageSize: 20,
-            filters: { projectId: '', keyword: '', obstacleType: '' },
+            filters: { projectName: '', keyword: '', obstacleType: '' },
             loading: false,
             errorMessage: '',
             warnings: [],
@@ -1096,7 +1096,7 @@ describe('DataManagementModal', () => {
             total: 0,
             page: 1,
             pageSize: 20,
-            filters: { projectId: '', keyword: '', obstacleType: '' },
+            filters: { projectName: '', keyword: '', obstacleType: '' },
             loading: false,
             errorMessage: '加载失败，请重试。',
             warnings: [],

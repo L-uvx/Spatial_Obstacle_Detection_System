@@ -42,7 +42,7 @@ function createDataManagementState(overrides: Partial<DataManagementState> = {})
       page: 1,
       pageSize: 20,
       filters: {
-        airportId: '',
+        airportName: '',
         keyword: '',
         runNumber: '',
       },
@@ -77,7 +77,7 @@ function createDataManagementState(overrides: Partial<DataManagementState> = {})
       page: 1,
       pageSize: 20,
       filters: {
-        airportId: '',
+        airportName: '',
         stationType: '',
         keyword: '',
         runwayNo: '',
@@ -124,7 +124,7 @@ function createDataManagementState(overrides: Partial<DataManagementState> = {})
       page: 1,
       pageSize: 20,
       filters: {
-        projectId: '',
+        projectName: '',
         keyword: '',
         obstacleType: '',
       },

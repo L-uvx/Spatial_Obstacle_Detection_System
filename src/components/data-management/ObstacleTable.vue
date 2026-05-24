@@ -4,14 +4,14 @@ import { polygonObstacleTypeOptions, pointObstacleTypeOptions } from '../../type
 
 const props = defineProps<{
   items: ObstacleListItem[]
-  projectId: string
+  projectName: string
   keyword: string
   obstacleType: string
   loading: boolean
 }>()
 
 const emit = defineEmits<{
-  'update:projectId': [projectId: string]
+  'update:projectName': [projectName: string]
   'update:keyword': [keyword: string]
   'update:obstacleType': [obstacleType: string]
   detail: [obstacle: ObstacleListItem]
@@ -34,12 +34,12 @@ function formatCoordinate(item: ObstacleListItem): string {
   <section class="obstacle-table" aria-label="障碍物列表">
     <div class="obstacle-table__toolbar">
       <label>
-        <span>项目 ID</span>
+        <span>项目名称</span>
         <input
-          data-testid="obstacle-project-id-input"
+          data-testid="obstacle-project-name-input"
           type="text"
-          :value="projectId"
-          @input="emit('update:projectId', ($event.target as HTMLInputElement).value)"
+          :value="projectName"
+          @input="emit('update:projectName', ($event.target as HTMLInputElement).value)"
         />
       </label>
       <label>

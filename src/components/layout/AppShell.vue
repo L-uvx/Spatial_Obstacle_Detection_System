@@ -36,18 +36,18 @@ const emit = defineEmits<{
   setAirportHasCoordinates: [hasCoordinates: boolean]
   changeAirportPage: [page: number]
   changeAirportPageSize: [pageSize: number]
-  setRunwayAirportId: [airportId: string]
+  setRunwayAirportName: [airportName: string]
   setRunwayKeyword: [keyword: string]
   setRunwayRunNumber: [runNumber: string]
   changeRunwayPage: [page: number]
   changeRunwayPageSize: [pageSize: number]
-  setStationAirportId: [airportId: string]
+  setStationAirportName: [airportName: string]
   setStationType: [stationType: string]
   setStationKeyword: [keyword: string]
   setStationRunwayNo: [runwayNo: string]
   changeStationPage: [page: number]
   changeStationPageSize: [pageSize: number]
-  setObstacleProjectId: [projectId: string]
+  setObstacleProjectName: [projectName: string]
   setObstacleKeyword: [keyword: string]
   setObstacleType: [obstacleType: string]
   changeObstaclePage: [page: number]
@@ -245,18 +245,18 @@ function handleSelectAirport(event: Event) {
         @set-airport-has-coordinates="emit('setAirportHasCoordinates', $event)"
         @change-airport-page="emit('changeAirportPage', $event)"
         @change-airport-page-size="emit('changeAirportPageSize', $event)"
-        @set-runway-airport-id="emit('setRunwayAirportId', $event)"
+        @set-runway-airport-name="emit('setRunwayAirportName', $event)"
         @set-runway-keyword="emit('setRunwayKeyword', $event)"
         @set-runway-run-number="emit('setRunwayRunNumber', $event)"
         @change-runway-page="emit('changeRunwayPage', $event)"
         @change-runway-page-size="emit('changeRunwayPageSize', $event)"
-        @set-station-airport-id="emit('setStationAirportId', $event)"
+        @set-station-airport-name="emit('setStationAirportName', $event)"
         @set-station-type="emit('setStationType', $event)"
         @set-station-keyword="emit('setStationKeyword', $event)"
         @set-station-runway-no="emit('setStationRunwayNo', $event)"
         @change-station-page="emit('changeStationPage', $event)"
         @change-station-page-size="emit('changeStationPageSize', $event)"
-        @set-obstacle-project-id="emit('setObstacleProjectId', $event)"
+        @set-obstacle-project-name="emit('setObstacleProjectName', $event)"
         @set-obstacle-keyword="emit('setObstacleKeyword', $event)"
         @set-obstacle-type="emit('setObstacleType', $event)"
         @change-obstacle-page="emit('changeObstaclePage', $event)"

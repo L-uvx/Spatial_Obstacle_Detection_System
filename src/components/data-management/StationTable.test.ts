@@ -48,7 +48,7 @@ describe('StationTable', () => {
     const wrapper = mount(StationTable, {
       props: {
         items: [station],
-        airportId: '',
+        airportName: '',
         stationType: '',
         keyword: '',
         runwayNo: '',
@@ -56,7 +56,7 @@ describe('StationTable', () => {
       },
     })
 
-    await wrapper.get('[data-testid="station-airport-id-input"]').setValue('airport-1')
+    await wrapper.get('[data-testid="station-airport-name-input"]').setValue('airport-1')
     await wrapper.get('[data-testid="station-type-input"]').setValue('ILS')
     await wrapper.get('[data-testid="station-keyword-input"]').setValue('近台')
     await wrapper.get('[data-testid="station-runway-no-input"]').setValue('18L')
@@ -64,7 +64,7 @@ describe('StationTable', () => {
     await wrapper.get('[data-action="edit-station"]').trigger('click')
     await wrapper.get('[data-action="delete-station"]').trigger('click')
 
-    expect(wrapper.emitted('update:airportId')).toEqual([['airport-1']])
+    expect(wrapper.emitted('update:airportName')).toEqual([['airport-1']])
     expect(wrapper.emitted('update:stationType')).toEqual([['ILS']])
     expect(wrapper.emitted('update:keyword')).toEqual([['近台']])
     expect(wrapper.emitted('update:runwayNo')).toEqual([['18L']])

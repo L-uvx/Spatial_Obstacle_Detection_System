@@ -137,12 +137,12 @@ const emit = defineEmits<{
   setAirportHasCoordinates: [hasCoordinates: boolean]
   changeAirportPage: [page: number]
   changeAirportPageSize: [pageSize: number]
-  setRunwayAirportId: [airportId: string]
+  setRunwayAirportName: [airportName: string]
   setRunwayKeyword: [keyword: string]
   setRunwayRunNumber: [runNumber: string]
   changeRunwayPage: [page: number]
   changeRunwayPageSize: [pageSize: number]
-  setStationAirportId: [airportId: string]
+  setStationAirportName: [airportName: string]
   setStationType: [stationType: string]
   setStationKeyword: [keyword: string]
   setStationRunwayNo: [runwayNo: string]
@@ -174,7 +174,7 @@ const emit = defineEmits<{
   openStationDetailDialog: [station: StationListItem]
   locateStation: [station: StationListItem]
   importAirports: []
-  setObstacleProjectId: [projectId: string]
+  setObstacleProjectName: [projectName: string]
   setObstacleKeyword: [keyword: string]
   setObstacleType: [obstacleType: string]
   changeObstaclePage: [page: number]
@@ -392,11 +392,11 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
         <template v-else-if="state.activeTab === 'runways'">
           <RunwayTable
             :items="state.runways.items"
-            :airport-id="state.runways.filters.airportId"
+            :airport-name="state.runways.filters.airportName"
             :keyword="state.runways.filters.keyword"
             :run-number="state.runways.filters.runNumber"
             :loading="state.runways.loading"
-            @update:airport-id="emit('setRunwayAirportId', $event)"
+            @update:airport-name="emit('setRunwayAirportName', $event)"
             @update:keyword="emit('setRunwayKeyword', $event)"
             @update:run-number="emit('setRunwayRunNumber', $event)"
             @create="emit('openRunwayCreateDialog')"
@@ -435,12 +435,12 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
         <template v-else-if="state.activeTab === 'stations'">
           <StationTable
             :items="state.stations.items"
-            :airport-id="state.stations.filters.airportId"
+            :airport-name="state.stations.filters.airportName"
             :station-type="state.stations.filters.stationType"
             :keyword="state.stations.filters.keyword"
             :runway-no="state.stations.filters.runwayNo"
             :loading="state.stations.loading"
-            @update:airport-id="emit('setStationAirportId', $event)"
+            @update:airport-name="emit('setStationAirportName', $event)"
             @update:station-type="emit('setStationType', $event)"
             @update:keyword="emit('setStationKeyword', $event)"
             @update:runway-no="emit('setStationRunwayNo', $event)"
@@ -482,11 +482,11 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
         <template v-else>
           <ObstacleTable
             :items="state.obstacles.items"
-            :project-id="state.obstacles.filters.projectId"
+            :project-name="state.obstacles.filters.projectName"
             :keyword="state.obstacles.filters.keyword"
             :obstacle-type="state.obstacles.filters.obstacleType"
             :loading="state.obstacles.loading"
-            @update:project-id="emit('setObstacleProjectId', $event)"
+            @update:project-name="emit('setObstacleProjectName', $event)"
             @update:keyword="emit('setObstacleKeyword', $event)"
             @update:obstacle-type="emit('setObstacleType', $event)"
             @detail="emit('openObstacleDetailDialog', $event)"

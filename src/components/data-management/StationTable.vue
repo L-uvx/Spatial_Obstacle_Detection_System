@@ -3,7 +3,7 @@ import type { StationListItem } from '../../types/dataManagement'
 
 const props = defineProps<{
   items: StationListItem[]
-  airportId: string
+  airportName: string
   stationType: string
   keyword: string
   runwayNo: string
@@ -11,7 +11,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:airportId': [airportId: string]
+  'update:airportName': [airportName: string]
   'update:stationType': [stationType: string]
   'update:keyword': [keyword: string]
   'update:runwayNo': [runwayNo: string]
@@ -27,13 +27,13 @@ const emit = defineEmits<{
   <section class="station-table" aria-label="台站列表">
     <div class="station-table__toolbar">
       <label>
-        <span>机场 ID</span>
+        <span>机场名称</span>
         <input
-          data-testid="station-airport-id-input"
+          data-testid="station-airport-name-input"
           type="text"
-          :value="airportId"
+          :value="airportName"
           placeholder="机场筛选待接入下拉"
-          @input="emit('update:airportId', ($event.target as HTMLInputElement).value)"
+          @input="emit('update:airportName', ($event.target as HTMLInputElement).value)"
         />
       </label>
       <label>
