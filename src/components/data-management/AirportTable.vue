@@ -22,7 +22,7 @@ const emit = defineEmits<{
   <section class="airport-table" aria-label="机场列表">
     <div class="airport-table__toolbar">
       <label>
-        <span>关键字</span>
+        <span>机场名称</span>
         <input
           data-testid="airport-keyword-input"
           type="text"

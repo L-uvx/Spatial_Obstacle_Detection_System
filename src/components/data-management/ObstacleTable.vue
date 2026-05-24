@@ -54,7 +54,7 @@ function formatCoordinate(item: ObstacleListItem): string {
         </select>
       </label>
       <label>
-        <span>关键字</span>
+        <span>障碍物名称</span>
         <input
           data-testid="obstacle-keyword-input"
           type="text"

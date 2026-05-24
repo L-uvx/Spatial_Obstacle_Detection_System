@@ -42,7 +42,7 @@ const emit = defineEmits<{
         />
       </label>
       <label>
-        <span>关键字</span>
+        <span>跑道名称</span>
         <input
           data-testid="runway-keyword-input"
           type="text"

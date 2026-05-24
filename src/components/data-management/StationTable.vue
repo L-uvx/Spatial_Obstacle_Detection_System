@@ -56,7 +56,7 @@ const emit = defineEmits<{
         />
       </label>
       <label>
-        <span>关键字</span>
+        <span>台站名称</span>
         <input
           data-testid="station-keyword-input"
           type="text"
