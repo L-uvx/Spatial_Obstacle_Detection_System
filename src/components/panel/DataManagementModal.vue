@@ -267,6 +267,70 @@ function handleClickOutside(event: MouseEvent) {
   }
 }
 
+function hasActiveDeleteTarget(): boolean {
+  if (props.state.activeTab === 'airports') return !!props.state.airports.deleteTarget
+  if (props.state.activeTab === 'runways') return !!props.state.runways.deleteTarget
+  if (props.state.activeTab === 'stations') return !!props.state.stations.deleteTarget
+  return !!props.state.obstacles.deleteTarget
+}
+
+function getActiveDeleteLabel(): string {
+  const labels: Record<string, string> = {
+    airports: '机场',
+    runways: '跑道',
+    stations: '台站',
+    obstacles: '障碍物',
+  }
+  return labels[props.state.activeTab] || ''
+}
+
+function getActiveDeleteTargetName(): string {
+  if (props.state.activeTab === 'airports' && props.state.airports.deleteTarget) {
+    return props.state.airports.deleteTarget.name
+  }
+  if (props.state.activeTab === 'runways' && props.state.runways.deleteTarget) {
+    return props.state.runways.deleteTarget.name
+  }
+  if (props.state.activeTab === 'stations' && props.state.stations.deleteTarget) {
+    return props.state.stations.deleteTarget.name
+  }
+  if (props.state.obstacles.deleteTarget) {
+    return props.state.obstacles.deleteTarget.name
+  }
+  return ''
+}
+
+function getActiveDeleteError(): string {
+  if (props.state.activeTab === 'airports') return props.state.airports.errorMessage
+  if (props.state.activeTab === 'runways') return props.state.runways.errorMessage
+  if (props.state.activeTab === 'stations') return props.state.stations.errorMessage
+  return props.state.obstacles.errorMessage
+}
+
+function handleCancelDelete() {
+  if (props.state.activeTab === 'airports') emit('closeAirportDeleteConfirm')
+  else if (props.state.activeTab === 'runways') emit('closeRunwayDeleteConfirm')
+  else if (props.state.activeTab === 'stations') emit('closeStationDeleteConfirm')
+  else emit('closeObstacleDeleteConfirm')
+}
+
+function handleConfirmDelete() {
+  if (props.state.activeTab === 'airports') emit('confirmAirportDelete')
+  else if (props.state.activeTab === 'runways') emit('confirmRunwayDelete')
+  else if (props.state.activeTab === 'stations') emit('confirmStationDelete')
+  else emit('confirmObstacleDelete')
+}
+
+function getActiveDeleteTestid(): string {
+  const keys: Record<string, string> = {
+    airports: 'confirm-airport-delete',
+    runways: 'confirm-runway-delete',
+    stations: 'confirm-station-delete',
+    obstacles: 'confirm-obstacle-delete',
+  }
+  return keys[props.state.activeTab] || ''
+}
+
 onMounted(() => document.addEventListener('click', handleClickOutside))
 onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 </script>
@@ -370,24 +434,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
             @close="emit('closeAirportFormDialog')"
             @save="emit('saveAirportDraft', $event)"
           />
-          <section
-            v-if="state.airports.deleteTarget"
-            class="data-management-modal__delete-confirm"
-            aria-label="删除机场确认"
-          >
-            <p>待删除机场：{{ state.airports.deleteTarget.name }}</p>
-            <p v-if="state.airports.errorMessage" class="data-management-modal__delete-error">
-              {{ state.airports.errorMessage }}
-            </p>
-            <button
-              type="button"
-              data-testid="confirm-airport-delete"
-              @click="emit('confirmAirportDelete')"
-            >
-              确认删除
-            </button>
-            <button type="button" @click="emit('closeAirportDeleteConfirm')">关闭</button>
-          </section>
+
         </template>
         <template v-else-if="state.activeTab === 'runways'">
           <RunwayTable
@@ -413,24 +460,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
             @close="emit('closeRunwayFormDialog')"
             @save="emit('saveRunwayDraft', $event)"
           />
-          <section
-            v-if="state.runways.deleteTarget"
-            class="data-management-modal__delete-confirm"
-            aria-label="删除跑道确认"
-          >
-            <p>待删除跑道：{{ state.runways.deleteTarget.name }}</p>
-            <p v-if="state.runways.errorMessage" class="data-management-modal__delete-error">
-              {{ state.runways.errorMessage }}
-            </p>
-            <button
-              type="button"
-              data-testid="confirm-runway-delete"
-              @click="emit('confirmRunwayDelete')"
-            >
-              确认删除
-            </button>
-            <button type="button" @click="emit('closeRunwayDeleteConfirm')">关闭</button>
-          </section>
+
         </template>
         <template v-else-if="state.activeTab === 'stations'">
           <StationTable
@@ -461,24 +491,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
             @close="emit('closeStationFormDialog')"
             @save="emit('saveStationDraft', $event)"
           />
-          <section
-            v-if="state.stations.deleteTarget"
-            class="data-management-modal__delete-confirm"
-            aria-label="删除台站确认"
-          >
-            <p>待删除台站：{{ state.stations.deleteTarget.name }}</p>
-            <p v-if="state.stations.errorMessage" class="data-management-modal__delete-error">
-              {{ state.stations.errorMessage }}
-            </p>
-            <button
-              type="button"
-              data-testid="confirm-station-delete"
-              @click="emit('confirmStationDelete')"
-            >
-              确认删除
-            </button>
-            <button type="button" @click="emit('closeStationDeleteConfirm')">关闭</button>
-          </section>
+
         </template>
         <template v-else>
           <ObstacleTable
@@ -502,24 +515,6 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
             :model-value="(state.obstacles.draft as ObstacleListItem)"
             @close="emit('closeObstacleDetailDialog')"
           />
-          <section
-            v-if="state.obstacles.deleteTarget"
-            class="data-management-modal__delete-confirm"
-            aria-label="删除障碍物确认"
-          >
-            <p>待删除障碍物：{{ state.obstacles.deleteTarget.name }}</p>
-            <p v-if="state.obstacles.errorMessage" class="data-management-modal__delete-error">
-              {{ state.obstacles.errorMessage }}
-            </p>
-            <button
-              type="button"
-              data-testid="confirm-obstacle-delete"
-              @click="emit('confirmObstacleDelete')"
-            >
-              确认删除
-            </button>
-            <button type="button" @click="emit('closeObstacleDeleteConfirm')">关闭</button>
-          </section>
         </template>
       </div>
       <footer class="data-management-modal__footer">
@@ -599,6 +594,36 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
               &nbsp; 失败 <strong>{{ importResultTotalFiles - importResultImportedCount - importResultSkippedCount }}</strong>
             </span>
             <button type="button" class="data-management-modal__import-result-close-btn" @click="handleCloseImportResult">关闭</button>
+          </footer>
+        </div>
+      </div>
+    </Teleport>
+    <Teleport to="body">
+      <div
+        v-if="hasActiveDeleteTarget()"
+        class="data-management-modal__delete-overlay"
+        aria-label="删除确认"
+        @click.self="handleCancelDelete"
+      >
+        <div class="data-management-modal__delete-card">
+          <header class="data-management-modal__delete-header">
+            <h3>确认删除{{ getActiveDeleteLabel() }}</h3>
+          </header>
+          <div class="data-management-modal__delete-body">
+            <p>待删除{{ getActiveDeleteLabel() }}：{{ getActiveDeleteTargetName() }}</p>
+            <p v-if="getActiveDeleteError()" class="data-management-modal__delete-error">
+              {{ getActiveDeleteError() }}
+            </p>
+          </div>
+          <footer class="data-management-modal__delete-footer">
+            <button
+              type="button"
+              :data-testid="getActiveDeleteTestid()"
+              @click="handleConfirmDelete"
+            >
+              确认删除
+            </button>
+            <button type="button" @click="handleCancelDelete">关闭</button>
           </footer>
         </div>
       </div>

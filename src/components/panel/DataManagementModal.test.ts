@@ -217,9 +217,11 @@ describe('DataManagementModal', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('机场下仍有关联数据，无法删除。')
+    expect(document.body.textContent).toContain('机场下仍有关联数据，无法删除。')
 
-    await wrapper.get('[data-testid="confirm-airport-delete"]').trigger('click')
+    await document.querySelector('[data-testid="confirm-airport-delete"]')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    )
 
     expect(wrapper.emitted('confirmAirportDelete')).toEqual([[]])
   })
@@ -386,9 +388,11 @@ describe('DataManagementModal', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('跑道下仍有关联台站，无法删除。')
+    expect(document.body.textContent).toContain('跑道下仍有关联台站，无法删除。')
 
-    await wrapper.get('[data-testid="confirm-runway-delete"]').trigger('click')
+    await document.querySelector('[data-testid="confirm-runway-delete"]')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    )
 
     expect(wrapper.emitted('confirmRunwayDelete')).toEqual([[]])
   })
@@ -546,9 +550,11 @@ describe('DataManagementModal', () => {
     })
 
     expect(document.body.querySelector('[aria-label="台站表单"]')).toBeTruthy()
-    expect(wrapper.text()).toContain('台站下仍有关联分析数据，无法删除。')
+    expect(document.body.textContent).toContain('台站下仍有关联分析数据，无法删除。')
 
-    await wrapper.get('[data-testid="confirm-station-delete"]').trigger('click')
+    await document.querySelector('[data-testid="confirm-station-delete"]')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    )
 
     expect(wrapper.emitted('confirmStationDelete')).toEqual([[]])
   })
@@ -968,9 +974,11 @@ describe('DataManagementModal', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('障碍物下仍有关联分析数据，无法删除。')
+    expect(document.body.textContent).toContain('障碍物下仍有关联分析数据，无法删除。')
 
-    await wrapper.get('[data-testid="confirm-obstacle-delete"]').trigger('click')
+    await document.querySelector('[data-testid="confirm-obstacle-delete"]')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    )
 
     expect(wrapper.emitted('confirmObstacleDelete')).toEqual([[]])
   })

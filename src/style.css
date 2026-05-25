@@ -929,6 +929,75 @@ body {
   background: rgba(71, 85, 105, 0.85);
 }
 
+.data-management-modal__delete-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 23;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.48);
+}
+
+.data-management-modal__delete-card {
+  width: min(480px, 90vw);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.data-management-modal__delete-header {
+  padding: 24px 24px 0;
+}
+
+.data-management-modal__delete-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #fecaca;
+}
+
+.data-management-modal__delete-body {
+  padding: 16px 24px;
+}
+
+.data-management-modal__delete-body p {
+  margin: 0;
+  color: #fecaca;
+  font-size: 14px;
+}
+
+.data-management-modal__delete-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 24px 24px;
+}
+
+.data-management-modal__delete-footer button {
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 16px;
+  color: #fff;
+  background: rgba(239, 68, 68, 0.85);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s ease;
+}
+
+.data-management-modal__delete-footer button:hover {
+  background: rgba(220, 38, 38, 0.9);
+}
+
+.data-management-modal__delete-footer button + button {
+  background: rgba(51, 65, 85, 0.85);
+}
+
+.data-management-modal__delete-footer button + button:hover {
+  background: rgba(71, 85, 105, 0.85);
+}
+
 /* ---------- 数据管理表格 ---------- */
 
 .airport-table,
