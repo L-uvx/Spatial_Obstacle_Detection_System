@@ -2,6 +2,14 @@
 import { reactive, ref, watch } from 'vue'
 import type { SelectOption, StationFormValue } from '../../types/dataManagement'
 
+const LOC_UNIT_OPTIONS = [
+  { value: '10', label: '小孔径（11单元及以下）' },
+  { value: '14', label: '中孔径（12至15单元）' },
+  { value: '20', label: '大孔径（16单元及以上）' },
+]
+
+const LOC_UNIT_SET: Set<string> = new Set(LOC_UNIT_OPTIONS.map((o) => o.value))
+
 const props = defineProps<{
   open: boolean
   readonly?: boolean
@@ -80,7 +88,7 @@ watch(
     draft.distanceToRunway = value.distanceToRunway
     draft.distanceVToRunway = value.distanceVToRunway
     draft.distanceEndoRunway = value.distanceEndoRunway
-    draft.unitNumber = value.unitNumber
+    draft.unitNumber = normalizeUnitNumber(value.unitNumber)
     draft.aircraft = value.aircraft
     draft.antennaHeight = value.antennaHeight
     draft.stationSubType = value.stationSubType
@@ -89,6 +97,17 @@ watch(
   },
   { immediate: true, deep: true },
 )
+
+function normalizeUnitNumber(raw: unknown): number | null {
+  if (raw === null || raw === undefined || raw === '') return null
+  const s = String(raw)
+  return LOC_UNIT_SET.has(s) ? Number(s) : null
+}
+
+function handleUnitNumberChange(e: Event) {
+  const raw = (e.target as HTMLSelectElement).value
+  draft.unitNumber = raw === '' ? null : Number(raw)
+}
 
 function validate() {
   if (!draft.airportId.trim()) {
@@ -366,13 +385,17 @@ function handleSave() {
         </label>
         <label>
           <span>天线单元个数(LOC)</span>
-          <input
+          <select
+            data-testid="station-unit-number-select"
             :value="draft.unitNumber ?? ''"
-            type="number"
-            step="any"
             :disabled="readonly"
-            @input="draft.unitNumber = normalizeNumber(($event.target as HTMLInputElement).value)"
-          />
+            @change="handleUnitNumberChange"
+          >
+            <option value="">请选择天线单元个数</option>
+            <option v-for="opt in LOC_UNIT_OPTIONS" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
         </label>
         <!-- <label>
           <span>航空器</span>

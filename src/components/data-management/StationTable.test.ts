@@ -50,7 +50,7 @@ describe('StationTable', () => {
         items: [station],
         airportName: '',
         stationType: '',
-        stationTypeOptions: [],
+        stationTypeOptions: [{ value: 'ILS', label: 'ILS' }],
         keyword: '',
         runwayNo: '',
         loading: false,
