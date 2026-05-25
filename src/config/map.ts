@@ -1,7 +1,17 @@
 import type { MapConfig } from '../types/map'
 
-const tdtKey = import.meta.env.VITE_TDT_KEY ?? ''
-const ionToken = import.meta.env.VITE_CESIUM_ION_TOKEN ?? ''
+function getRuntimeConfig(key: string, fallback: string): string {
+  if (typeof window !== 'undefined' && (window as any).__SODS_CONFIG__) {
+    const val = (window as any).__SODS_CONFIG__[key]
+    if (val !== undefined && val !== null && val !== '') {
+      return String(val)
+    }
+  }
+  return fallback
+}
+
+const tdtKey = getRuntimeConfig('tdtKey', import.meta.env.VITE_TDT_KEY ?? '')
+const ionToken = getRuntimeConfig('cesiumIonToken', import.meta.env.VITE_CESIUM_ION_TOKEN ?? '')
 
 export const mapConfig: MapConfig = {
   tdtKey,
