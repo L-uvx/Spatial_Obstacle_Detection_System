@@ -69,6 +69,15 @@ watch(
   { immediate: true, deep: true },
 )
 
+watch(
+  () => draft.runwayType,
+  (newValue) => {
+    if (newValue === '非仪表跑道') {
+      draft.stationSubType = ''
+    }
+  },
+)
+
 function validate() {
   if (!draft.airportId.trim()) {
     return '所属机场不能为空'
@@ -217,35 +226,64 @@ function handleSave() {
           />
         </label>
         <label>
-          <span>最大适航机型(H:航空器高度)</span>
-          <input
+          <span>最大适航机型</span>
+          <select
+            data-testid="runway-maximum-airworthiness-select"
             :value="draft.maximumAirworthiness ?? ''"
-            type="number"
-            step="any"
             :disabled="readonly"
-            @input="draft.maximumAirworthiness = normalizeNumber(($event.target as HTMLInputElement).value)"
-          />
+            @change="draft.maximumAirworthiness = ($event.target as HTMLSelectElement).value === '' ? null : Number(($event.target as HTMLSelectElement).value)"
+          >
+            <option value="">请选择</option>
+            <option value="0">车辆（H≤6米）</option>
+            <option value="1">中型航空器(6米≤H≤14米)</option>
+            <option value="2">大型航空器(14米≤H≤20米)</option>
+            <option value="3">特大型航空器(20米≤H≤25米)</option>
+          </select>
         </label>
         <label>
           <span>仪表着陆系统类别</span>
-          <input v-model="draft.stationSubType" type="text" :disabled="readonly" />
+          <select data-testid="runway-station-sub-type-select" v-model="draft.stationSubType" :disabled="readonly">
+            <option value="">请选择</option>
+            <option value="I">I</option>
+            <option value="II">II</option>
+            <option value="III">III</option>
+          </select>
         </label>
         <label>
           <span>跑道类型</span>
-          <input v-model="draft.runwayType" type="text" :disabled="readonly" />
+          <select data-testid="runway-type-select" v-model="draft.runwayType" :disabled="readonly">
+            <option value="">请选择</option>
+            <option value="非仪表跑道">非仪表跑道</option>
+            <option value="非精密进近跑道">非精密进近跑道</option>
+            <option value="精密进近跑道">精密进近跑道</option>
+          </select>
         </label>
         <label>
           <span>编码A</span>
-          <input v-model="draft.runwayCodeA" type="text" :disabled="readonly" />
+          <select data-testid="runway-code-a-select" v-model="draft.runwayCodeA" :disabled="readonly">
+            <option value="">请选择</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
         </label>
         <label>
           <span>编码B</span>
-          <input v-model="draft.runwayCodeB" type="text" :disabled="readonly" />
+          <select data-testid="runway-code-b-select" v-model="draft.runwayCodeB" :disabled="readonly">
+            <option value="">请选择</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+            <option value="E">E</option>
+            <option value="F">F</option>
+          </select>
         </label>
         <label>
           <span>最大可起降航空器类别</span>
           <select v-model="draft.maximumTypeAircraft" :disabled="readonly">
-    <option value="D类和D类以上">D类和D类以上</option>
+            <option value="D类和D类以上">D类和D类以上</option>
             <option value="C类和C类以下">C类和C类以下</option>
             <option value="B类和B类以下">B类和B类以下</option>
           </select>
