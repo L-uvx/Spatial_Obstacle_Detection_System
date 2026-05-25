@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { StationListItem } from '../../types/dataManagement'
+import type { SelectOption, StationListItem } from '../../types/dataManagement'
 
 const props = defineProps<{
   items: StationListItem[]
   airportName: string
   stationType: string
+  stationTypeOptions: SelectOption[]
   keyword: string
   runwayNo: string
   loading: boolean
@@ -38,13 +39,16 @@ const emit = defineEmits<{
       </label>
       <label>
         <span>台站类型</span>
-        <input
-          data-testid="station-type-input"
-          type="text"
+        <select
+          data-testid="station-type-select"
           :value="stationType"
-          placeholder="台站类型筛选待接入下拉"
-          @input="emit('update:stationType', ($event.target as HTMLInputElement).value)"
-        />
+          @change="emit('update:stationType', ($event.target as HTMLSelectElement).value)"
+        >
+          <option value="">全部类型</option>
+          <option v-for="option in stationTypeOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
       </label>
       <label>
         <span>关联跑道</span>

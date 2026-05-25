@@ -50,6 +50,7 @@ describe('StationTable', () => {
         items: [station],
         airportName: '',
         stationType: '',
+        stationTypeOptions: [],
         keyword: '',
         runwayNo: '',
         loading: false,
@@ -57,7 +58,7 @@ describe('StationTable', () => {
     })
 
     await wrapper.get('[data-testid="station-airport-name-input"]').setValue('airport-1')
-    await wrapper.get('[data-testid="station-type-input"]').setValue('ILS')
+    await wrapper.get('[data-testid="station-type-select"]').setValue('ILS')
     await wrapper.get('[data-testid="station-keyword-input"]').setValue('近台')
     await wrapper.get('[data-testid="station-runway-no-input"]').setValue('18L')
     await wrapper.get('[data-action="create-station"]').trigger('click')

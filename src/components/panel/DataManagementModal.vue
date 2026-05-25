@@ -437,6 +437,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
             :items="state.stations.items"
             :airport-name="state.stations.filters.airportName"
             :station-type="state.stations.filters.stationType"
+            :station-type-options="state.stationTypeOptions"
             :keyword="state.stations.filters.keyword"
             :runway-no="state.stations.filters.runwayNo"
             :loading="state.stations.loading"
