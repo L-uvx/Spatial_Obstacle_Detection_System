@@ -15,7 +15,16 @@ function formatCoordinate(item: ObstacleListItem): string {
   if (item.geometry.type === 'Point') {
     return `${item.geometry.coordinates[0]}, ${item.geometry.coordinates[1]}`
   }
-  return '多边形'
+  const polygons = item.geometry.coordinates
+  return polygons.map((rings, i) => {
+    const outerRing = rings[0]
+    if (!outerRing || outerRing.length === 0) return ''
+    const lines = outerRing.map((p: number[]) => `${p[0]}, ${p[1]}`)
+    if (polygons.length > 1) {
+      return `-- 多边形 ${i + 1} --\n${lines.join('\n')}`
+    }
+    return lines.join('\n')
+  }).filter(Boolean).join('\n\n')
 }
 </script>
 
@@ -37,32 +46,21 @@ function formatCoordinate(item: ObstacleListItem): string {
             <input :value="modelValue.obstacleType" disabled />
           </label>
           <label>
-            <span>项目 ID</span>
-            <input :value="modelValue.projectId" disabled />
-          </label>
-          <label>
             <span>项目名称</span>
             <input :value="modelValue.projectName" disabled />
-          </label>
-          <label>
-            <span>导入批次</span>
-            <input :value="modelValue.sourceBatchId" disabled />
-          </label>
-          <label>
-            <span>导入行号</span>
-            <input :value="modelValue.sourceRowNo" disabled />
           </label>
           <label>
             <span>顶部高程 (m)</span>
             <input :value="modelValue.topElevation?.toFixed(1) ?? '-'" disabled />
           </label>
-          <label>
-            <span>几何类型</span>
-            <input :value="modelValue.geometry?.type ?? '-'" disabled />
-          </label>
-          <label>
+          <label class="data-management-form-dialog__label--wide">
             <span>坐标</span>
-            <input :value="formatCoordinate(modelValue)" disabled />
+            <textarea
+              class="data-management-form-dialog__coordinate-textarea"
+              :value="formatCoordinate(modelValue)"
+              rows="4"
+              readonly
+            />
           </label>
         </div>
         <footer class="data-management-form-dialog__footer">

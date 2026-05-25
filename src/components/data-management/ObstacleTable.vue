@@ -20,14 +20,6 @@ const emit = defineEmits<{
 }>()
 
 const typeOptions = [...new Set([...polygonObstacleTypeOptions, ...pointObstacleTypeOptions])]
-
-function formatCoordinate(item: ObstacleListItem): string {
-  if (!item.geometry) return '-'
-  if (item.geometry.type === 'Point') {
-    return `${item.geometry.coordinates[0]}, ${item.geometry.coordinates[1]}`
-  }
-  return '多边形'
-}
 </script>
 
 <template>
@@ -71,23 +63,21 @@ function formatCoordinate(item: ObstacleListItem): string {
           <th>所属项目</th>
           <th>障碍物类型</th>
           <th>顶部高程 (m)</th>
-          <th>坐标</th>
           <th>操作</th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="loading">
-          <td colspan="6">加载中...</td>
+          <td colspan="5">加载中...</td>
         </tr>
         <tr v-else-if="items.length === 0">
-          <td colspan="6">暂无障碍物数据</td>
+          <td colspan="5">暂无障碍物数据</td>
         </tr>
         <tr v-for="item in items" :key="item.id">
           <td>{{ item.name || '-' }}</td>
           <td>{{ item.projectName || '-' }}</td>
           <td>{{ item.obstacleType || '-' }}</td>
           <td>{{ item.topElevation?.toFixed(1) ?? '-' }}</td>
-          <td>{{ formatCoordinate(item) }}</td>
           <td>
             <button type="button" data-action="detail-obstacle" @click="emit('detail', item)">详情</button>
             <button type="button" data-action="delete-obstacle" @click="emit('delete', item)">删除</button>

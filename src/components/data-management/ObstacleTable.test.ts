@@ -42,7 +42,6 @@ describe('ObstacleTable', () => {
     expect(wrapper.text()).toContain('测试项目')
     expect(wrapper.text()).toContain('建筑物/构建物')
     expect(wrapper.text()).toContain('100.5')
-    expect(wrapper.text()).toContain('114.2, 30.7')
   })
 
   it('shows loading state', () => {
@@ -181,53 +180,5 @@ describe('ObstacleTable', () => {
     const locateBtn = wrapper.get('[data-action="locate-obstacle"]')
     expect((locateBtn.element as HTMLButtonElement).disabled).toBe(true)
   })
-
-  it('formats Point coordinate as "lon, lat"', () => {
-    const item = createObstacle({
-      geometry: { type: 'Point', coordinates: [120.5, 31.2] },
-    })
-    const wrapper = mount(ObstacleTable, {
-      props: {
-        items: [item],
-        projectName: '',
-        keyword: '',
-        obstacleType: '',
-        loading: false,
-      },
-    })
-
-    expect(wrapper.text()).toContain('120.5, 31.2')
-  })
-
-  it('formats MultiPolygon coordinate as "多边形"', () => {
-    const item = createObstacle({
-      geometry: { type: 'MultiPolygon', coordinates: [[[[114, 30]]]] },
-    })
-    const wrapper = mount(ObstacleTable, {
-      props: {
-        items: [item],
-        projectName: '',
-        keyword: '',
-        obstacleType: '',
-        loading: false,
-      },
-    })
-
-    expect(wrapper.text()).toContain('多边形')
-  })
-
-  it('formats null coordinate as "-"', () => {
-    const item = createObstacle({ geometry: null })
-    const wrapper = mount(ObstacleTable, {
-      props: {
-        items: [item],
-        projectName: '',
-        keyword: '',
-        obstacleType: '',
-        loading: false,
-      },
-    })
-
-    expect(wrapper.text()).toContain('-')
-  })
 })
+

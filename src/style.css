@@ -1350,6 +1350,29 @@ body {
   border-color: rgba(37, 99, 235, 0.5);
 }
 
+.data-management-form-dialog__label--wide {
+  flex: 1 1 auto;
+}
+
+.data-management-form-dialog__coordinate-textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #e2e8f0;
+  font-size: 14px;
+  font-family: 'Courier New', Consolas, monospace;
+  line-height: 1.6;
+  background: rgba(15, 23, 42, 0.64);
+  min-height: 72px;
+}
+
+.data-management-form-dialog__coordinate-textarea:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.5);
+}
+
 .data-management-form-dialog__error {
   margin: 0 0 12px;
   padding: 10px 14px;

@@ -112,27 +112,19 @@ describe('ObstacleDetailDialog', () => {
     const labels = [
       '障碍物名称',
       '障碍物类型',
-      '项目 ID',
       '项目名称',
-      '导入批次',
-      '导入行号',
       '顶部高程',
-      '几何类型',
       '坐标',
     ]
     for (const label of labels) {
       expect(text).toContain(label)
     }
 
-    // Check field values rendered in inputs
     const inputs = wrapper.findAll('input')
     const inputValues = inputs.map((i) => (i.element as HTMLInputElement).value)
     expect(inputValues).toContain('高压线塔')
     expect(inputValues).toContain('电力塔')
-    expect(inputValues).toContain('proj-99')
     expect(inputValues).toContain('某机场项目')
-    expect(inputValues).toContain('batch-xyz')
-    expect(inputValues).toContain('42')
     expect(inputValues).toContain('200.0')
   })
 
@@ -154,7 +146,7 @@ describe('ObstacleDetailDialog', () => {
     expect((elevInput!.element as HTMLInputElement).value).toBe('-')
   })
 
-  it('shows "多边形" for MultiPolygon geometry coordinate', () => {
+  it('shows vertex coordinates for MultiPolygon geometry', () => {
     const wrapper = mount(ObstacleDetailDialog, {
       global: { stubs: { Teleport: true } },
       props: {
@@ -168,13 +160,10 @@ describe('ObstacleDetailDialog', () => {
       },
     })
 
-    const inputs = wrapper.findAll('input')
-    const coordInput = inputs.find((i) => {
-      const label = (i.element as HTMLInputElement).closest('label')
-      return label?.textContent?.includes('坐标')
-    })
-    expect(coordInput).toBeTruthy()
-    expect((coordInput!.element as HTMLInputElement).value).toBe('多边形')
+    const textaraa = wrapper.find('textarea')
+    expect(textaraa.exists()).toBe(true)
+    expect((textaraa.element as HTMLTextAreaElement).value).toContain('114, 30')
+    expect((textaraa.element as HTMLTextAreaElement).value).toContain('115, 30')
   })
 
   it('shows "lon, lat" for Point geometry coordinate', () => {
@@ -188,13 +177,9 @@ describe('ObstacleDetailDialog', () => {
       },
     })
 
-    const inputs = wrapper.findAll('input')
-    const coordInput = inputs.find((i) => {
-      const label = (i.element as HTMLInputElement).closest('label')
-      return label?.textContent?.includes('坐标')
-    })
-    expect(coordInput).toBeTruthy()
-    expect((coordInput!.element as HTMLInputElement).value).toBe('120.5, 35.2')
+    const textaraa = wrapper.find('textarea')
+    expect(textaraa.exists()).toBe(true)
+    expect((textaraa.element as HTMLTextAreaElement).value).toBe('120.5, 35.2')
   })
 
   it('shows "-" for null geometry coordinate', () => {
@@ -206,34 +191,12 @@ describe('ObstacleDetailDialog', () => {
       },
     })
 
-    const inputs = wrapper.findAll('input')
-    const coordInput = inputs.find((i) => {
-      const label = (i.element as HTMLInputElement).closest('label')
-      return label?.textContent?.includes('坐标')
-    })
-    expect(coordInput).toBeTruthy()
-    expect((coordInput!.element as HTMLInputElement).value).toBe('-')
+    const textaraa = wrapper.find('textarea')
+    expect(textaraa.exists()).toBe(true)
+    expect((textaraa.element as HTMLTextAreaElement).value).toBe('-')
   })
 
-  it('shows "-" for null geometry type when geometry is null', () => {
-    const wrapper = mount(ObstacleDetailDialog, {
-      global: { stubs: { Teleport: true } },
-      props: {
-        open: true,
-        modelValue: makeItem({ geometry: null }),
-      },
-    })
-
-    const inputs = wrapper.findAll('input')
-    const typeInput = inputs.find((i) => {
-      const label = (i.element as HTMLInputElement).closest('label')
-      return label?.textContent?.includes('几何类型')
-    })
-    expect(typeInput).toBeTruthy()
-    expect((typeInput!.element as HTMLInputElement).value).toBe('-')
-  })
-
-  it('all inputs are disabled', () => {
+  it('all inputs and textarea are disabled/readonly', () => {
     const wrapper = mount(ObstacleDetailDialog, {
       global: { stubs: { Teleport: true } },
       props: {
@@ -247,5 +210,9 @@ describe('ObstacleDetailDialog', () => {
     for (const input of inputs) {
       expect((input.element as HTMLInputElement).disabled).toBe(true)
     }
+
+    const textaraa = wrapper.find('textarea')
+    expect(textaraa.exists()).toBe(true)
+    expect((textaraa.element as HTMLTextAreaElement).readOnly).toBe(true)
   })
 })
