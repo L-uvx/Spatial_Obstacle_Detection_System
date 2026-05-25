@@ -8,15 +8,15 @@ export default defineConfig({
   server: {
     proxy: {
       '/polygon-obstacle': {
-        target: 'http://172.25.74.165:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/point-obstacle': {
-        target: 'http://172.25.74.165:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/data-management': {
-        target: 'http://172.25.74.165:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },

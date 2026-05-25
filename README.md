@@ -77,3 +77,10 @@ server: {
 ## 环境变量
 
 参考 `.env.example` 中的变量定义，在 `.env.local` 中配置。
+
+### 便携部署的运行时配置
+
+在便携部署中（非 `npm run dev`），`TDT_KEY` 和 `CESIUM_ION_TOKEN` 不再编译进 JS，而是由启动脚本从 `config.env` 动态生成 `dist/config.js`。前端通过 `window.__SODS_CONFIG__` 读取配置，若缺失则回退到 `import.meta.env.VITE_*`。
+
+- 开发模式：修改 `.env.local` → 重启 `npm run dev`
+- 便携部署：修改 `config.env` → 重启 `start.bat` → 刷新浏览器
