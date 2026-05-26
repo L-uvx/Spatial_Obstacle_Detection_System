@@ -98,15 +98,15 @@ watch(
   { immediate: true, deep: true },
 )
 
-function normalizeUnitNumber(raw: unknown): number | null {
+function normalizeUnitNumber(raw: unknown): string | null {
   if (raw === null || raw === undefined || raw === '') return null
   const s = String(raw)
-  return LOC_UNIT_SET.has(s) ? Number(s) : null
+  return LOC_UNIT_SET.has(s) ? s : null
 }
 
 function handleUnitNumberChange(e: Event) {
   const raw = (e.target as HTMLSelectElement).value
-  draft.unitNumber = raw === '' ? null : Number(raw)
+  draft.unitNumber = raw === '' ? null : raw
 }
 
 function validate() {

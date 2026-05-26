@@ -123,7 +123,7 @@ export interface StationListItem {
   distanceToRunway: number | null
   distanceVToRunway: number | null
   distanceEndoRunway: number | null
-  unitNumber: number | null
+  unitNumber: string | null
   aircraft: string
   antennaHeight: number | null
   stationSubType: string | null
@@ -155,7 +155,7 @@ export interface StationPayload {
   distanceToRunway: number | null
   distanceVToRunway: number | null
   distanceEndoRunway: number | null
-  unitNumber: number | null
+  unitNumber: string | null
   aircraft: string
   antennaHeight: number | null
   stationSubType: string | null

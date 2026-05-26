@@ -234,7 +234,7 @@ function normalizeStationListItem(item: StationListItemResponse): StationListIte
     distanceToRunway: typeof item.distanceToRunway === 'number' ? item.distanceToRunway : null,
     distanceVToRunway: typeof item.distanceVToRunway === 'number' ? item.distanceVToRunway : null,
     distanceEndoRunway: typeof item.distanceEndoRunway === 'number' ? item.distanceEndoRunway : null,
-    unitNumber: item.unitNumber != null ? Number(item.unitNumber) : null,
+    unitNumber: item.unitNumber != null ? String(item.unitNumber) : null,
     aircraft: item.aircraft ?? '',
     antennaHeight: typeof item.antennaHeight === 'number' ? item.antennaHeight : null,
     stationSubType: item.stationSubType ?? null,
