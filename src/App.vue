@@ -85,6 +85,13 @@ const {
   confirmObstacleDelete,
   openObstacleDetailDialog,
   closeObstacleDetailDialog,
+  setProjectName,
+  setProjectObstacleType,
+  setProjectStatus,
+  changeProjectPage,
+  changeProjectPageSize,
+  toggleProjectExpand,
+  exportProjectTarget,
 } = useDataManagement({
   onRefreshBootstrap: async () => {
     await bootstrap()
@@ -125,7 +132,7 @@ function handleCloseDataManagement() {
 }
 
 // 切换数据管理标签页。
-function handleSwitchDataManagementTab(tab: 'airports' | 'runways' | 'stations' | 'obstacles') {
+function handleSwitchDataManagementTab(tab: 'airports' | 'runways' | 'stations' | 'obstacles' | 'projects') {
   setActiveTab(tab)
 }
 
@@ -458,6 +465,34 @@ function handleLocateStation(station: StationListItem) {
   }
   state.flyToTargetTick += 1
 }
+
+function handleSetProjectName(projectName: string) {
+  void setProjectName(projectName)
+}
+
+function handleSetProjectObstacleType(obstacleType: string) {
+  void setProjectObstacleType(obstacleType)
+}
+
+function handleSetProjectStatus(status: string) {
+  void setProjectStatus(status)
+}
+
+function handleChangeProjectPage(page: number) {
+  void changeProjectPage(page)
+}
+
+function handleChangeProjectPageSize(pageSize: number) {
+  void changeProjectPageSize(pageSize)
+}
+
+function handleToggleProjectExpand(projectId: string) {
+  void toggleProjectExpand(projectId)
+}
+
+function handleExportProjectTarget(payload: { analysisTaskId: string; targetId: number }) {
+  void exportProjectTarget(payload.analysisTaskId, payload.targetId)
+}
 </script>
 
 <template>
@@ -511,6 +546,13 @@ function handleLocateStation(station: StationListItem) {
     @close-obstacle-delete-confirm="handleCloseObstacleDeleteConfirm"
     @confirm-obstacle-delete="handleConfirmObstacleDelete"
     @locate-obstacle="handleLocateObstacle"
+    @set-project-name="handleSetProjectName"
+    @set-project-obstacle-type="handleSetProjectObstacleType"
+    @set-project-status="handleSetProjectStatus"
+    @change-project-page="handleChangeProjectPage"
+    @change-project-page-size="handleChangeProjectPageSize"
+    @toggle-project-expand="handleToggleProjectExpand"
+    @export-project-target="handleExportProjectTarget"
     @open-airport-create-dialog="handleOpenAirportCreateDialog"
     @open-airport-edit-dialog="handleOpenAirportEditDialog"
     @open-airport-detail-dialog="handleOpenAirportDetailDialog"

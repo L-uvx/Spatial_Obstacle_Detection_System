@@ -8,6 +8,9 @@ import type {
   ObstacleListItem,
   PaginatedResult,
   PaginationParams,
+  ProjectFilters,
+  ProjectListItem,
+  ProjectTargetSummary,
   RunwayFilters,
   RunwayListItem,
   RunwayPayload,
@@ -145,6 +148,29 @@ interface ObstacleDetailResponse {
   geometry?: ObstacleGeometry | null
 }
 
+interface ProjectListItemResponse {
+  id?: number
+  projectName?: string
+  obstacleType?: string
+  analysisTaskId?: string
+  status?: string
+  obstacleCount?: number
+  targetCount?: number
+  nonCompliantTargetCount?: number
+  createdAt?: string
+}
+
+interface ProjectTargetSummaryResponse {
+  targetId?: number
+  targetName?: string
+  ruleCount?: number
+  nonCompliantCount?: number
+}
+
+interface ProjectTargetListResponse {
+  targets?: ProjectTargetSummaryResponse[]
+}
+
 interface ConflictResponseBody {
   detail?: DataManagementConflict | string
 }
@@ -273,6 +299,31 @@ function normalizeObstacleDetail(item: ObstacleDetailResponse): ObstacleListItem
     geometry: item.geometry ?? null,
     createdAt: '',
     updatedAt: '',
+  }
+}
+
+function normalizeProjectListItem(item: ProjectListItemResponse): ProjectListItem {
+  return {
+    id: String(item.id ?? ''),
+    projectName: item.projectName ?? '',
+    obstacleType: item.obstacleType ?? '',
+    analysisTaskId: item.analysisTaskId ?? '',
+    status: (item.status === 'not_analyzed' || item.status === 'running' || item.status === 'succeeded' || item.status === 'failed')
+      ? item.status
+      : 'not_analyzed',
+    obstacleCount: typeof item.obstacleCount === 'number' ? item.obstacleCount : 0,
+    targetCount: typeof item.targetCount === 'number' ? item.targetCount : 0,
+    nonCompliantTargetCount: typeof item.nonCompliantTargetCount === 'number' ? item.nonCompliantTargetCount : 0,
+    createdAt: item.createdAt ?? '',
+  }
+}
+
+function normalizeProjectTargetSummary(item: ProjectTargetSummaryResponse): ProjectTargetSummary {
+  return {
+    targetId: typeof item.targetId === 'number' ? item.targetId : 0,
+    targetName: item.targetName ?? '',
+    ruleCount: typeof item.ruleCount === 'number' ? item.ruleCount : 0,
+    nonCompliantCount: typeof item.nonCompliantCount === 'number' ? item.nonCompliantCount : 0,
   }
 }
 
@@ -603,4 +654,33 @@ export async function deleteObstacle(id: string) {
   })
 
   await ensureOk(response)
+}
+
+export async function getProjects(
+  params: ProjectFilters & PaginationParams,
+): Promise<PaginatedResult<ProjectListItem>> {
+  const response = await fetch(`/polygon-obstacle/projects${buildQuery({ ...params })}`)
+
+  await ensureOk(response)
+
+  const result = await readJson<PaginatedResultResponse<ProjectListItemResponse>>(response)
+
+  return {
+    items: Array.isArray(result.items) ? result.items.map((item) => normalizeProjectListItem(item)) : [],
+    total: typeof result.total === 'number' ? result.total : 0,
+    page: typeof result.page === 'number' ? result.page : params.page,
+    pageSize: typeof result.pageSize === 'number' ? result.pageSize : params.pageSize,
+  }
+}
+
+export async function getProjectTargets(projectId: number): Promise<ProjectTargetSummary[]> {
+  const response = await fetch(`/polygon-obstacle/projects/${projectId}/targets`)
+
+  await ensureOk(response)
+
+  const result = await readJson<ProjectTargetListResponse>(response)
+
+  return Array.isArray(result.targets)
+    ? result.targets.map((item) => normalizeProjectTargetSummary(item))
+    : []
 }

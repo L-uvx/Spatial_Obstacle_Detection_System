@@ -10,6 +10,7 @@ import RunwayTable from '../data-management/RunwayTable.vue'
 import StationTable from '../data-management/StationTable.vue'
 import ObstacleTable from '../data-management/ObstacleTable.vue'
 import ObstacleDetailDialog from '../data-management/ObstacleDetailDialog.vue'
+import ProjectTable from '../data-management/ProjectTable.vue'
 import type { AirportFormValue, DataManagementState } from '../../composables/useDataManagement'
 import type { AirportListItem, ObstacleListItem, RunwayListItem, RunwayPayload, StationListItem, StationPayload } from '../../types/dataManagement'
 
@@ -44,6 +45,10 @@ function getActivePager() {
 
   if (props.state.activeTab === 'stations') {
     return props.state.stations
+  }
+
+  if (props.state.activeTab === 'projects') {
+    return props.state.projects
   }
 
   return props.state.obstacles
@@ -86,6 +91,8 @@ function handlePreviousPage() {
     emit('changeRunwayPage', nextPage)
   } else if (props.state.activeTab === 'stations') {
     emit('changeStationPage', nextPage)
+  } else if (props.state.activeTab === 'projects') {
+    emit('changeProjectPage', nextPage)
   } else {
     emit('changeObstaclePage', nextPage)
   }
@@ -107,6 +114,8 @@ function handleNextPage() {
     emit('changeRunwayPage', nextPage)
   } else if (props.state.activeTab === 'stations') {
     emit('changeStationPage', nextPage)
+  } else if (props.state.activeTab === 'projects') {
+    emit('changeProjectPage', nextPage)
   } else {
     emit('changeObstaclePage', nextPage)
   }
@@ -125,6 +134,8 @@ function handlePageSizeChange(event: Event) {
     emit('changeRunwayPageSize', Number(target.value))
   } else if (props.state.activeTab === 'stations') {
     emit('changeStationPageSize', Number(target.value))
+  } else if (props.state.activeTab === 'projects') {
+    emit('changeProjectPageSize', Number(target.value))
   } else {
     emit('changeObstaclePageSize', Number(target.value))
   }
@@ -185,6 +196,13 @@ const emit = defineEmits<{
   closeObstacleDeleteConfirm: []
   confirmObstacleDelete: []
   locateObstacle: [obstacle: ObstacleListItem]
+  setProjectName: [projectName: string]
+  setProjectObstacleType: [obstacleType: string]
+  setProjectStatus: [status: string]
+  changeProjectPage: [page: number]
+  changeProjectPageSize: [pageSize: number]
+  toggleProjectExpand: [projectId: string]
+  exportProjectTarget: [payload: { analysisTaskId: string; targetId: number }]
 }>()
 
 const importFileInput = ref<HTMLInputElement | null>(null)
@@ -403,6 +421,11 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
           @click="emit('switchTab', 'obstacles')">
           障碍物管理
         </button>
+        <button type="button" class="data-management-modal__tab" data-tab="projects"
+          :data-active="state.activeTab === 'projects'"
+          @click="emit('switchTab', 'projects')">
+          项目管理
+        </button>
       </nav>
       <div class="data-management-modal__body shell-scrollbar">
         <section
@@ -488,12 +511,11 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
             :airport-options="state.airportOptions"
             :station-type-options="state.stationTypeOptions"
             :model-value="state.stations.draft"
-            @close="emit('closeStationFormDialog')"
-            @save="emit('saveStationDraft', $event)"
-          />
-
+          @close="emit('closeStationFormDialog')"
+          @save="emit('saveStationDraft', $event)"
+        />
         </template>
-        <template v-else>
+        <template v-else-if="state.activeTab === 'obstacles'">
           <ObstacleTable
             :items="state.obstacles.items"
             :project-name="state.obstacles.filters.projectName"
@@ -515,6 +537,28 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
             :model-value="(state.obstacles.draft as ObstacleListItem)"
             @close="emit('closeObstacleDetailDialog')"
           />
+        </template>
+        <template v-else-if="state.activeTab === 'projects'">
+          <ProjectTable
+            :items="state.projects.items"
+            :project-name="state.projects.filters.projectName"
+            :obstacle-type="state.projects.filters.obstacleType"
+            :status="state.projects.filters.status"
+            :loading="state.projects.loading"
+            :expanded-project-id="state.projects.expandedProjectId"
+            :expanded-targets="state.projects.expandedTargets"
+            :targets-loading="state.projects.targetsLoading"
+            :targets-error="state.projects.targetsError"
+            :target-export-state="state.projects.targetExportState"
+            @update:project-name="emit('setProjectName', $event)"
+            @update:obstacle-type="emit('setProjectObstacleType', $event)"
+            @update:status="emit('setProjectStatus', $event)"
+            @toggle-expand="emit('toggleProjectExpand', $event)"
+            @export-target="emit('exportProjectTarget', $event)"
+          />
+          <p v-if="state.projects.errorMessage" class="data-management-modal__placeholder">
+            {{ state.projects.errorMessage }}
+          </p>
         </template>
       </div>
       <footer class="data-management-modal__footer">

@@ -1,4 +1,4 @@
-export type DataManagementTab = 'airports' | 'runways' | 'stations' | 'obstacles'
+export type DataManagementTab = 'airports' | 'runways' | 'stations' | 'obstacles' | 'projects'
 
 export interface PaginationParams {
   page: number
@@ -216,4 +216,29 @@ export interface ObstacleListItem {
   geometry: ObstacleGeometry | null
   createdAt: string
   updatedAt: string
+}
+
+export interface ProjectFilters {
+  projectName: string
+  obstacleType: string
+  status: string
+}
+
+export interface ProjectListItem {
+  id: string
+  projectName: string
+  obstacleType: string
+  analysisTaskId: string
+  status: 'not_analyzed' | 'running' | 'succeeded' | 'failed'
+  obstacleCount: number
+  targetCount: number
+  nonCompliantTargetCount: number
+  createdAt: string
+}
+
+export interface ProjectTargetSummary {
+  targetId: number
+  targetName: string
+  ruleCount: number
+  nonCompliantCount: number
 }

@@ -58,6 +58,13 @@ const emit = defineEmits<{
   closeObstacleDeleteConfirm: []
   confirmObstacleDelete: []
   locateObstacle: [obstacle: ObstacleListItem]
+  setProjectName: [projectName: string]
+  setProjectObstacleType: [obstacleType: string]
+  setProjectStatus: [status: string]
+  changeProjectPage: [page: number]
+  changeProjectPageSize: [pageSize: number]
+  toggleProjectExpand: [projectId: string]
+  exportProjectTarget: [payload: { analysisTaskId: string; targetId: number }]
   openAirportCreateDialog: []
   openAirportEditDialog: [airportId: string]
   openAirportDetailDialog: [airport: AirportListItem]
@@ -267,6 +274,13 @@ function handleSelectAirport(event: Event) {
         @close-obstacle-delete-confirm="emit('closeObstacleDeleteConfirm')"
         @confirm-obstacle-delete="emit('confirmObstacleDelete')"
         @locate-obstacle="emit('locateObstacle', $event)"
+        @set-project-name="emit('setProjectName', $event)"
+        @set-project-obstacle-type="emit('setProjectObstacleType', $event)"
+        @set-project-status="emit('setProjectStatus', $event)"
+        @change-project-page="emit('changeProjectPage', $event)"
+        @change-project-page-size="emit('changeProjectPageSize', $event)"
+        @toggle-project-expand="emit('toggleProjectExpand', $event)"
+        @export-project-target="emit('exportProjectTarget', $event)"
         @open-station-create-dialog="emit('openStationCreateDialog')"
         @open-station-edit-dialog="emit('openStationEditDialog', $event)"
         @open-station-delete-confirm="emit('openStationDeleteConfirm', $event)"

@@ -135,6 +135,24 @@ function createState(overrides: Partial<DataManagementState> = {}): DataManageme
       draft: {},
       deleteTarget: null,
     },
+    projects: {
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 10,
+      loading: false,
+      errorMessage: '',
+      filters: {
+        projectName: '',
+        obstacleType: '',
+        status: '',
+      },
+      expandedProjectId: null,
+      expandedTargets: [],
+      targetsLoading: false,
+      targetsError: '',
+      targetExportState: {},
+    },
     ...overrides,
   }
 }

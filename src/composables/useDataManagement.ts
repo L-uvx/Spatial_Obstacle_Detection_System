@@ -11,6 +11,8 @@ import {
   getAirportDetail,
   getAirportOptions,
   getObstacles,
+  getProjects,
+  getProjectTargets,
   getRunwayDetail,
   getRunways,
   getStationDetail,
@@ -26,6 +28,9 @@ import type {
   AirportListItem,
   ObstacleFilters,
   ObstacleListItem,
+  ProjectFilters,
+  ProjectListItem,
+  ProjectTargetSummary,
   RunwayFilters,
   RunwayListItem,
   RunwayPayload,
@@ -35,6 +40,8 @@ import type {
   StationListItem,
   StationPayload,
 } from '../types/dataManagement'
+import { runExportWorkflow } from '../workflows/exportWorkflow'
+import type { ExportStatus } from '../types/tool'
 
 export interface AirportFormValue {
   name: string
@@ -59,7 +66,7 @@ export interface ObstacleDraft extends Partial<ObstacleListItem> {}
 
 export interface DataManagementState {
   isOpen: boolean
-  activeTab: 'airports' | 'runways' | 'stations' | 'obstacles'
+  activeTab: 'airports' | 'runways' | 'stations' | 'obstacles' | 'projects'
   airportOptions: SelectOption[]
   stationTypeOptions: SelectOption[]
   airports: {
@@ -117,6 +124,27 @@ export interface DataManagementState {
     readonly: boolean
     draft: ObstacleDraft
     deleteTarget: ObstacleListItem | null
+  }
+  projects: {
+    items: ProjectListItem[]
+    total: number
+    page: number
+    pageSize: number
+    loading: boolean
+    errorMessage: string
+    filters: ProjectFilters
+    expandedProjectId: string | null
+    expandedTargets: ProjectTargetSummary[]
+    targetsLoading: boolean
+    targetsError: string
+    targetExportState: Record<string, {
+      status: ExportStatus
+      progressPercent: number
+      message: string
+      fileName: string
+      downloadUrl: string
+      errorMessage: string
+    }>
   }
 }
 
@@ -263,6 +291,24 @@ function createInitialState(): DataManagementState {
       readonly: false,
       draft: createEmptyObstacleDraft(),
       deleteTarget: null,
+    },
+    projects: {
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 10,
+      loading: false,
+      errorMessage: '',
+      filters: {
+        projectName: '',
+        obstacleType: '',
+        status: '',
+      },
+      expandedProjectId: null,
+      expandedTargets: [],
+      targetsLoading: false,
+      targetsError: '',
+      targetExportState: {} as Record<string, { status: ExportStatus; progressPercent: number; message: string; fileName: string; downloadUrl: string; errorMessage: string }>,
     },
   }
 }
@@ -419,6 +465,151 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     }
   }
 
+  async function loadProjectPage() {
+    state.projects.loading = true
+    state.projects.errorMessage = ''
+
+    try {
+      const result = await getProjects({
+        projectName: state.projects.filters.projectName,
+        obstacleType: state.projects.filters.obstacleType,
+        status: state.projects.filters.status,
+        page: state.projects.page,
+        pageSize: state.projects.pageSize,
+      })
+
+      state.projects.items = result.items
+      state.projects.total = result.total
+      state.projects.page = result.page
+      state.projects.pageSize = result.pageSize
+    } catch (error) {
+      state.projects.items = []
+      state.projects.total = 0
+      state.projects.errorMessage = error instanceof Error ? error.message : '项目列表加载失败'
+    } finally {
+      state.projects.loading = false
+    }
+  }
+
+  async function setProjectName(projectName: string) {
+    state.projects.filters.projectName = projectName
+    state.projects.page = 1
+    await loadProjectPage()
+  }
+
+  async function setProjectObstacleType(obstacleType: string) {
+    state.projects.filters.obstacleType = obstacleType
+    state.projects.page = 1
+    await loadProjectPage()
+  }
+
+  async function setProjectStatus(status: string) {
+    state.projects.filters.status = status
+    state.projects.page = 1
+    await loadProjectPage()
+  }
+
+  async function changeProjectPage(page: number) {
+    state.projects.page = page
+    await loadProjectPage()
+  }
+
+  async function changeProjectPageSize(pageSize: number) {
+    state.projects.pageSize = pageSize
+    state.projects.page = 1
+    await loadProjectPage()
+  }
+
+  async function toggleProjectExpand(projectId: string) {
+    if (state.projects.expandedProjectId === projectId) {
+      state.projects.expandedProjectId = null
+      state.projects.expandedTargets = []
+      state.projects.targetsError = ''
+      return
+    }
+
+    const numericId = Number(projectId)
+    if (!Number.isFinite(numericId)) {
+      state.projects.targetsError = '无效的项目ID'
+      return
+    }
+
+    state.projects.expandedProjectId = projectId
+    state.projects.expandedTargets = []
+    state.projects.targetsLoading = true
+    state.projects.targetsError = ''
+
+    try {
+      const targets = await getProjectTargets(numericId)
+      state.projects.expandedTargets = targets
+    } catch (error) {
+      state.projects.expandedTargets = []
+      state.projects.expandedProjectId = null
+      state.projects.targetsError = error instanceof Error ? error.message : '目标列表加载失败'
+    } finally {
+      state.projects.targetsLoading = false
+    }
+  }
+
+  function triggerDownload(downloadUrl: string) {
+    const anchor = document.createElement('a')
+    anchor.href = downloadUrl
+    anchor.download = ''
+    anchor.style.display = 'none'
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+  }
+
+  async function exportProjectTarget(analysisTaskId: string, targetId: number) {
+    const key = `${analysisTaskId}_${targetId}`
+    state.projects.targetExportState[key] = {
+      status: 'pending',
+      progressPercent: 0,
+      message: '正在创建导出任务...',
+      fileName: '',
+      downloadUrl: '',
+      errorMessage: '',
+    }
+
+    try {
+      const result = await runExportWorkflow({
+        analysisTaskId,
+        targetId,
+        onProgress(progress) {
+          state.projects.targetExportState[key] = {
+            status: progress.exportStatus,
+            progressPercent: progress.exportProgressPercent,
+            message: progress.exportMessage,
+            fileName: '',
+            downloadUrl: '',
+            errorMessage: '',
+          }
+        },
+        triggerDownload,
+      })
+
+      state.projects.targetExportState[key] = {
+        status: 'succeeded',
+        progressPercent: 100,
+        message: result.exportMessage,
+        fileName: result.exportFileName,
+        downloadUrl: result.downloadUrl,
+        errorMessage: '',
+      }
+    } catch (error) {
+      const prev = state.projects.targetExportState[key]
+      state.projects.targetExportState[key] = {
+        status: 'failed',
+        progressPercent: prev?.progressPercent ?? 0,
+        message: '',
+        fileName: prev?.fileName ?? '',
+        downloadUrl: prev?.downloadUrl ?? '',
+        errorMessage: error instanceof Error ? error.message : '导出失败',
+      }
+    }
+  }
+
   async function openDataManagement() {
     state.isOpen = true
     await loadOptionSources()
@@ -440,6 +631,10 @@ export function useDataManagement(_options: UseDataManagementOptions) {
 
     if (state.activeTab === 'obstacles') {
       await loadObstaclePage()
+    }
+
+    if (state.activeTab === 'projects') {
+      await loadProjectPage()
     }
   }
 
@@ -1079,6 +1274,10 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     if (tab === 'obstacles' && state.isOpen) {
       void loadObstaclePage()
     }
+
+    if (tab === 'projects' && state.isOpen) {
+      void loadProjectPage()
+    }
   }
 
     return {
@@ -1140,5 +1339,13 @@ export function useDataManagement(_options: UseDataManagementOptions) {
     loadRunwayPage,
     loadStationPage,
     loadObstaclePage,
+    loadProjectPage,
+    setProjectName,
+    setProjectObstacleType,
+    setProjectStatus,
+    changeProjectPage,
+    changeProjectPageSize,
+    toggleProjectExpand,
+    exportProjectTarget,
   }
 }
