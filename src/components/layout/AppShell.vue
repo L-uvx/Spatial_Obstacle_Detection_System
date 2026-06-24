@@ -12,6 +12,7 @@ import type {
   ProtectionZoneNode,
   RenderedObstacle,
 } from '../../types/tool'
+import AirportSearchSelect from '../common/AirportSearchSelect.vue'
 import type { AirportFormValue, DataManagementState } from '../../composables/useDataManagement'
 import type { AirportListItem, ObstacleListItem, RunwayListItem, RunwayPayload, StationListItem, StationPayload } from '../../types/dataManagement'
 
@@ -163,15 +164,9 @@ function handleStationPanelToggle() {
   emit('openStationPanel')
 }
 
-// 从下拉框读取机场选择结果并通知上层。
-function handleSelectAirport(event: Event) {
-  const target = event.target as HTMLSelectElement | null
-
-  if (!target) {
-    return
-  }
-
-  emit('selectAirport', target.value)
+function handleAirportSelected(airportId: string) {
+  emit('selectAirport', airportId)
+  emit('closeStationPanel')
 }
 </script>
 
@@ -199,26 +194,41 @@ function handleSelectAirport(event: Event) {
           class="app-shell__station-popover"
           data-testid="station-panel-popover"
         >
-          <label
+          <div
             v-if="analysisState.airports.length > 0"
             class="app-shell__station-field"
           >
-            <span>切换机场</span>
-            <select
-              class="app-shell__station-select"
-              data-testid="station-airport-select"
-              :value="analysisState.selectedAirportId"
-              @change="handleSelectAirport"
-            >
-              <option
-                v-for="airport in analysisState.airports"
-                :key="airport.id"
-                :value="airport.id"
+            <div class="app-shell__station-popover-header">
+              <span class="app-shell__station-popover-title">切换机场</span>
+              <button
+                type="button"
+                class="app-shell__station-popover-close"
+                data-testid="station-popover-close"
+                aria-label="关闭机场选择"
+                @click="emit('closeStationPanel')"
               >
-                {{ airport.name }}
-              </option>
-            </select>
-          </label>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <AirportSearchSelect
+              :airports="analysisState.airports"
+              :model-value="analysisState.selectedAirportId"
+              @update:model-value="handleAirportSelected"
+            />
+          </div>
           <p v-else class="app-shell__station-empty">暂无可选机场</p>
         </div>
       </div>

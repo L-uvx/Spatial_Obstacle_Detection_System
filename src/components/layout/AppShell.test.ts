@@ -373,9 +373,15 @@ describe('AppShell', () => {
     await wrapper.get('[data-testid="station-panel-toggle"]').trigger('click')
     expect(wrapper.emitted('closeStationPanel')).toEqual([[]])
 
-    await wrapper.get('[data-testid="station-airport-select"]').setValue('airport-2')
+    const searchInput = wrapper.find('.airport-search-select__input')
+    await searchInput.setValue('天府')
+
+    const option = wrapper.get('.airport-search-select__option')
+    await option.trigger('click')
 
     expect(wrapper.emitted('selectAirport')).toEqual([['airport-2']])
+    // 选择机场后应自动关闭弹窗
+    expect(wrapper.emitted('closeStationPanel')).toEqual([[], []])
   })
 
   it('closes the protection-zone panel before opening the station panel', async () => {

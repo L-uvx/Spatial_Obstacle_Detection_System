@@ -120,7 +120,7 @@ body {
 }
 
 .app-shell__station-toggle {
-  min-width: 220px;
+  width: 260px;
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 12px;
   padding: 10px 14px;
@@ -133,29 +133,58 @@ body {
 
 .app-shell__station-popover {
   margin-top: 10px;
-  min-width: 220px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  width: 260px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 16px;
-  padding: 14px;
+  padding: 16px;
   color: #d8e4ff;
-  background: rgba(8, 17, 31, 0.9);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.35);
+  background: rgba(8, 17, 31, 0.92);
+  backdrop-filter: blur(16px) saturate(120%);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.25),
+    0 16px 48px rgba(15, 23, 42, 0.4),
+    inset 0 1px 0 rgba(148, 163, 184, 0.06);
+}
+
+.app-shell__station-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.app-shell__station-popover-title {
+  margin: 0;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+}
+
+.app-shell__station-popover-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  padding: 0;
+}
+
+.app-shell__station-popover-close:hover {
+  color: #e2e8f0;
+  background: rgba(148, 163, 184, 0.12);
 }
 
 .app-shell__station-field {
   display: grid;
-  gap: 8px;
+  gap: 4px;
   color: #cbd5e1;
-}
-
-.app-shell__station-select {
-  width: 100%;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 12px;
-  padding: 10px 12px;
-  color: #e2e8f0;
-  background: rgba(15, 23, 42, 0.8);
 }
 
 .app-shell__station-empty {
