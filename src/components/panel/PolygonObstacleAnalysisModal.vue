@@ -186,14 +186,6 @@ watch(
             </tbody>
           </table>
 
-          <button
-            type="button"
-            class="analysis-modal__primary"
-            :disabled="state.selectedTargetIds.length === 0"
-            @click="emit('startAnalysis')"
-          >
-            开始分析
-          </button>
         </div>
 
         <div v-else-if="state.stage === 'analyzing'" class="analysis-modal__section">
@@ -265,8 +257,17 @@ watch(
         </div>
       </div>
 
-      <div v-if="state.stage === 'analysis-result'" class="analysis-modal__footer analysis-modal__footer--rounded">
-        <p class="analysis-modal__footer-summary">
+      <div v-if="state.stage === 'target-selection' || state.stage === 'analysis-result'" class="analysis-modal__footer analysis-modal__footer--rounded" :class="{ 'analysis-modal__footer--target-selection': state.stage === 'target-selection' }">
+        <button
+          v-if="state.stage === 'target-selection'"
+          type="button"
+          class="analysis-modal__primary"
+          :disabled="state.selectedTargetIds.length === 0"
+          @click="emit('startAnalysis')"
+        >
+          开始分析
+        </button>
+        <p v-else class="analysis-modal__footer-summary">
           共 {{ state.analysisTargetResults.length }} 个分析对象，
           已导出 {{ state.analysisTargetResults.filter(t => t.exportStatus === 'succeeded').length }} 个
         </p>

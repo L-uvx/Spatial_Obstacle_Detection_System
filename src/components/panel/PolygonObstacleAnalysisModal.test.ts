@@ -698,4 +698,69 @@ describe('PolygonObstacleAnalysisModal', () => {
     expect(targetCard.text()).toContain('report generation failed')
   })
 
+  function createTargetSelectionState(): PolygonObstacleAnalysisState {
+    return {
+      ...createImportFormState(),
+      stage: 'target-selection',
+      projectName: '武汉净空项目',
+      obstacleType: '建筑物/构筑物',
+      fileName: 'targets.xlsx',
+      targetOptions: [
+        { id: 'airport-1', name: '天河机场', category: '机场', distance: '2.5km' },
+        { id: 'atmb-1', name: '湖北空管局', category: '空管局', distance: '8.0km' },
+      ],
+      selectedTargetIds: [],
+    }
+  }
+
+  it('renders the footer with start analysis button in target-selection stage', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: createTargetSelectionState(),
+      },
+    })
+
+    const footer = wrapper.get('.analysis-modal__footer')
+    expect(footer.find('button.analysis-modal__primary').exists()).toBe(true)
+    expect(footer.find('button.analysis-modal__primary').text()).toContain('开始分析')
+    expect(footer.find('button.analysis-modal__primary').attributes('disabled')).toBeDefined()
+  })
+
+  it('enables start analysis button in footer when targets are selected', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: {
+          ...createTargetSelectionState(),
+          selectedTargetIds: ['airport-1'],
+        },
+      },
+    })
+
+    const footer = wrapper.get('.analysis-modal__footer')
+    expect(footer.find('button.analysis-modal__primary').attributes('disabled')).toBeUndefined()
+  })
+
+  it('does not render start analysis button inside body in target-selection stage', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: createTargetSelectionState(),
+      },
+    })
+
+    const body = wrapper.get('.analysis-modal__body')
+    const startButton = body.findAll('button.analysis-modal__primary').find(btn => btn.text().includes('开始分析'))
+    expect(startButton).toBeUndefined()
+  })
+
+  it('footer uses rounded modifier in target-selection stage', () => {
+    const wrapper = mount(PolygonObstacleAnalysisModal, {
+      props: {
+        state: createTargetSelectionState(),
+      },
+    })
+
+    const footer = wrapper.get('.analysis-modal__footer')
+    expect(footer.classes()).toContain('analysis-modal__footer--rounded')
+  })
+
 })

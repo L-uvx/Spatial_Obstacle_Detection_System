@@ -1482,6 +1482,10 @@ body {
   border-bottom-right-radius: 24px;
 }
 
+.analysis-modal__footer--target-selection {
+  justify-content: flex-end;
+}
+
 @media (max-width: 768px) {
   .top-toolbar {
     left: 12px;
