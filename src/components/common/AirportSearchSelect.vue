@@ -150,6 +150,7 @@ onMounted(() => {
 .airport-search-select {
   position: relative;
   width: 100%;
+  min-width: 0;
 }
 
 .airport-search-select__input-wrap {
@@ -210,6 +211,7 @@ onMounted(() => {
 }
 
 .airport-search-select__option-name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
