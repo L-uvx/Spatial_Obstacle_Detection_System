@@ -20,7 +20,7 @@ function delay(ms: number) {
 
 // 轮询分析任务，直到后端返回成功、失败或超时。
 async function waitForAnalysisCompletion(taskId: string) {
-  for (let attempt = 0; attempt < 60; attempt += 1) {
+  for (let attempt = 0; attempt < 1200; attempt += 1) {
     const statusResult = await getAnalysisTaskStatus(taskId)
 
     if (statusResult.status === 'succeeded') {
