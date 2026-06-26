@@ -70,6 +70,24 @@ function createPolygonHierarchy(polygon: PolygonCoordinates) {
   )
 }
 
+function createRegularPolygonRing([longitude, latitude]: PositionCoordinate, radiusMeters: number): LinearRingCoordinates {
+  const sides = 8
+  const ring: LinearRingCoordinates = []
+  const latRad = Cesium.Math.toRadians(latitude)
+  const metersPerDegLat = 111320
+  const metersPerDegLon = 111320 * Math.cos(latRad)
+
+  for (let i = 0; i < sides; i++) {
+    const angle = (Math.PI * 2 * i) / sides
+    const dx = radiusMeters * Math.cos(angle)
+    const dy = radiusMeters * Math.sin(angle)
+    ring.push([longitude + dx / metersPerDegLon, latitude + dy / metersPerDegLat])
+  }
+  ring.push(ring[0])
+
+  return ring
+}
+
 // 为障碍物的每个面片生成稳定实体 id。
 function createEntityId(obstacleId: string, polygonIndex: number) {
   return `${POLYGON_ENTITY_ID_PREFIX}-${obstacleId}-${polygonIndex}`
@@ -173,18 +191,21 @@ function createObstacleEntities(
         ds.entities.add({
           id: entityId,
           name: obstacle.name,
-          position: createPointCartesian(obstacle.geometry.coordinates, obstacle.topElevation),
           properties: {
             obstacleId: obstacle.id,
             obstacleType: obstacle.obstacleType,
             topElevation: obstacle.topElevation,
           },
-          point: {
-            pixelSize: 10,
-            color: Cesium.Color.fromCssColorString('#ff8a3d'),
-            outlineColor: Cesium.Color.fromCssColorString('#fff1e5'),
-            outlineWidth: 2,
-            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          polygon: {
+            hierarchy: new Cesium.PolygonHierarchy(
+              createCartesianPositions(createRegularPolygonRing(obstacle.geometry.coordinates, 10)),
+            ),
+            height: 0,
+            extrudedHeight: obstacle.topElevation,
+            perPositionHeight: false,
+            material: Cesium.Color.fromCssColorString('#ff8a3d').withAlpha(1),
+            outline: false,
+            outlineColor: Cesium.Color.fromCssColorString('#ffb26b'),
           },
         })
         addedEntityIds.push(entityId)
