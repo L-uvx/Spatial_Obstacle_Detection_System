@@ -28,7 +28,7 @@ async function waitForAnalysisCompletion(taskId: string) {
     }
 
     if (statusResult.status === 'failed') {
-      throw new Error('分析任务失败，请检查后端处理结果。')
+      throw new Error(statusResult.message || '分析任务失败，请检查后端处理结果。')
     }
 
     await delay(1000)

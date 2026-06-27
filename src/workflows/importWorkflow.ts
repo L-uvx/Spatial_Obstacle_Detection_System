@@ -34,7 +34,7 @@ async function waitForImportCompletion(mode: ObstacleAnalysisMode, taskId: strin
     }
 
     if (statusResult.status === 'failed') {
-      throw new Error('导入任务失败，请检查后端处理结果。')
+      throw new Error(statusResult.message || '导入任务失败，请检查后端处理结果。')
     }
 
     await delay(1000)
