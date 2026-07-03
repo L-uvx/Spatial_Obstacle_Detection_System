@@ -202,7 +202,8 @@ watch(
               <h4>已分析对象</h4>
               <ul>
                 <li v-for="target in state.analysisSelectedTargets" :key="target.id">
-                  {{ target.name }}（{{ target.category }}）
+                  {{ target.name }}
+                  <!-- （{{ target.category }}） -->
                 </li>
               </ul>
             </div>
