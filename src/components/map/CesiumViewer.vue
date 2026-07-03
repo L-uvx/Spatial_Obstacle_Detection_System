@@ -271,7 +271,6 @@ watch(
       return
     }
 
-    syncObstacles(props.obstacles, false)
     flyToTarget(target)
     appliedInitialCameraKeyRef.value = nextKey
   },
